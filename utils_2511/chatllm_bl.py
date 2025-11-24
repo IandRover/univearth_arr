@@ -230,7 +230,8 @@ class ChatLLM:
         except Exception as e:
             if "The model is overloaded. Please try again later." in str(e):
                 return {}
-            
+            if "initEE is not defined" in str(e):
+                return {}
             print(f"error: {e}")
             self.temp_code = f"""'No <code> is found in the response. Please try again. The exception error is: {e}'"""
         return {"raw_code": self.temp_response, "code": self.temp_code}
@@ -238,6 +239,8 @@ class ChatLLM:
     def generate_answer(self, info: dict):
 
         self.temp_ans_system_prompt = self.prompt_system_answer
+        if "at module$" in info["exec_msg"]:
+            info["exec_msg"] = info["exec_msg"].split("at module$")[0]
         self.temp_ans_user_prompt = self.prompt_user_answer.format_map(info)
 
         self._get_client(self.text_generator)
