@@ -27,13 +27,11 @@ class ChatLLM:
             "Llama-3.2-3B-Instruct",
             "Llama-3.2-1B-Instruct",
             "Qwen-2.5-72B-Instruct",
-            "DeepSeek-V3", # huggingface
+            # "DeepSeek-V3", # huggingface
             # "Qwen-2.5-Coder-32B-Instruct", 
             "Qwen2.5-Coder-32B-Instruct",
-            "deepseek-chat-v3",
+            "deepseek-chat",
             "deepseek-reasoner",
-            "codellama/CodeLlama-13b-hf",
-            "DeepSeek-R1-Distill-Qwen-32B",
             # Gemini
             "gemini", 'gemini-2.5-pro', "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.5-flash",
             "gemini-3-pro-preview",
@@ -51,7 +49,7 @@ class ChatLLM:
         self.temp_code_user_prompts = []
         self.should_clean_utf8 = False
         
-    def _make_api_call(self, system_prompt, user_prompts) -> str:
+    def _make_api_call(self, system_prompt, user_prompts, info=None) -> str:
 
         if self.request_type == "openai":
             messages = [{ "role": "system", "content": system_prompt}]
@@ -61,7 +59,18 @@ class ChatLLM:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                # max_completion_tokens=4096,
+            )
+            return response.choices[0].message.content
+        
+        elif self.request_type == "openai-deepseek":
+            messages = [{ "role": "system", "content": system_prompt}]
+            messages.append({ "role": "user", "content": user_prompts[-1]})            
+            self.temp_messages = messages 
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                stream=False,
             )
             return response.choices[0].message.content
 
@@ -225,7 +234,7 @@ class ChatLLM:
         self.temp_response = ""
         self.temp_code = ""
         try:
-            self.temp_response = self._make_api_call(self.temp_code_system_prompt, self.temp_code_user_prompts)
+            self.temp_response = self._make_api_call(self.temp_code_system_prompt, self.temp_code_user_prompts, info)
             self.temp_code = self._parse(self.temp_response, ["code"])["code"]
             if not self.temp_code:
                 assert False, "No <code> is found in the response."
@@ -289,7 +298,7 @@ class ChatLLM:
             
 
         # deepseek
-        elif model_name == "deepseek-chat-v3":
+        elif model_name == "deepseek-chat":
             model = "deepseek-chat"
             request_type = "openai-deepseek"
         elif model_name == "deepseek-reasoner":
@@ -340,15 +349,15 @@ class ChatLLM:
             request_type = 'gemini'
         
         # openrouter
-        elif model_name == "OR-Llama-3.3-70B-Instruct":
-            model = "meta-llama/llama-3.3-70b-instruct:free"
-            request_type = "openrouter"
-        elif model_name == "OR-phi-3-medium":
-            model = "microsoft/phi-3-medium-128k-instruct:free"
-            request_type = "openrouter"
-        elif model_name == "OR-deepseek-r1-distill-llama-70b":
-            model = "deepseek/deepseek-r1-distill-llama-70b:free"
-            request_type = "openrouter"
+        # elif model_name == "OR-Llama-3.3-70B-Instruct":
+        #     model = "meta-llama/llama-3.3-70b-instruct:free"
+        #     request_type = "openrouter"
+        # elif model_name == "OR-phi-3-medium":
+        #     model = "microsoft/phi-3-medium-128k-instruct:free"
+        #     request_type = "openrouter"
+        # elif model_name == "OR-deepseek-r1-distill-llama-70b":
+        #     model = "deepseek/deepseek-r1-distill-llama-70b:free"
+        #     request_type = "openrouter"
 
         # together AI
         elif model_name == "tgt-Llama-3.3-70B-Instruct":
@@ -391,7 +400,7 @@ class ChatLLM:
                 api_key=os.environ.get('HUGGINGFACE_API_KEY'),
             )
         elif request_type == "openai-deepseek":
-            self.client = OpenAI(api_key="sk-0c2900b9c0ca4a44a4ad79bc09eefba3", 
+            self.client = OpenAI(api_key=os.environ.get('DEEPSEEK_API_KEY'), 
                                 base_url="https://api.deepseek.com")
 
         elif request_type == "gemini":
