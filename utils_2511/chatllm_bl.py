@@ -16,7 +16,9 @@ class ChatLLM:
 
         # self.model_name = args.model_name
         self.valid_model_list = [
-            "haiku", "sonnet", "claude-3.7",
+            # Anthropic
+            "claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929", 
+            # OpenAI
             "gpt-4o", "gpt-4o-mini", "o3-mini", "o5-mini",
             # "qwen-2.5-coder-32b-instruct",
             "Llama-3.1-8B-Instruct",
@@ -310,15 +312,15 @@ class ChatLLM:
             self.should_clean_utf8 = True
 
         # anthropic
-        elif model_name == "haiku":
-            model = "claude-3-5-haiku-20241022"
+        elif model_name == "claude-haiku-4-5-20251001":
+            model = "claude-haiku-4-5-20251001"
             request_type = "anthropic"
-        elif model_name == "sonnet":
-            model = "claude-3-5-sonnet-20241022"
+        elif model_name == "claude-sonnet-4-5-20250929":
+            model = "claude-sonnet-4-5-20250929"
             request_type = "anthropic"
-        elif model_name == "claude-3.7":
-            model = "claude-3-7-sonnet-20250219"
-            request_type = "anthropic"
+        # elif model_name == "claude-3.7":
+        #     model = "claude-3-7-sonnet-20250219"
+        #     request_type = "anthropic"
 
         # gemini
         elif model_name == "gemini-2.0-flash":
