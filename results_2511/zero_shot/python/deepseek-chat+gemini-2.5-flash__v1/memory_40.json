@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Did did the total rainfall exceed 6 inches in Grafton, New South Wales during January 14, 2020 to January 22, 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-chat",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-24_20-24-29",
+        "url": "https://earthobservatory.nasa.gov/images/146201/rain-brought-brief-relief-to-australia",
+        "unique_id": 40
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Need rainfall data for Grafton, NSW from Jan 14-22, 2020. Best dataset would be CHIRPS (Climate Hazards Group InfraRed Precipitation with Station data) which provides daily precipitation data.\n2. Masking strategy: Rainfall data doesn't need cloud masking, but I should check for valid pixels.\n3. Logic: Sum rainfall over the period, convert from mm to inches (1 inch = 25.4 mm), compare to 6 inches threshold.\n\nSteps:\n- Define geometry for Grafton, NSW (using a point or small buffer)\n- Get CHIRPS daily precipitation data for the date range\n- Check if collection has data\n- Sum rainfall over the period\n- Check for valid pixels\n- Convert mm to inches and compare to 6 inches\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\ngrafton = ee.Geometry.Point([152.9339, -29.6819])  # Grafton, NSW coordinates\nstart_date = '2020-01-14'\nend_date = '2020-01-22'\n\n# 2. Data Acquisition - CHIRPS Daily Precipitation\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(grafton)\n\n# Check if collection has data\nif chirps.size().getInfo() == 0:\n    print(\"No rainfall data found for the period.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing - Sum rainfall over the period\n    total_rainfall = chirps.sum()\n    \n    # Check for valid pixels\n    pixel_count = total_rainfall.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=grafton.buffer(5000),  # 5km buffer around Grafton\n        scale=5000,\n        maxPixels=1e9\n    ).get('precipitation').getInfo()\n    \n    if pixel_count == 0:\n        print(\"No valid rainfall pixels in the area.\")\n        print(\"<answer>C2</answer>\")\n    else:\n        # 4. Calculation - Get total rainfall in mm, convert to inches\n        rainfall_mm = total_rainfall.reduceRegion(\n            reducer=ee.Reducer.mean(),\n            geometry=grafton.buffer(5000),\n            scale=5000,\n            maxPixels=1e9\n        ).get('precipitation').getInfo()\n        \n        # 5. Validation & Final Answer\n        if rainfall_mm is None:\n            print(\"<answer>C3</answer>\")\n        else:\n            rainfall_inches = rainfall_mm / 25.4  # Convert mm to inches\n            print(f\"Total rainfall: {rainfall_inches:.2f} inches, Pixels: {int(pixel_count)}\")\n            \n            if rainfall_inches > 6:\n                print(\"<answer>A</answer>\")\n            else:\n                print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\ngrafton = ee.Geometry.Point([152.9339, -29.6819])  # Grafton, NSW coordinates\nstart_date = '2020-01-14'\nend_date = '2020-01-22'\n\n# 2. Data Acquisition - CHIRPS Daily Precipitation\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(grafton)\n\n# Check if collection has data\nif chirps.size().getInfo() == 0:\n    print(\"No rainfall data found for the period.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing - Sum rainfall over the period\n    total_rainfall = chirps.sum()\n    \n    # Check for valid pixels\n    pixel_count = total_rainfall.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=grafton.buffer(5000),  # 5km buffer around Grafton\n        scale=5000,\n        maxPixels=1e9\n    ).get('precipitation').getInfo()\n    \n    if pixel_count == 0:\n        print(\"No valid rainfall pixels in the area.\")\n        print(\"<answer>C2</answer>\")\n    else:\n        # 4. Calculation - Get total rainfall in mm, convert to inches\n        rainfall_mm = total_rainfall.reduceRegion(\n            reducer=ee.Reducer.mean(),\n            geometry=grafton.buffer(5000),\n            scale=5000,\n            maxPixels=1e9\n        ).get('precipitation').getInfo()\n        \n        # 5. Validation & Final Answer\n        if rainfall_mm is None:\n            print(\"<answer>C3</answer>\")\n        else:\n            rainfall_inches = rainfall_mm / 25.4  # Convert mm to inches\n            print(f\"Total rainfall: {rainfall_inches:.2f} inches, Pixels: {int(pixel_count)}\")\n            \n            if rainfall_inches > 6:\n                print(\"<answer>A</answer>\")\n            else:\n                print(\"<answer>B</answer>\")",
+            "exec_msg": "Total rainfall: 7.65 inches, Pixels: 4\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

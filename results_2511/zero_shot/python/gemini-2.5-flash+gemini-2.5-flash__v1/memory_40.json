@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Did did the total rainfall exceed 6 inches in Grafton, New South Wales during January 14, 2020 to January 22, 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gemini-2.5-flash",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-24_15-25-33",
+        "url": "https://earthobservatory.nasa.gov/images/146201/rain-brought-brief-relief-to-australia",
+        "unique_id": 40
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<code>\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\n# Grafton, New South Wales coordinates: approx -29.664, 153.033\ngrafton_point = ee.Geometry.Point(153.033, -29.664)\nstart_date = '2020-01-14'\nend_date = '2020-01-22' # End date is exclusive in GEE filters, so '2020-01-23' for data up to Jan 22\n\n# 2. Data Acquisition & Check\n# CHIRPS Daily Precipitation\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, '2020-01-23') \\\n    .filterBounds(grafton_point)\n\nnum_images = chirps.size().getInfo()\nprint(f\"Number of CHIRPS images found: {num_images}\")\n\nif num_images == 0:\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing\n    # Sum the precipitation over the period\n    total_precipitation_image = chirps.sum().select('precipitation')\n\n    # Calculate the total precipitation for the point region\n    # Use a scale of 1000m to get a representative value around the point\n    # and maxPixels to handle potential large areas (though less relevant for a point)\n    region_stats = total_precipitation_image.reduceRegion(\n        reducer=ee.Reducer.mean(), # Mean over the small region is effectively the value at the point\n        geometry=grafton_point,\n        scale=1000,\n        maxPixels=1e9\n    )\n\n    total_mm = region_stats.get('precipitation').getInfo()\n\n    # 4. Calculation & Validation\n    if total_mm is None:\n        print(\"Calculation failed to retrieve precipitation value.\")\n        print(\"<answer>C3</answer>\")\n    else:\n        # Convert millimeters to inches (1 inch = 25.4 mm)\n        total_inches = total_mm / 25.4\n        \n        print(f\"Total rainfall (mm): {total_mm:.2f}\")\n        print(f\"Total rainfall (inches): {total_inches:.2f}\")\n\n        # Check for C2 (No valid pixels) is implicitly handled by total_mm being None for CHIRPS\n        # If total_mm is 0, it means no rainfall, not no valid pixels.\n        \n        # 5. Validation & Final Answer\n        if total_inches > 6.0:\n            print(\"<answer>A</answer>\")\n        else:\n            print(\"<answer>B</answer>\")\n\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\n# Grafton, New South Wales coordinates: approx -29.664, 153.033\ngrafton_point = ee.Geometry.Point(153.033, -29.664)\nstart_date = '2020-01-14'\nend_date = '2020-01-22' # End date is exclusive in GEE filters, so '2020-01-23' for data up to Jan 22\n\n# 2. Data Acquisition & Check\n# CHIRPS Daily Precipitation\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, '2020-01-23') \\\n    .filterBounds(grafton_point)\n\nnum_images = chirps.size().getInfo()\nprint(f\"Number of CHIRPS images found: {num_images}\")\n\nif num_images == 0:\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing\n    # Sum the precipitation over the period\n    total_precipitation_image = chirps.sum().select('precipitation')\n\n    # Calculate the total precipitation for the point region\n    # Use a scale of 1000m to get a representative value around the point\n    # and maxPixels to handle potential large areas (though less relevant for a point)\n    region_stats = total_precipitation_image.reduceRegion(\n        reducer=ee.Reducer.mean(), # Mean over the small region is effectively the value at the point\n        geometry=grafton_point,\n        scale=1000,\n        maxPixels=1e9\n    )\n\n    total_mm = region_stats.get('precipitation').getInfo()\n\n    # 4. Calculation & Validation\n    if total_mm is None:\n        print(\"Calculation failed to retrieve precipitation value.\")\n        print(\"<answer>C3</answer>\")\n    else:\n        # Convert millimeters to inches (1 inch = 25.4 mm)\n        total_inches = total_mm / 25.4\n        \n        print(f\"Total rainfall (mm): {total_mm:.2f}\")\n        print(f\"Total rainfall (inches): {total_inches:.2f}\")\n\n        # Check for C2 (No valid pixels) is implicitly handled by total_mm being None for CHIRPS\n        # If total_mm is 0, it means no rainfall, not no valid pixels.\n        \n        # 5. Validation & Final Answer\n        if total_inches > 6.0:\n            print(\"<answer>A</answer>\")\n        else:\n            print(\"<answer>B</answer>\")",
+            "exec_msg": "Number of CHIRPS images found: 9\nTotal rainfall (mm): 195.25\nTotal rainfall (inches): 7.69\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Did Wilmington, North Carolina receive at least 90 inches of rainfall during the year of 2018?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-haiku-4-5-20251001",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-24_16-31-18",
+        "url": "https://earthobservatory.nasa.gov/images/144417/soggy-2018-for-the-eastern-us",
+        "unique_id": 6
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:\n   - Location: Wilmington, North Carolina (approximately 34.23\u00b0N, 77.95\u00b0W)\n   - Date: Full year 2018 (2018-01-01 to 2018-12-31)\n   - Collection: Use CHIRPS (Climate Hazards Group InfraRed Precipitation with Stations) which is the standard for precipitation analysis globally\n   - Alternative: NOAA/PERSIANN-CDR if CHIRPS has issues\n\n2. Masking strategy:\n   - Precipitation data doesn't require cloud masking in the traditional sense; CHIRPS is already a processed precipitation product\n   - Simply sum daily precipitation across the year for the Wilmington area\n\n3. Logic to distinguish Valid Zero from Null/Error:\n   - Valid answer: Total precipitation is a number >= 0\n   - C1: No data available for 2018 in the region\n   - C2: After filtering, no valid pixels remain (unlikely for precipitation)\n   - C3: Result is None/NaN or out of reasonable range (e.g., negative or > 500 inches for annual)\n   - Compare: Is total >= 90 inches? (A: Yes, B: No)\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Wilmington, North Carolina\nwilmington = ee.Geometry.Point([-77.95, 34.23])\n# Create a small buffer for the area\naoi = wilmington.buffer(5000)  # 5km buffer\n\n# 2. Load CHIRPS daily precipitation data for 2018\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate('2018-01-01', '2018-12-31') \\\n    .filterBounds(aoi)\n\n# Check if data exists\nn_images = chirps.size().getInfo()\nprint(f\"2018 CHIRPS images found: {n_images}\")\n\nif n_images == 0:\n    print(\"No CHIRPS data for 2018 in Wilmington area.\")\n    print(\"C1\")\nelse:\n    # 3. Sum all daily precipitation for the year\n    annual_precip = chirps.sum()\n    \n    # 4. Calculate mean precipitation over the area (in mm)\n    result = annual_precip.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=aoi,\n        scale=5000,\n        maxPixels=1e9\n    ).get('precipitation').getInfo()\n    \n    print(f\"Annual precipitation (mm): {result}\")\n    \n    # 5. Validate result\n    if result is None or result < 0:\n        print(\"C3\")\n    else:\n        # Convert mm to inches (1 inch = 25.4 mm)\n        precip_inches = result / 25.4\n        print(f\"Annual precipitation (inches): {precip_inches:.2f}\")\n        \n        # 6. Check if >= 90 inches\n        if precip_inches >= 90:\n            print(\"A\")\n        else:\n            print(\"B\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Wilmington, North Carolina\nwilmington = ee.Geometry.Point([-77.95, 34.23])\n# Create a small buffer for the area\naoi = wilmington.buffer(5000)  # 5km buffer\n\n# 2. Load CHIRPS daily precipitation data for 2018\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate('2018-01-01', '2018-12-31') \\\n    .filterBounds(aoi)\n\n# Check if data exists\nn_images = chirps.size().getInfo()\nprint(f\"2018 CHIRPS images found: {n_images}\")\n\nif n_images == 0:\n    print(\"No CHIRPS data for 2018 in Wilmington area.\")\n    print(\"C1\")\nelse:\n    # 3. Sum all daily precipitation for the year\n    annual_precip = chirps.sum()\n    \n    # 4. Calculate mean precipitation over the area (in mm)\n    result = annual_precip.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=aoi,\n        scale=5000,\n        maxPixels=1e9\n    ).get('precipitation').getInfo()\n    \n    print(f\"Annual precipitation (mm): {result}\")\n    \n    # 5. Validate result\n    if result is None or result < 0:\n        print(\"C3\")\n    else:\n        # Convert mm to inches (1 inch = 25.4 mm)\n        precip_inches = result / 25.4\n        print(f\"Annual precipitation (inches): {precip_inches:.2f}\")\n        \n        # 6. Check if >= 90 inches\n        if precip_inches >= 90:\n            print(\"A\")\n        else:\n            print(\"B\")",
+            "exec_msg": "2018 CHIRPS images found: 364\nAnnual precipitation (mm): 2133.5972805038928\nAnnual precipitation (inches): 84.00\nB\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nB\n</answer>",
+            "answer": "B",
+            "answer_thinking": null
+        }
+    ]
+}

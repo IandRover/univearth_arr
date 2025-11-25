@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "In January 2021, did Nambia experience over 7 inches of rainfall?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-haiku-4-5-20251001",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-24_16-58-08",
+        "url": "https://earthobservatory.nasa.gov/images/147924/abundant-rain-turns-namibia-green",
+        "unique_id": 77
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:\n   - Collection: CHIRPS (Climate Hazards Group Precipitation) is the standard for global rainfall data\n   - Date: January 2021 (2021-01-01 to 2021-01-31)\n   - Location: Namibia (define as polygon/bounds)\n\n2. Masking strategy:\n   - CHIRPS is precipitation data, no cloud masking needed\n   - Sum total rainfall over the month for the entire country\n   - Check if mean/median rainfall exceeds 7 inches (~178 mm)\n\n3. Logic to distinguish Valid Zero (A/B) from Null/Error (C3):\n   - Valid Zero: If CHIRPS returns 0 mm rainfall \u2192 Answer B (No)\n   - Valid Non-Zero: If CHIRPS returns > 0 mm, compare to 7 inches threshold\n   - Null/Error: If data is missing or calculation fails \u2192 C3\n   - No data: If collection is empty \u2192 C1\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Namibia geometry\nnamibia = ee.Geometry.Rectangle([11.5, -28.9, 25.3, -16.5])\n\n# 2. Load CHIRPS precipitation data for January 2021\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate('2021-01-01', '2021-02-01') \\\n    .filterBounds(namibia)\n\n# Check if data exists\nsize = chirps.size().getInfo()\nprint(f\"CHIRPS images for Jan 2021: {size}\")\n\nif size == 0:\n    print(\"No CHIRPS data found for January 2021 in Namibia.\")\n    print(\"C1\")\nelse:\n    # 3. Sum total rainfall for January 2021\n    total_rainfall = chirps.sum().reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=namibia,\n        scale=5000,\n        maxPixels=1e9\n    ).get('precipitation').getInfo()\n    \n    print(f\"Total rainfall Jan 2021: {total_rainfall:.1f} mm\")\n    \n    # 4. Validation\n    if total_rainfall is None:\n        print(\"Calculation failed (None returned).\")\n        print(\"C3\")\n    elif total_rainfall < 0:\n        print(\"Invalid rainfall value.\")\n        print(\"C3\")\n    else:\n        # Convert 7 inches to mm (7 inches = 177.8 mm)\n        threshold_mm = 7 * 25.4  # 177.8 mm\n        print(f\"Threshold: {threshold_mm:.1f} mm\")\n        \n        # 5. Compare and answer\n        if total_rainfall > threshold_mm:\n            print(f\"Result: {total_rainfall:.1f} mm > {threshold_mm:.1f} mm\")\n            print(\"A\")\n        else:\n            print(f\"Result: {total_rainfall:.1f} mm <= {threshold_mm:.1f} mm\")\n            print(\"B\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Namibia geometry\nnamibia = ee.Geometry.Rectangle([11.5, -28.9, 25.3, -16.5])\n\n# 2. Load CHIRPS precipitation data for January 2021\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate('2021-01-01', '2021-02-01') \\\n    .filterBounds(namibia)\n\n# Check if data exists\nsize = chirps.size().getInfo()\nprint(f\"CHIRPS images for Jan 2021: {size}\")\n\nif size == 0:\n    print(\"No CHIRPS data found for January 2021 in Namibia.\")\n    print(\"C1\")\nelse:\n    # 3. Sum total rainfall for January 2021\n    total_rainfall = chirps.sum().reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=namibia,\n        scale=5000,\n        maxPixels=1e9\n    ).get('precipitation').getInfo()\n    \n    print(f\"Total rainfall Jan 2021: {total_rainfall:.1f} mm\")\n    \n    # 4. Validation\n    if total_rainfall is None:\n        print(\"Calculation failed (None returned).\")\n        print(\"C3\")\n    elif total_rainfall < 0:\n        print(\"Invalid rainfall value.\")\n        print(\"C3\")\n    else:\n        # Convert 7 inches to mm (7 inches = 177.8 mm)\n        threshold_mm = 7 * 25.4  # 177.8 mm\n        print(f\"Threshold: {threshold_mm:.1f} mm\")\n        \n        # 5. Compare and answer\n        if total_rainfall > threshold_mm:\n            print(f\"Result: {total_rainfall:.1f} mm > {threshold_mm:.1f} mm\")\n            print(\"A\")\n        else:\n            print(f\"Result: {total_rainfall:.1f} mm <= {threshold_mm:.1f} mm\")\n            print(\"B\")",
+            "exec_msg": "CHIRPS images for Jan 2021: 31\nTotal rainfall Jan 2021: 167.4 mm\nThreshold: 177.8 mm\nResult: 167.4 mm <= 177.8 mm\nB\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nB\n</answer>",
+            "answer": "B",
+            "answer_thinking": null
+        }
+    ]
+}

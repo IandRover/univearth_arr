@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "In the summer of 2021, did at least 6 million hectares of forests burn in Sakha?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-chat",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-24_19-07-04",
+        "url": "https://earthobservatory.nasa.gov/images/148943/a-record-breaking-year-for-fire-in-sakha",
+        "unique_id": 92
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\nThe question is asking about forest fires in Sakha (Yakutia) during summer 2021, specifically whether at least 6 million hectares burned.\n\nKey considerations:\n1. Location: Sakha Republic (Yakutia) in Russia\n2. Time: Summer 2021 (June-August 2021)\n3. Data: Need burned area data - MODIS burned area product (MCD64A1) would be appropriate\n4. Area threshold: 6 million hectares = 60,000 km\u00b2\n\nApproach:\n1. Use MODIS MCD64A1 burned area collection\n2. Filter for summer 2021 (June-August)\n3. Sum burned area over Sakha region\n4. Compare with 6 million hectare threshold\n\nPotential issues:\n- Collection might be empty (C1)\n- No burned pixels detected (C2)\n- Calculation failure (C3)\n\nI'll define Sakha geometry explicitly since we can't use FAO/GAUL.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\n# Sakha Republic approximate bounding box\nsakha = ee.Geometry.Polygon([\n    [105.0, 70.0], [165.0, 70.0], [165.0, 55.0], [105.0, 55.0], [105.0, 70.0]\n])\n\nstart_date = '2021-06-01'\nend_date = '2021-08-31'\n\n# 2. Data Acquisition - MODIS Burned Area\nburned_col = ee.ImageCollection('MODIS/061/MCD64A1') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(sakha)\n\n# Check collection size\nif burned_col.size().getInfo() == 0:\n    print(\"No burned area data found for summer 2021.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing - Sum burned area\n    # BurnDate band: day of burn (1-366), 0=unburned\n    burned_mask = burned_col.select('BurnDate').max().gt(0)\n    \n    # Calculate area in hectares (1 pixel = 500m \u00d7 500m = 0.25 ha)\n    area_per_pixel = 0.25  # hectares\n    burned_area = burned_mask.multiply(area_per_pixel)\n    \n    # Sum burned area\n    stats = burned_area.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=sakha,\n        scale=500,\n        maxPixels=1e10\n    )\n    \n    total_burned = stats.get('BurnDate').getInfo()\n    \n    # Check for valid result\n    if total_burned is None:\n        print(\"Calculation failed - null result.\")\n        print(\"<answer>C3</answer>\")\n    else:\n        # 4. Validation & Final Answer\n        print(f\"Summer 2021 burned area: {total_burned:,.0f} hectares\")\n        \n        if total_burned >= 6000000:  # 6 million hectares\n            print(\"<answer>A</answer>\")\n        else:\n            print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\n# Sakha Republic approximate bounding box\nsakha = ee.Geometry.Polygon([\n    [105.0, 70.0], [165.0, 70.0], [165.0, 55.0], [105.0, 55.0], [105.0, 70.0]\n])\n\nstart_date = '2021-06-01'\nend_date = '2021-08-31'\n\n# 2. Data Acquisition - MODIS Burned Area\nburned_col = ee.ImageCollection('MODIS/061/MCD64A1') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(sakha)\n\n# Check collection size\nif burned_col.size().getInfo() == 0:\n    print(\"No burned area data found for summer 2021.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing - Sum burned area\n    # BurnDate band: day of burn (1-366), 0=unburned\n    burned_mask = burned_col.select('BurnDate').max().gt(0)\n    \n    # Calculate area in hectares (1 pixel = 500m \u00d7 500m = 0.25 ha)\n    area_per_pixel = 0.25  # hectares\n    burned_area = burned_mask.multiply(area_per_pixel)\n    \n    # Sum burned area\n    stats = burned_area.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=sakha,\n        scale=500,\n        maxPixels=1e10\n    )\n    \n    total_burned = stats.get('BurnDate').getInfo()\n    \n    # Check for valid result\n    if total_burned is None:\n        print(\"Calculation failed - null result.\")\n        print(\"<answer>C3</answer>\")\n    else:\n        # 4. Validation & Final Answer\n        print(f\"Summer 2021 burned area: {total_burned:,.0f} hectares\")\n        \n        if total_burned >= 6000000:  # 6 million hectares\n            print(\"<answer>A</answer>\")\n        else:\n            print(\"<answer>B</answer>\")",
+            "exec_msg": "Summer 2021 burned area: 172,877 hectares\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null
+        }
+    ]
+}

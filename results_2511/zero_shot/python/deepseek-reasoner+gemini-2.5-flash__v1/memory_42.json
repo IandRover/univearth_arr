@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Was the total rainfall in Grafton, New South Wales, greater than the total rainfall in Canberra from January 15, 2020 to January 21, 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-reasoner",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-24_16-04-43",
+        "url": "https://earthobservatory.nasa.gov/images/146201/rain-brought-brief-relief-to-australia",
+        "unique_id": 42
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\nThe user is asking to compare total rainfall between two Australian cities (Grafton, NSW and Canberra) over a specific week in January 2020. I need to:\n\n1. Use precipitation data - CHIRPS (Climate Hazards Group InfraRed Precipitation with Station data) would be appropriate\n2. Define geometries for both cities\n3. Get rainfall data for the specified date range (Jan 15-21, 2020)\n4. Sum the rainfall for each location and compare\n5. Handle cases where data might be missing or invalid\n\nLet me break this down:\n- Data: CHIRPS daily precipitation (UCSB-CHG/CHIRPS/DAILY)\n- Time: 2020-01-15 to 2020-01-21 (7 days)\n- Locations: Grafton, NSW and Canberra\n- Processing: Sum daily precipitation over the week for each location\n- Comparison: Grafton total > Canberra total?\n\nI need to handle:\n- Empty collections (try alternative data sources)\n- No valid pixels (check pixel counts)\n- Invalid calculations (check for None/NaN)\n\nLet me code this step by step.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\ngrafton = ee.Geometry.Point([152.933, -29.681])  # Grafton, NSW\ncanberra = ee.Geometry.Point([149.130, -35.280])  # Canberra\ndate_range = ['2020-01-15', '2020-01-22']  # End is exclusive\n\n# 2. Data Acquisition - CHIRPS precipitation data\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(date_range[0], date_range[1])\n\n# Check if collection has data\nif chirps.size().getInfo() == 0:\n    print(\"No CHIRPS data found for the period.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Calculate total rainfall for each location\n    def get_rainfall_total(geometry):\n        # Sum precipitation over the period\n        total_img = chirps.sum()\n        stats = total_img.reduceRegion(\n            reducer=ee.Reducer.sum(),\n            geometry=geometry,\n            scale=5000,\n            maxPixels=1e9\n        )\n        return stats.get('precipitation').getInfo()\n    \n    # Get rainfall totals\n    grafton_rain = get_rainfall_total(grafton)\n    canberra_rain = get_rainfall_total(canberra)\n    \n    # 4. Validation & Final Answer\n    print(f\"Grafton rainfall: {grafton_rain:.1f} mm\")\n    print(f\"Canberra rainfall: {canberra_rain:.1f} mm\")\n    \n    # Check for calculation failures\n    if grafton_rain is None or canberra_rain is None:\n        print(\"<answer>C3</answer>\")\n    elif grafton_rain > canberra_rain:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\ngrafton = ee.Geometry.Point([152.933, -29.681])  # Grafton, NSW\ncanberra = ee.Geometry.Point([149.130, -35.280])  # Canberra\ndate_range = ['2020-01-15', '2020-01-22']  # End is exclusive\n\n# 2. Data Acquisition - CHIRPS precipitation data\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(date_range[0], date_range[1])\n\n# Check if collection has data\nif chirps.size().getInfo() == 0:\n    print(\"No CHIRPS data found for the period.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Calculate total rainfall for each location\n    def get_rainfall_total(geometry):\n        # Sum precipitation over the period\n        total_img = chirps.sum()\n        stats = total_img.reduceRegion(\n            reducer=ee.Reducer.sum(),\n            geometry=geometry,\n            scale=5000,\n            maxPixels=1e9\n        )\n        return stats.get('precipitation').getInfo()\n    \n    # Get rainfall totals\n    grafton_rain = get_rainfall_total(grafton)\n    canberra_rain = get_rainfall_total(canberra)\n    \n    # 4. Validation & Final Answer\n    print(f\"Grafton rainfall: {grafton_rain:.1f} mm\")\n    print(f\"Canberra rainfall: {canberra_rain:.1f} mm\")\n    \n    # Check for calculation failures\n    if grafton_rain is None or canberra_rain is None:\n        print(\"<answer>C3</answer>\")\n    elif grafton_rain > canberra_rain:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "Grafton rainfall: 202.6 mm\nCanberra rainfall: 23.6 mm\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

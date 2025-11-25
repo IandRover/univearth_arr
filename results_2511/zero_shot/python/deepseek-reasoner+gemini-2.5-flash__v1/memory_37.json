@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Were the water levels in Lake Kariba in December, 2019 higher than the water levels seen in December, 2018?",
+        "answer": "no",
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-reasoner",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-24_16-41-32",
+        "url": "https://earthobservatory.nasa.gov/images/146068/water-levels-keep-falling-at-lake-kariba",
+        "unique_id": 37
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\nThe user is asking about water levels in Lake Kariba comparing December 2018 vs December 2019. \n\nFor water level analysis, I should use:\n- JRC Global Surface Water dataset (best for water extent mapping)\n- Or Sentinel-1 SAR data (good for water detection)\n- Or Landsat surface water detection\n\nThe JRC dataset is specifically designed for water mapping and has good temporal coverage. I'll use the JRC Global Surface Water dataset which provides monthly water occurrence data.\n\nStrategy:\n1. Use JRC/GSW1_3/MonthlyHistory collection\n2. Filter for December 2018 and December 2019\n3. Extract water pixels (values 2 and 3 represent water)\n4. Count water pixels for each period\n5. Compare the counts\n\nI need to define a geometry for Lake Kariba and check for data availability.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nlake_kariba = ee.Geometry.Polygon([\n    [26.5, -17.0], [29.0, -17.0], [29.0, -16.0], [26.5, -16.0], [26.5, -17.0]\n])\n\n# 2. Data Acquisition - JRC Monthly Water History\ncollection = ee.ImageCollection('JRC/GSW1_3/MonthlyHistory')\n\n# Get December 2018 and December 2019\ndec_2018 = collection.filterDate('2018-12-01', '2018-12-31').first()\ndec_2019 = collection.filterDate('2019-12-01', '2019-12-31').first()\n\n# Check if images exist\nif dec_2018 is None or dec_2019 is None:\n    print(\"Missing one or both monthly images\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing - Extract water pixels (values 2 and 3 are water)\n    water_2018 = dec_2018.eq(2).Or(dec_2018.eq(3))\n    water_2019 = dec_2019.eq(2).Or(dec_2019.eq(3))\n    \n    # Count water pixels\n    count_2018 = water_2018.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=lake_kariba,\n        scale=1000,\n        maxPixels=1e9\n    ).get('water').getInfo()\n    \n    count_2019 = water_2019.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=lake_kariba,\n        scale=1000,\n        maxPixels=1e9\n    ).get('water').getInfo()\n    \n    # 4. Validation & Final Answer\n    print(f\"2018 Water Pixels: {count_2018}\")\n    print(f\"2019 Water Pixels: {count_2019}\")\n    \n    if count_2018 is None or count_2019 is None:\n        print(\"<answer>C3</answer>\")\n    elif count_2018 == 0 or count_2019 == 0:\n        print(\"<answer>C2</answer>\")\n    elif count_2019 > count_2018:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nlake_kariba = ee.Geometry.Polygon([\n    [26.5, -17.0], [29.0, -17.0], [29.0, -16.0], [26.5, -16.0], [26.5, -17.0]\n])\n\n# 2. Data Acquisition - JRC Monthly Water History\ncollection = ee.ImageCollection('JRC/GSW1_3/MonthlyHistory')\n\n# Get December 2018 and December 2019\ndec_2018 = collection.filterDate('2018-12-01', '2018-12-31').first()\ndec_2019 = collection.filterDate('2019-12-01', '2019-12-31').first()\n\n# Check if images exist\nif dec_2018 is None or dec_2019 is None:\n    print(\"Missing one or both monthly images\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing - Extract water pixels (values 2 and 3 are water)\n    water_2018 = dec_2018.eq(2).Or(dec_2018.eq(3))\n    water_2019 = dec_2019.eq(2).Or(dec_2019.eq(3))\n    \n    # Count water pixels\n    count_2018 = water_2018.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=lake_kariba,\n        scale=1000,\n        maxPixels=1e9\n    ).get('water').getInfo()\n    \n    count_2019 = water_2019.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=lake_kariba,\n        scale=1000,\n        maxPixels=1e9\n    ).get('water').getInfo()\n    \n    # 4. Validation & Final Answer\n    print(f\"2018 Water Pixels: {count_2018}\")\n    print(f\"2019 Water Pixels: {count_2019}\")\n    \n    if count_2018 is None or count_2019 is None:\n        print(\"<answer>C3</answer>\")\n    elif count_2018 == 0 or count_2019 == 0:\n        print(\"<answer>C2</answer>\")\n    elif count_2019 > count_2018:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "2018 Water Pixels: 3325.9647058823575\n2019 Water Pixels: 3034.7921568627503\n<answer>B</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for JRC/GSW1_3/MonthlyHistory! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by JRC/GSW1_4/MonthlyHistory\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/JRC_GSW1_3_MonthlyHistory\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null
+        }
+    ]
+}

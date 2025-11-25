@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Did did the total rainfall exceed 6 inches in Grafton, New South Wales during January 14, 2020 to January 22, 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-haiku-4-5-20251001",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-24_16-48-11",
+        "url": "https://earthobservatory.nasa.gov/images/146201/rain-brought-brief-relief-to-australia",
+        "unique_id": 40
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:\n   - Location: Grafton, New South Wales, Australia (approximately -29.65, 152.93)\n   - Date range: January 14, 2020 to January 22, 2020\n   - Data source: CHIRPS (Climate Hazards Group InfraRed Precipitation with Station data) is the best freely available rainfall dataset in GEE for this period\n   - Alternative: ERA5 precipitation, but CHIRPS is more accurate for rainfall monitoring\n\n2. Masking strategy:\n   - No cloud masking needed; CHIRPS is a precipitation dataset, not optical imagery\n   - Need to sum rainfall over the 9-day period and compare to 6 inches (152.4 mm)\n\n3. Logic to distinguish Valid Zero from Null/Error:\n   - If collection is empty: C1\n   - If pixel count is 0 (location out of bounds): C2\n   - If result is None/NaN or invalid: C3\n   - If total rainfall >= 6 inches (152.4 mm): A\n   - If total rainfall < 6 inches: B\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\n# Grafton, New South Wales coordinates\ngrafton_coords = [152.93, -29.65]\npoint = ee.Geometry.Point(grafton_coords)\nbuffer = point.buffer(5000)  # 5km buffer around Grafton\n\nstart_date = '2020-01-14'\nend_date = '2020-01-22'\n\n# 2. Data Acquisition - CHIRPS Rainfall\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(buffer)\n\nsize = chirps.size().getInfo()\nprint(f\"CHIRPS images in date range: {size}\")\n\nif size == 0:\n    print(\"No CHIRPS data found.\")\n    print(\"C1\")\nelse:\n    # 3. Sum rainfall over the period\n    total_rainfall = chirps.select('precipitation').sum()\n    \n    # 4. Reduce to get total rainfall at point\n    stats = total_rainfall.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=buffer,\n        scale=5000,\n        maxPixels=1e9\n    ).getInfo()\n    \n    rainfall_mm = stats.get('precipitation')\n    print(f\"Total rainfall (mm): {rainfall_mm}\")\n    \n    # Convert 6 inches to mm (1 inch = 25.4 mm)\n    threshold_mm = 6 * 25.4\n    print(f\"Threshold (6 inches): {threshold_mm} mm\")\n    \n    # 5. Validation & Answer\n    if rainfall_mm is None:\n        print(\"C3\")\n    elif rainfall_mm >= threshold_mm:\n        print(f\"Rainfall: {rainfall_mm:.1f} mm >= {threshold_mm} mm\")\n        print(\"A\")\n    else:\n        print(f\"Rainfall: {rainfall_mm:.1f} mm < {threshold_mm} mm\")\n        print(\"B\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\n# Grafton, New South Wales coordinates\ngrafton_coords = [152.93, -29.65]\npoint = ee.Geometry.Point(grafton_coords)\nbuffer = point.buffer(5000)  # 5km buffer around Grafton\n\nstart_date = '2020-01-14'\nend_date = '2020-01-22'\n\n# 2. Data Acquisition - CHIRPS Rainfall\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(buffer)\n\nsize = chirps.size().getInfo()\nprint(f\"CHIRPS images in date range: {size}\")\n\nif size == 0:\n    print(\"No CHIRPS data found.\")\n    print(\"C1\")\nelse:\n    # 3. Sum rainfall over the period\n    total_rainfall = chirps.select('precipitation').sum()\n    \n    # 4. Reduce to get total rainfall at point\n    stats = total_rainfall.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=buffer,\n        scale=5000,\n        maxPixels=1e9\n    ).getInfo()\n    \n    rainfall_mm = stats.get('precipitation')\n    print(f\"Total rainfall (mm): {rainfall_mm}\")\n    \n    # Convert 6 inches to mm (1 inch = 25.4 mm)\n    threshold_mm = 6 * 25.4\n    print(f\"Threshold (6 inches): {threshold_mm} mm\")\n    \n    # 5. Validation & Answer\n    if rainfall_mm is None:\n        print(\"C3\")\n    elif rainfall_mm >= threshold_mm:\n        print(f\"Rainfall: {rainfall_mm:.1f} mm >= {threshold_mm} mm\")\n        print(\"A\")\n    else:\n        print(f\"Rainfall: {rainfall_mm:.1f} mm < {threshold_mm} mm\")\n        print(\"B\")",
+            "exec_msg": "CHIRPS images in date range: 8\nTotal rainfall (mm): 195.94778495214496\nThreshold (6 inches): 152.39999999999998 mm\nRainfall: 195.9 mm >= 152.39999999999998 mm\nA\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

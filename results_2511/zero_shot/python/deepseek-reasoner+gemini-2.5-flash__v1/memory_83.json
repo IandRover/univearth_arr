@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Was the area of aritifical land built off the coast of Jakarata Bay greater than 800 hectares as of 2021? ",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-reasoner",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-24_18-54-47",
+        "url": "https://earthobservatory.nasa.gov/images/148303/as-jakarta-grows-so-do-the-water-issues",
+        "unique_id": 83
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\nThe user is asking about artificial land built off the coast of Jakarta Bay, specifically if it was greater than 800 hectares as of 2021. This requires:\n\n1. Identifying artificial/built-up land in coastal areas near Jakarta Bay\n2. Calculating the area of this artificial land\n3. Comparing to 800 hectares\n\nFor artificial land detection, I should use a land cover dataset. The ESA WorldCover dataset is good for this as it has a built-up class. I'll use the 2021 version.\n\nSteps:\n1. Define the Jakarta Bay coastal area (using a polygon around the bay)\n2. Use ESA WorldCover 2021 dataset\n3. Extract the built-up class (class 50)\n4. Calculate the area of built-up pixels\n5. Compare to 800 hectares\n\nPotential issues:\n- If no WorldCover data exists for 2021 (unlikely, but possible) - C1\n- If no built-up pixels found - could be valid (B) or C2 if no data at all\n- Area calculation returns None/NaN - C3\n\nI'll use the ESA WorldCover v200 collection which has 2021 data.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\njakarta_bay = ee.Geometry.Polygon([\n    [106.65, -5.95],\n    [106.95, -5.95],\n    [106.95, -6.25],\n    [106.65, -6.25],\n    [106.65, -5.95]\n])\n\n# 2. Data Acquisition - ESA WorldCover 2021 for built-up detection\nworldcover = ee.ImageCollection(\"ESA/WorldCover/v200\").filterDate('2021-01-01', '2021-12-31')\n\nif worldcover.size().getInfo() == 0:\n    print(\"No WorldCover data found for 2021.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # Get the 2021 land cover image\n    lc_2021 = worldcover.first()\n    \n    # Extract built-up class (class 50)\n    built_up = lc_2021.select('Map').eq(50)\n    \n    # Calculate area in hectares (pixel area in m\u00b2 / 10000)\n    pixel_area = built_up.multiply(ee.Image.pixelArea()).divide(10000)\n    \n    # Calculate total built-up area\n    area_stats = pixel_area.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=jakarta_bay,\n        scale=100,\n        maxPixels=1e9\n    )\n    \n    total_area = area_stats.get('Map').getInfo()\n    pixel_count = built_up.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=jakarta_bay,\n        scale=100,\n        maxPixels=1e9\n    ).get('Map').getInfo()\n    \n    print(f\"2021 Built-up area: {total_area:.2f} hectares\")\n    print(f\"Valid pixels: {int(pixel_count)}\")\n    \n    # Validation & Final Answer\n    if total_area is None:\n        print(\"<answer>C3</answer>\")\n    elif pixel_count == 0:\n        print(\"<answer>C2</answer>\")\n    elif total_area > 800:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\njakarta_bay = ee.Geometry.Polygon([\n    [106.65, -5.95],\n    [106.95, -5.95],\n    [106.95, -6.25],\n    [106.65, -6.25],\n    [106.65, -5.95]\n])\n\n# 2. Data Acquisition - ESA WorldCover 2021 for built-up detection\nworldcover = ee.ImageCollection(\"ESA/WorldCover/v200\").filterDate('2021-01-01', '2021-12-31')\n\nif worldcover.size().getInfo() == 0:\n    print(\"No WorldCover data found for 2021.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # Get the 2021 land cover image\n    lc_2021 = worldcover.first()\n    \n    # Extract built-up class (class 50)\n    built_up = lc_2021.select('Map').eq(50)\n    \n    # Calculate area in hectares (pixel area in m\u00b2 / 10000)\n    pixel_area = built_up.multiply(ee.Image.pixelArea()).divide(10000)\n    \n    # Calculate total built-up area\n    area_stats = pixel_area.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=jakarta_bay,\n        scale=100,\n        maxPixels=1e9\n    )\n    \n    total_area = area_stats.get('Map').getInfo()\n    pixel_count = built_up.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=jakarta_bay,\n        scale=100,\n        maxPixels=1e9\n    ).get('Map').getInfo()\n    \n    print(f\"2021 Built-up area: {total_area:.2f} hectares\")\n    print(f\"Valid pixels: {int(pixel_count)}\")\n    \n    # Validation & Final Answer\n    if total_area is None:\n        print(\"<answer>C3</answer>\")\n    elif pixel_count == 0:\n        print(\"<answer>C2</answer>\")\n    elif total_area > 800:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "2021 Built-up area: 47678.46 hectares\nValid pixels: 111556\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}
