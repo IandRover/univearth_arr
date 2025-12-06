@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Were there fires visible in a 50 mile radius around (latitude: 34.498828, longitude: -112.246886) between June 20, 2017 and June 30, 2017?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-haiku-4-5-20251001",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_16-43-33",
+        "url": "https://earthobservatory.nasa.gov/images/90501/fires-in-the-southwest",
+        "unique_id": 320
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: I need to detect fires in a 50-mile radius around the given coordinates during June 20-30, 2017. I'll use the MODIS Active Fire product (MCD64A1 or FIRMS) or Landsat 8 thermal anomalies. MODIS Active Fires (ee.ImageCollection('MODIS/006/MOD14A1')) is ideal for detecting fires during this period.\n\n2. Masking strategy: Fire detection doesn't require cloud masking in the traditional sense - I'm looking for fire pixels directly. I'll filter for fire confidence > threshold and check if any confirmed fires exist in the region.\n\n3. Logic: \n   - If the collection is empty \u2192 C1\n   - If fire pixels found (count > 0) with valid confidence values \u2192 A (Yes, fires visible)\n   - If no fire pixels after filtering \u2192 B (No fires)\n   - If calculation returns invalid values \u2192 C3\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nlat, lon = 34.498828, -112.246886\nradius_miles = 50\nradius_meters = radius_miles * 1609.34  # Convert to meters\npoint = ee.Geometry.Point([lon, lat])\nregion = point.buffer(radius_meters)\n\nstart_date = '2017-06-20'\nend_date = '2017-06-30'\n\n# 2. Data Acquisition - MODIS Active Fire Detection\nfire_col = ee.ImageCollection('MODIS/006/MOD14A1') \\\n    .filterBounds(region) \\\n    .filterDate(start_date, end_date)\n\nsize = fire_col.size().getInfo()\nprint(f\"MODIS Active Fire Images: {size}\")\n\nif size == 0:\n    print(\"No MODIS data in date range.\")\n    print(\"C1\")\nelse:\n    # 3. Processing - Check for fire pixels with confidence threshold\n    # FireMask band: 0-3 (0=no fire, 1=low conf, 2=med conf, 3=high conf)\n    fires = fire_col.select('FireMask')\n    \n    # Count high-confidence fire pixels (FireMask >= 2)\n    fire_mask = fires.map(lambda img: img.gte(2).rename('fire'))\n    fire_pixels = fire_mask.sum()\n    \n    fire_count = fire_pixels.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=region,\n        scale=1000,\n        maxPixels=1e9\n    ).get('fire').getInfo()\n    \n    print(f\"High-confidence fire pixels: {int(fire_count) if fire_count else 0}\")\n    \n    # 4. Validation & Final Answer\n    if fire_count is None:\n        print(\"C3\")\n    elif fire_count > 0:\n        print(\"A\")\n    else:\n        print(\"B\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nlat, lon = 34.498828, -112.246886\nradius_miles = 50\nradius_meters = radius_miles * 1609.34  # Convert to meters\npoint = ee.Geometry.Point([lon, lat])\nregion = point.buffer(radius_meters)\n\nstart_date = '2017-06-20'\nend_date = '2017-06-30'\n\n# 2. Data Acquisition - MODIS Active Fire Detection\nfire_col = ee.ImageCollection('MODIS/006/MOD14A1') \\\n    .filterBounds(region) \\\n    .filterDate(start_date, end_date)\n\nsize = fire_col.size().getInfo()\nprint(f\"MODIS Active Fire Images: {size}\")\n\nif size == 0:\n    print(\"No MODIS data in date range.\")\n    print(\"C1\")\nelse:\n    # 3. Processing - Check for fire pixels with confidence threshold\n    # FireMask band: 0-3 (0=no fire, 1=low conf, 2=med conf, 3=high conf)\n    fires = fire_col.select('FireMask')\n    \n    # Count high-confidence fire pixels (FireMask >= 2)\n    fire_mask = fires.map(lambda img: img.gte(2).rename('fire'))\n    fire_pixels = fire_mask.sum()\n    \n    fire_count = fire_pixels.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=region,\n        scale=1000,\n        maxPixels=1e9\n    ).get('fire').getInfo()\n    \n    print(f\"High-confidence fire pixels: {int(fire_count) if fire_count else 0}\")\n    \n    # 4. Validation & Final Answer\n    if fire_count is None:\n        print(\"C3\")\n    elif fire_count > 0:\n        print(\"A\")\n    else:\n        print(\"B\")",
+            "exec_msg": "MODIS Active Fire Images: 10\nHigh-confidence fire pixels: 244417\nA\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for MODIS/006/MOD14A1! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by MODIS/061/MOD14A1\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MOD14A1\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

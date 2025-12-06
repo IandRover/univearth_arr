@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Did Sacramento, California experience 2-meter air temperatures above 110 degrees fahrenheit in September 2022?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-sonnet-4-5-20250929",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-28_21-49-04",
+        "url": "https://earthobservatory.nasa.gov/images/150318/a-long-lasting-western-heatwave",
+        "unique_id": 156
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Need to find temperature data for Sacramento, CA in September 2022. Will use ERA5-Land hourly data which has 2-meter air temperature.\n2. Masking strategy: No masking needed - this is meteorological reanalysis data, not satellite imagery with clouds.\n3. Logic: Need to convert Kelvin to Fahrenheit and check if any pixel/time exceeds 110\u00b0F. Valid zero would be \"no temperatures above 110\u00b0F\" (answer B). C3 would be if calculation returns None/NaN. C1 if no data exists for that period.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nsacramento = ee.Geometry.Point([-121.4944, 38.5816])\nstart_date = '2022-09-01'\nend_date = '2022-09-30'\n\n# 2. Data Acquisition - ERA5-Land hourly 2m temperature\ncollection = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(sacramento) \\\n    .select('temperature_2m')\n\n# Check collection size\ncol_size = collection.size().getInfo()\nprint(f\"Images found: {col_size}\")\n\nif col_size == 0:\n    print(\"No ERA5-Land data for September 2022.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Get maximum temperature across all times in September 2022\n    max_temp_image = collection.max()\n    \n    # 4. Extract temperature at Sacramento location\n    temp_k = max_temp_image.reduceRegion(\n        reducer=ee.Reducer.max(),\n        geometry=sacramento,\n        scale=11132,\n        maxPixels=1e9\n    ).get('temperature_2m').getInfo()\n    \n    # 5. Validation & Conversion\n    if temp_k is None:\n        print(\"Temperature calculation returned None.\")\n        print(\"<answer>C3</answer>\")\n    else:\n        # Convert Kelvin to Fahrenheit\n        temp_f = (temp_k - 273.15) * 9/5 + 32\n        \n        print(f\"Max temperature in September 2022: {temp_f:.2f} F ({temp_k:.2f} K)\")\n        \n        # Check if temperature is in valid range\n        if temp_f < -50 or temp_f > 150:\n            print(\"Temperature outside valid range.\")\n            print(\"<answer>C3</answer>\")\n        elif temp_f > 110:\n            print(f\"Temperature exceeded 110 F (reached {temp_f:.2f} F)\")\n            print(\"<answer>A</answer>\")\n        else:\n            print(f\"Temperature did not exceed 110 F (max was {temp_f:.2f} F)\")\n            print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nsacramento = ee.Geometry.Point([-121.4944, 38.5816])\nstart_date = '2022-09-01'\nend_date = '2022-09-30'\n\n# 2. Data Acquisition - ERA5-Land hourly 2m temperature\ncollection = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(sacramento) \\\n    .select('temperature_2m')\n\n# Check collection size\ncol_size = collection.size().getInfo()\nprint(f\"Images found: {col_size}\")\n\nif col_size == 0:\n    print(\"No ERA5-Land data for September 2022.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Get maximum temperature across all times in September 2022\n    max_temp_image = collection.max()\n    \n    # 4. Extract temperature at Sacramento location\n    temp_k = max_temp_image.reduceRegion(\n        reducer=ee.Reducer.max(),\n        geometry=sacramento,\n        scale=11132,\n        maxPixels=1e9\n    ).get('temperature_2m').getInfo()\n    \n    # 5. Validation & Conversion\n    if temp_k is None:\n        print(\"Temperature calculation returned None.\")\n        print(\"<answer>C3</answer>\")\n    else:\n        # Convert Kelvin to Fahrenheit\n        temp_f = (temp_k - 273.15) * 9/5 + 32\n        \n        print(f\"Max temperature in September 2022: {temp_f:.2f} F ({temp_k:.2f} K)\")\n        \n        # Check if temperature is in valid range\n        if temp_f < -50 or temp_f > 150:\n            print(\"Temperature outside valid range.\")\n            print(\"<answer>C3</answer>\")\n        elif temp_f > 110:\n            print(f\"Temperature exceeded 110 F (reached {temp_f:.2f} F)\")\n            print(\"<answer>A</answer>\")\n        else:\n            print(f\"Temperature did not exceed 110 F (max was {temp_f:.2f} F)\")\n            print(\"<answer>B</answer>\")",
+            "exec_msg": "Images found: 696\nMax temperature in September 2022: 116.23 F (319.95 K)\nTemperature exceeded 110 F (reached 116.23 F)\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

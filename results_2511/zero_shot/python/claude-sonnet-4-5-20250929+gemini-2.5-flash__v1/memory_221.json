@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Were there more active fire counts in Punjab than Haryana on November 8, 2024?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-sonnet-4-5-20250929",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_11-35-26",
+        "url": "https://earthobservatory.nasa.gov/images/153826/is-fire-activity-declining-in-northwestern-india",
+        "unique_id": 221
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: \n   - Use FIRMS/MODIS or VIIRS active fire collection for November 8, 2024\n   - Need geometries for Punjab and Haryana states in India\n   - Compare fire counts between the two regions\n\n2. Masking strategy:\n   - No masking needed - we're looking at active fire detections directly\n   - The question is about fire counts, not optical imagery\n\n3. Logic to distinguish Valid Zero (A/B) from Null/Error (C3):\n   - Valid Zero: If one or both states have 0 fires, that's a valid answer (A or B)\n   - C1: If no fire data exists for Nov 8, 2024\n   - C2: Not applicable (fire points, not pixels)\n   - C3: If calculation fails or returns None/NaN\n   - Compare counts: Punjab > Haryana \u2192 A, otherwise \u2192 B\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define geometries for Punjab and Haryana\npunjab = ee.Geometry.Polygon([\n    [[73.9, 29.5], [76.9, 29.5], [76.9, 32.5], [73.9, 32.5], [73.9, 29.5]]\n])\n\nharyana = ee.Geometry.Polygon([\n    [[74.5, 27.6], [77.6, 27.6], [77.6, 30.9], [74.5, 30.9], [74.5, 27.6]]\n])\n\n# 2. Get FIRMS active fire data for November 8, 2024\nfire_collection = ee.ImageCollection('FIRMS').filterDate('2024-11-08', '2024-11-09')\n\n# Check if collection exists\ncollection_size = fire_collection.size().getInfo()\nprint(f\"Fire images available: {collection_size}\")\n\nif collection_size == 0:\n    print(\"No fire data for November 8, 2024\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # Get the fire image for the date\n    fire_img = fire_collection.first()\n    \n    # Count fires in Punjab\n    punjab_stats = fire_img.select('T21').reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=punjab,\n        scale=1000,\n        maxPixels=1e9\n    )\n    punjab_count = punjab_stats.get('T21').getInfo()\n    \n    # Count fires in Haryana\n    haryana_stats = fire_img.select('T21').reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=haryana,\n        scale=1000,\n        maxPixels=1e9\n    )\n    haryana_count = haryana_stats.get('T21').getInfo()\n    \n    print(f\"Punjab fire count: {punjab_count}\")\n    print(f\"Haryana fire count: {haryana_count}\")\n    \n    # Validate results\n    if punjab_count is None or haryana_count is None:\n        print(\"Calculation failed - invalid result\")\n        print(\"<answer>C3</answer>\")\n    else:\n        # Compare counts\n        if punjab_count > haryana_count:\n            print(f\"Punjab had more fires ({punjab_count} vs {haryana_count})\")\n            print(\"<answer>A</answer>\")\n        else:\n            print(f\"Punjab did not have more fires ({punjab_count} vs {haryana_count})\")\n            print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define geometries for Punjab and Haryana\npunjab = ee.Geometry.Polygon([\n    [[73.9, 29.5], [76.9, 29.5], [76.9, 32.5], [73.9, 32.5], [73.9, 29.5]]\n])\n\nharyana = ee.Geometry.Polygon([\n    [[74.5, 27.6], [77.6, 27.6], [77.6, 30.9], [74.5, 30.9], [74.5, 27.6]]\n])\n\n# 2. Get FIRMS active fire data for November 8, 2024\nfire_collection = ee.ImageCollection('FIRMS').filterDate('2024-11-08', '2024-11-09')\n\n# Check if collection exists\ncollection_size = fire_collection.size().getInfo()\nprint(f\"Fire images available: {collection_size}\")\n\nif collection_size == 0:\n    print(\"No fire data for November 8, 2024\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # Get the fire image for the date\n    fire_img = fire_collection.first()\n    \n    # Count fires in Punjab\n    punjab_stats = fire_img.select('T21').reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=punjab,\n        scale=1000,\n        maxPixels=1e9\n    )\n    punjab_count = punjab_stats.get('T21').getInfo()\n    \n    # Count fires in Haryana\n    haryana_stats = fire_img.select('T21').reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=haryana,\n        scale=1000,\n        maxPixels=1e9\n    )\n    haryana_count = haryana_stats.get('T21').getInfo()\n    \n    print(f\"Punjab fire count: {punjab_count}\")\n    print(f\"Haryana fire count: {haryana_count}\")\n    \n    # Validate results\n    if punjab_count is None or haryana_count is None:\n        print(\"Calculation failed - invalid result\")\n        print(\"<answer>C3</answer>\")\n    else:\n        # Compare counts\n        if punjab_count > haryana_count:\n            print(f\"Punjab had more fires ({punjab_count} vs {haryana_count})\")\n            print(\"<answer>A</answer>\")\n        else:\n            print(f\"Punjab did not have more fires ({punjab_count} vs {haryana_count})\")\n            print(\"<answer>B</answer>\")",
+            "exec_msg": "Fire images available: 1\nPunjab fire count: 2843\nHaryana fire count: 1950\nPunjab had more fires (2843 vs 1950)\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

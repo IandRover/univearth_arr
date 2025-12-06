@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "In November 2021, did Seattle experience less than 20cm of rainfall?",
+        "answer": "no",
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-reasoner",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_09-23-52",
+        "url": "https://earthobservatory.nasa.gov/images/149195/soggy-autumn-in-the-pacific-northwest",
+        "unique_id": 110
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nseattle = ee.Geometry.Rectangle([-122.45, 47.5, -122.25, 47.7])\nstart_date = '2021-11-01'\nend_date = '2021-12-01'\n\n# 2. Data Acquisition - CHIRPS Daily Precipitation (mm/day)\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterBounds(seattle) \\\n    .filterDate(start_date, end_date)\n\nn_images = chirps.size().getInfo()\nprint(f\"November 2021 Images: {n_images}\")\n\n# Check for empty collection\nif n_images == 0:\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Processing: Sum daily precipitation for monthly total (mm)\ntotal_precip = chirps.sum()\nband_name = 'precipitation'\n\n# Count valid pixels in the summed image\ncount_dict = total_precip.select(band_name).reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=seattle,\n    scale=1000,\n    maxPixels=1e9\n)\nvalid_pixels = count_dict.get(band_name).getInfo()\nprint(f\"Valid Pixels: {int(valid_pixels)}\")\n\nif valid_pixels == 0:\n    print(\"<answer>C2</answer>\")\n    exit()\n\n# 4. Calculation: Mean monthly precipitation over area (mm)\nmean_dict = total_precip.reduceRegion(\n    reducer=ee.Reducer.mean(),\n    geometry=seattle,\n    scale=1000,\n    maxPixels=1e9\n)\nmean_mm = mean_dict.get(band_name).getInfo()\n\n# Validate result\nif mean_mm is None or mean_mm != mean_mm:  # Check for None or NaN\n    print(\"<answer>C3</answer>\")\n    exit()\n\nmean_cm = mean_mm / 10.0  # Convert mm to cm\nprint(f\"Mean Monthly Rainfall: {mean_cm:.2f} cm\")\n\n# 5. Final Answer: Less than 20 cm?\nif mean_cm < 20:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n\n**Explanation:**\n- Used CHIRPS daily precipitation data (mm/day) for November 2021 over a Seattle bounding box.\n- Summed daily values to get monthly total precipitation in mm, then converted to cm.\n- Checked for empty collection (C1) and no valid pixels (C2) after masking.\n- Calculated mean rainfall over the region. If the result was invalid (None/NaN), would output C3.\n- Compared the mean (in cm) against 20 cm threshold to determine answer A (Yes) or B (No).",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nseattle = ee.Geometry.Rectangle([-122.45, 47.5, -122.25, 47.7])\nstart_date = '2021-11-01'\nend_date = '2021-12-01'\n\n# 2. Data Acquisition - CHIRPS Daily Precipitation (mm/day)\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterBounds(seattle) \\\n    .filterDate(start_date, end_date)\n\nn_images = chirps.size().getInfo()\nprint(f\"November 2021 Images: {n_images}\")\n\n# Check for empty collection\nif n_images == 0:\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Processing: Sum daily precipitation for monthly total (mm)\ntotal_precip = chirps.sum()\nband_name = 'precipitation'\n\n# Count valid pixels in the summed image\ncount_dict = total_precip.select(band_name).reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=seattle,\n    scale=1000,\n    maxPixels=1e9\n)\nvalid_pixels = count_dict.get(band_name).getInfo()\nprint(f\"Valid Pixels: {int(valid_pixels)}\")\n\nif valid_pixels == 0:\n    print(\"<answer>C2</answer>\")\n    exit()\n\n# 4. Calculation: Mean monthly precipitation over area (mm)\nmean_dict = total_precip.reduceRegion(\n    reducer=ee.Reducer.mean(),\n    geometry=seattle,\n    scale=1000,\n    maxPixels=1e9\n)\nmean_mm = mean_dict.get(band_name).getInfo()\n\n# Validate result\nif mean_mm is None or mean_mm != mean_mm:  # Check for None or NaN\n    print(\"<answer>C3</answer>\")\n    exit()\n\nmean_cm = mean_mm / 10.0  # Convert mm to cm\nprint(f\"Mean Monthly Rainfall: {mean_cm:.2f} cm\")\n\n# 5. Final Answer: Less than 20 cm?\nif mean_cm < 20:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "November 2021 Images: 30\nValid Pixels: 429\nMean Monthly Rainfall: 19.30 cm\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

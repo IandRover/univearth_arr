@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Did temperatures exceed 100 degrees fahrenheit in Prescott, Arizona during the month of June in 2017?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-haiku-4-5-20251001",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_09-46-20",
+        "url": "https://earthobservatory.nasa.gov/images/90501/fires-in-the-southwest",
+        "unique_id": 319
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. **Search Strategy**: \n   - Use NOAA/GOES or Landsat thermal data to get land surface temperature (LST).\n   - Prescott, Arizona: ~34.54\u00b0N, 112.47\u00b0W\n   - Date range: June 1-30, 2017\n   - Collection: NOAA GOES-16/17 or Landsat 8 (Band 10/11 for thermal)\n\n2. **Masking Strategy**: \n   - Filter for valid thermal pixels (quality control bands).\n   - Mask clouds to avoid contaminated measurements.\n   - Focus on daytime/afternoon passes when max temps occur.\n\n3. **Logic**:\n   - Convert thermal data to brightness temperature or LST in Kelvin, then to Fahrenheit.\n   - Check if **any** pixel in June 2017 exceeded 100\u00b0F (310.93 K).\n   - If valid pixels exist but max < 100\u00b0F \u2192 B (No).\n   - If valid pixels exist and max \u2265 100\u00b0F \u2192 A (Yes).\n   - If no valid pixels \u2192 C2.\n   - If calculation fails (None/NaN) \u2192 C3.\n   - If collection empty \u2192 C1.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Prescott, Arizona location\nprescott = ee.Geometry.Point([-112.47, 34.54])\nprescott_buffer = prescott.buffer(15000)  # ~15 km buffer\n\n# 2. Define date range: June 2017\nstart_date = '2017-06-01'\nend_date = '2017-06-30'\n\n# 3. Attempt 1: Landsat 8 Band 10 (Thermal Infrared)\ncol = (ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')\n       .filterBounds(prescott_buffer)\n       .filterDate(start_date, end_date)\n       .filter(ee.Filter.lt('CLOUD_COVER', 50)))\n\nprint(f\"Landsat 8 images found: {col.size().getInfo()}\")\n\nif col.size().getInfo() == 0:\n    print(\"No Landsat 8 data for June 2017 in Prescott.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 4. Process thermal band (Band 10: ST_B10, already in Kelvin)\n    def add_fahrenheit(img):\n        # ST_B10 is in Kelvin from Collection 2\n        st_band = img.select('ST_B10')\n        # Convert K to Fahrenheit: (K - 273.15) * 9/5 + 32\n        fahrenheit = st_band.subtract(273.15).multiply(1.8).add(32)\n        return fahrenheit.rename('temp_f')\n    \n    col_f = col.map(add_fahrenheit)\n    \n    # 5. Get maximum temperature in the region\n    max_temp = col_f.reduce(ee.Reducer.max())\n    \n    # 6. Extract max temperature value\n    stats = max_temp.reduceRegion(\n        reducer=ee.Reducer.max(),\n        geometry=prescott_buffer,\n        scale=30,\n        maxPixels=1e9\n    ).getInfo()\n    \n    max_val = stats.get('temp_f_max')\n    \n    print(f\"Landsat 8 June 2017 - Images: {col.size().getInfo()}\")\n    print(f\"Max Temperature (\u00b0F): {max_val}\")\n    \n    # 7. Validate and answer\n    if max_val is None or max_val == 'null':\n        print(\"<answer>C3</answer>\")\n    elif max_val >= 100.0:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Prescott, Arizona location\nprescott = ee.Geometry.Point([-112.47, 34.54])\nprescott_buffer = prescott.buffer(15000)  # ~15 km buffer\n\n# 2. Define date range: June 2017\nstart_date = '2017-06-01'\nend_date = '2017-06-30'\n\n# 3. Attempt 1: Landsat 8 Band 10 (Thermal Infrared)\ncol = (ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')\n       .filterBounds(prescott_buffer)\n       .filterDate(start_date, end_date)\n       .filter(ee.Filter.lt('CLOUD_COVER', 50)))\n\nprint(f\"Landsat 8 images found: {col.size().getInfo()}\")\n\nif col.size().getInfo() == 0:\n    print(\"No Landsat 8 data for June 2017 in Prescott.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 4. Process thermal band (Band 10: ST_B10, already in Kelvin)\n    def add_fahrenheit(img):\n        # ST_B10 is in Kelvin from Collection 2\n        st_band = img.select('ST_B10')\n        # Convert K to Fahrenheit: (K - 273.15) * 9/5 + 32\n        fahrenheit = st_band.subtract(273.15).multiply(1.8).add(32)\n        return fahrenheit.rename('temp_f')\n    \n    col_f = col.map(add_fahrenheit)\n    \n    # 5. Get maximum temperature in the region\n    max_temp = col_f.reduce(ee.Reducer.max())\n    \n    # 6. Extract max temperature value\n    stats = max_temp.reduceRegion(\n        reducer=ee.Reducer.max(),\n        geometry=prescott_buffer,\n        scale=30,\n        maxPixels=1e9\n    ).getInfo()\n    \n    max_val = stats.get('temp_f_max')\n    \n    print(f\"Landsat 8 June 2017 - Images: {col.size().getInfo()}\")\n    print(f\"Max Temperature (\u00b0F): {max_val}\")\n    \n    # 7. Validate and answer\n    if max_val is None or max_val == 'null':\n        print(\"<answer>C3</answer>\")\n    elif max_val >= 100.0:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "Landsat 8 images found: 2\nLandsat 8 June 2017 - Images: 2\nMax Temperature (\u00b0F): 95579.33\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C3</answer>",
+            "answer": "C3",
+            "answer_thinking": null
+        }
+    ]
+}

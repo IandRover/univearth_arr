@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Did the air temperature reach over 50 degrees Celsius at the Furnace Creek Visitor's Center on June 30, 2013?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-reasoner",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_09-01-30",
+        "url": "https://earthobservatory.nasa.gov/images/81562/death-valley-claims-a-heat-title-again",
+        "unique_id": 277
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\npoint = ee.Geometry.Point(-116.8687, 36.4619)  # Furnace Creek Visitor Center\nstart_date = '2013-06-30'\nend_date = '2013-07-01'\n\n# 2. Data Acquisition - ERA5-Land hourly temperature dataset\ncollection = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(point) \\\n    .select('temperature_2m')  # Temperature at 2m in Kelvin\n\n# Check for data availability\ncount = collection.size().getInfo()\nif count == 0:\n    print(f\"2013-06-30 Images: {count}\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # Process collection: convert K to C and get daily maximum\n    def k_to_c(img):\n        return img.subtract(273.15).rename('temp_c')\n    \n    temp_c_col = collection.map(k_to_c)\n    \n    # Get max temperature image\n    max_temp_img = temp_c_col.max()\n    \n    # Extract value at point with conservative scale\n    result = max_temp_img.reduceRegion(\n        reducer=ee.Reducer.max(),\n        geometry=point,\n        scale=30000,\n        bestEffort=True,\n        maxPixels=1e9\n    ).get('temp_c')\n    \n    temp_val = result.getInfo()\n    \n    # Count valid pixels\n    count_stats = max_temp_img.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=point.buffer(5000),\n        scale=30000,\n        maxPixels=1e9\n    ).get('temp_c').getInfo()\n    \n    print(f\"2013-06-30 Images: {count}, Valid Pixels: {count_stats}\")\n    \n    if temp_val is None:\n        print(\"<answer>C3</answer>\")\n    elif count_stats == 0:\n        print(\"<answer>C2</answer>\")\n    elif temp_val > 50:\n        print(f\"Max Temp: {temp_val:.1f}\u00b0C\")\n        print(\"<answer>A</answer>\")\n    else:\n        print(f\"Max Temp: {temp_val:.1f}\u00b0C\")\n        print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\npoint = ee.Geometry.Point(-116.8687, 36.4619)  # Furnace Creek Visitor Center\nstart_date = '2013-06-30'\nend_date = '2013-07-01'\n\n# 2. Data Acquisition - ERA5-Land hourly temperature dataset\ncollection = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(point) \\\n    .select('temperature_2m')  # Temperature at 2m in Kelvin\n\n# Check for data availability\ncount = collection.size().getInfo()\nif count == 0:\n    print(f\"2013-06-30 Images: {count}\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # Process collection: convert K to C and get daily maximum\n    def k_to_c(img):\n        return img.subtract(273.15).rename('temp_c')\n    \n    temp_c_col = collection.map(k_to_c)\n    \n    # Get max temperature image\n    max_temp_img = temp_c_col.max()\n    \n    # Extract value at point with conservative scale\n    result = max_temp_img.reduceRegion(\n        reducer=ee.Reducer.max(),\n        geometry=point,\n        scale=30000,\n        bestEffort=True,\n        maxPixels=1e9\n    ).get('temp_c')\n    \n    temp_val = result.getInfo()\n    \n    # Count valid pixels\n    count_stats = max_temp_img.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=point.buffer(5000),\n        scale=30000,\n        maxPixels=1e9\n    ).get('temp_c').getInfo()\n    \n    print(f\"2013-06-30 Images: {count}, Valid Pixels: {count_stats}\")\n    \n    if temp_val is None:\n        print(\"<answer>C3</answer>\")\n    elif count_stats == 0:\n        print(\"<answer>C2</answer>\")\n    elif temp_val > 50:\n        print(f\"Max Temp: {temp_val:.1f}\u00b0C\")\n        print(\"<answer>A</answer>\")\n    else:\n        print(f\"Max Temp: {temp_val:.1f}\u00b0C\")\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "2013-06-30 Images: 24, Valid Pixels: 0\n<answer>C2</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C2</answer>",
+            "answer": "C2",
+            "answer_thinking": null
+        }
+    ]
+}

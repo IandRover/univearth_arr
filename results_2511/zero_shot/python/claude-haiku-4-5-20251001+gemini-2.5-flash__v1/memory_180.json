@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Did the Central Valley of California experience at least 15 inches of rainfall between October 2022 and March 2023?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-haiku-4-5-20251001",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-28_20-13-54",
+        "url": "https://earthobservatory.nasa.gov/images/151438/satellites-show-gains-in-california-water",
+        "unique_id": 180
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: \n   - Use CHIRPS (Climate Hazards Group InfraRed Precipitation with Stations) dataset for rainfall measurement, which is widely used for precipitation analysis\n   - Define Central Valley of California geometry (approximately lat: 35-40\u00b0N, lon: -119 to -121\u00b0W)\n   - Date range: October 1, 2022 to March 31, 2023 (6 months)\n\n2. Masking strategy:\n   - CHIRPS is a precipitation dataset without cloud masking concerns\n   - Sum all daily precipitation across the 6-month period\n   - Convert mm to inches (1 inch = 25.4 mm)\n\n3. Logic to distinguish Valid Zero from Null/Error:\n   - Valid Zero (B): If total rainfall < 15 inches (measured correctly)\n   - Valid Non-Zero (A): If total rainfall >= 15 inches (measured correctly)\n   - C3: If calculation returns None/NaN or invalid value\n   - C1: If no images found in collection\n   - C2: If no valid pixels after processing\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry Definition - Central Valley of California\ncentral_valley = ee.Geometry.Rectangle([-121.5, 35.0, -119.0, 40.0])\n\n# 2. Data Acquisition - CHIRPS Daily Precipitation\nstart_date = '2022-10-01'\nend_date = '2023-03-31'\n\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(central_valley)\n\n# Check if collection is empty\ncollection_size = chirps.size().getInfo()\nprint(f\"CHIRPS images found: {collection_size}\")\n\nif collection_size == 0:\n    print(\"No CHIRPS data for Oct 2022 - Mar 2023\")\n    print(\"C1\")\nelse:\n    # 3. Calculate total precipitation (sum all daily values)\n    total_precip_mm = chirps.select('precipitation').sum()\n    \n    # 4. Reduce to get mean value over Central Valley region\n    stats = total_precip_mm.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=central_valley,\n        scale=1000,\n        maxPixels=1e9\n    ).getInfo()\n    \n    precip_mm = stats.get('precipitation')\n    print(f\"Total precipitation (mm): {precip_mm}\")\n    \n    # Check for valid result\n    if precip_mm is None or precip_mm < 0:\n        print(\"Invalid precipitation value\")\n        print(\"C3\")\n    else:\n        # 5. Convert mm to inches and check threshold\n        precip_inches = precip_mm / 25.4\n        print(f\"Total precipitation (inches): {precip_inches:.2f}\")\n        print(f\"Threshold: 15.0 inches\")\n        print(f\"Valid pixels in region: {collection_size} daily images\")\n        \n        if precip_inches >= 15.0:\n            print(\"A\")\n        else:\n            print(\"B\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry Definition - Central Valley of California\ncentral_valley = ee.Geometry.Rectangle([-121.5, 35.0, -119.0, 40.0])\n\n# 2. Data Acquisition - CHIRPS Daily Precipitation\nstart_date = '2022-10-01'\nend_date = '2023-03-31'\n\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(central_valley)\n\n# Check if collection is empty\ncollection_size = chirps.size().getInfo()\nprint(f\"CHIRPS images found: {collection_size}\")\n\nif collection_size == 0:\n    print(\"No CHIRPS data for Oct 2022 - Mar 2023\")\n    print(\"C1\")\nelse:\n    # 3. Calculate total precipitation (sum all daily values)\n    total_precip_mm = chirps.select('precipitation').sum()\n    \n    # 4. Reduce to get mean value over Central Valley region\n    stats = total_precip_mm.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=central_valley,\n        scale=1000,\n        maxPixels=1e9\n    ).getInfo()\n    \n    precip_mm = stats.get('precipitation')\n    print(f\"Total precipitation (mm): {precip_mm}\")\n    \n    # Check for valid result\n    if precip_mm is None or precip_mm < 0:\n        print(\"Invalid precipitation value\")\n        print(\"C3\")\n    else:\n        # 5. Convert mm to inches and check threshold\n        precip_inches = precip_mm / 25.4\n        print(f\"Total precipitation (inches): {precip_inches:.2f}\")\n        print(f\"Threshold: 15.0 inches\")\n        print(f\"Valid pixels in region: {collection_size} daily images\")\n        \n        if precip_inches >= 15.0:\n            print(\"A\")\n        else:\n            print(\"B\")",
+            "exec_msg": "CHIRPS images found: 181\nTotal precipitation (mm): 722.5836262938818\nTotal precipitation (inches): 28.45\nThreshold: 15.0 inches\nValid pixels in region: 181 daily images\nA\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

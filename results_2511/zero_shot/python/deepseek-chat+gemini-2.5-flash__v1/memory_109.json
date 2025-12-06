@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Did Bellingham, Washington experience at least 30cm of rainfall between September and November 2021?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-chat",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-28_22-11-33",
+        "url": "https://earthobservatory.nasa.gov/images/149195/soggy-autumn-in-the-pacific-northwest",
+        "unique_id": 109
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:\n   - Collection: I'll use CHIRPS Daily precipitation data which is good for rainfall analysis\n   - Date: September 1 to November 30, 2021\n   - Location: Bellingham, Washington (need to define a point geometry)\n\n2. Masking strategy:\n   - For precipitation data, no cloud masking needed as CHIRPS is already processed precipitation estimates\n\n3. Logic:\n   - Sum precipitation over the 3-month period\n   - Convert from mm to cm (divide by 10)\n   - Check if total >= 30cm\n   - Need to handle cases where data might be missing or invalid\n\nLet me structure this:\n- Define Bellingham, WA point\n- Get CHIRPS daily precipitation collection\n- Filter by date and location\n- Check if collection is empty\n- Sum precipitation over the period\n- Check if result is valid\n- Compare to 30cm threshold\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nbellingham = ee.Geometry.Point([-122.482, 48.751])\nstart_date = '2021-09-01'\nend_date = '2021-11-30'\n\n# 2. Data Acquisition\nprecip_col = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(bellingham)\n\n# Check if collection is empty\nif precip_col.size().getInfo() == 0:\n    print(\"No precipitation data found for the period.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing - Sum precipitation over the period\n    total_precip = precip_col.select('precipitation').sum()\n    \n    # Get pixel count to check for valid data\n    count_stats = total_precip.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=bellingham,\n        scale=5000,\n        maxPixels=1e9\n    )\n    pixel_count = count_stats.get('precipitation').getInfo()\n    \n    if pixel_count == 0:\n        print(\"No valid precipitation pixels.\")\n        print(\"<answer>C2</answer>\")\n    else:\n        # 4. Calculation - Get total precipitation in cm\n        precip_stats = total_precip.reduceRegion(\n            reducer=ee.Reducer.mean(),\n            geometry=bellingham,\n            scale=5000,\n            maxPixels=1e9\n        )\n        total_mm = precip_stats.get('precipitation').getInfo()\n        \n        # Convert mm to cm and validate\n        if total_mm is None:\n            print(\"Calculation failed - no precipitation value.\")\n            print(\"<answer>C3</answer>\")\n        else:\n            total_cm = total_mm / 10.0\n            print(f\"Total rainfall: {total_cm:.1f}cm, Pixels: {pixel_count}\")\n            \n            # 5. Final Answer\n            if total_cm >= 30:\n                print(\"<answer>A</answer>\")\n            else:\n                print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nbellingham = ee.Geometry.Point([-122.482, 48.751])\nstart_date = '2021-09-01'\nend_date = '2021-11-30'\n\n# 2. Data Acquisition\nprecip_col = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(bellingham)\n\n# Check if collection is empty\nif precip_col.size().getInfo() == 0:\n    print(\"No precipitation data found for the period.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing - Sum precipitation over the period\n    total_precip = precip_col.select('precipitation').sum()\n    \n    # Get pixel count to check for valid data\n    count_stats = total_precip.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=bellingham,\n        scale=5000,\n        maxPixels=1e9\n    )\n    pixel_count = count_stats.get('precipitation').getInfo()\n    \n    if pixel_count == 0:\n        print(\"No valid precipitation pixels.\")\n        print(\"<answer>C2</answer>\")\n    else:\n        # 4. Calculation - Get total precipitation in cm\n        precip_stats = total_precip.reduceRegion(\n            reducer=ee.Reducer.mean(),\n            geometry=bellingham,\n            scale=5000,\n            maxPixels=1e9\n        )\n        total_mm = precip_stats.get('precipitation').getInfo()\n        \n        # Convert mm to cm and validate\n        if total_mm is None:\n            print(\"Calculation failed - no precipitation value.\")\n            print(\"<answer>C3</answer>\")\n        else:\n            total_cm = total_mm / 10.0\n            print(f\"Total rainfall: {total_cm:.1f}cm, Pixels: {pixel_count}\")\n            \n            # 5. Final Answer\n            if total_cm >= 30:\n                print(\"<answer>A</answer>\")\n            else:\n                print(\"<answer>B</answer>\")",
+            "exec_msg": "Total rainfall: 56.5cm, Pixels: 1\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

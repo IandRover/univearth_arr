@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Between September through November 2021, did Seattle experience at least 40cm of rainfall?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-haiku-4-5-20251001",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-28_21-14-09",
+        "url": "https://earthobservatory.nasa.gov/images/149195/soggy-autumn-in-the-pacific-northwest",
+        "unique_id": 108
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: I need to find precipitation data for Seattle (Washington, USA) from September through November 2021. I'll use NOAA's Climate Prediction Center gridded precipitation data or CHIRPS (Climate Hazards Group InfraRed Precipitation with Station data), which are reliable global precipitation datasets available in GEE.\n2. Masking strategy: Precipitation data doesn't require cloud masking like optical imagery. I'll sum cumulative precipitation over the 3-month period.\n3. Logic: \n   - Check if data exists for the region and date range (C1).\n   - Sum total rainfall over Sep-Nov 2021.\n   - Check if result is valid (not None/NaN) - if invalid, output C3.\n   - Compare: \u226540cm \u2192 A, <40cm \u2192 B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Seattle geometry\nseattle = ee.Geometry.Point([-122.3321, 47.6062])\nseattle_buffer = seattle.buffer(25000)  # ~25km buffer for regional precipitation\n\n# 2. Define time period: September through November 2021\nstart_date = '2021-09-01'\nend_date = '2021-11-30'\n\n# 3. Load CHIRPS precipitation dataset (daily, mm)\nprecip_col = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(start_date, end_date).filterBounds(seattle_buffer)\n\n# Check if collection is empty\nnum_images = precip_col.size().getInfo()\nprint(f\"Precipitation images found (Sep-Nov 2021): {num_images}\")\n\nif num_images == 0:\n    print(\"No precipitation data available for the date range.\")\n    print(\"C1\")\nelse:\n    # 4. Sum all daily precipitation over the period (convert mm to cm)\n    total_precip_mm = precip_col.sum()\n    \n    # 5. Calculate total precipitation in the Seattle area\n    total_precip_dict = total_precip_mm.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=seattle_buffer,\n        scale=5000,\n        maxPixels=1e9\n    ).getInfo()\n    \n    total_precip_mm_val = total_precip_dict.get('precipitation')\n    print(f\"Total precipitation dict: {total_precip_dict}\")\n    \n    # Validate result\n    if total_precip_mm_val is None or total_precip_mm_val != total_precip_mm_val:  # NaN check\n        print(\"Calculation returned None or NaN.\")\n        print(\"C3\")\n    else:\n        total_precip_cm = total_precip_mm_val / 10.0  # Convert mm to cm\n        print(f\"Total precipitation (Sep-Nov 2021): {total_precip_cm:.2f} cm\")\n        print(f\"Images processed: {num_images}\")\n        \n        # Check if at least 40cm\n        if total_precip_cm >= 40.0:\n            print(\"A\")\n        else:\n            print(\"B\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Seattle geometry\nseattle = ee.Geometry.Point([-122.3321, 47.6062])\nseattle_buffer = seattle.buffer(25000)  # ~25km buffer for regional precipitation\n\n# 2. Define time period: September through November 2021\nstart_date = '2021-09-01'\nend_date = '2021-11-30'\n\n# 3. Load CHIRPS precipitation dataset (daily, mm)\nprecip_col = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(start_date, end_date).filterBounds(seattle_buffer)\n\n# Check if collection is empty\nnum_images = precip_col.size().getInfo()\nprint(f\"Precipitation images found (Sep-Nov 2021): {num_images}\")\n\nif num_images == 0:\n    print(\"No precipitation data available for the date range.\")\n    print(\"C1\")\nelse:\n    # 4. Sum all daily precipitation over the period (convert mm to cm)\n    total_precip_mm = precip_col.sum()\n    \n    # 5. Calculate total precipitation in the Seattle area\n    total_precip_dict = total_precip_mm.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=seattle_buffer,\n        scale=5000,\n        maxPixels=1e9\n    ).getInfo()\n    \n    total_precip_mm_val = total_precip_dict.get('precipitation')\n    print(f\"Total precipitation dict: {total_precip_dict}\")\n    \n    # Validate result\n    if total_precip_mm_val is None or total_precip_mm_val != total_precip_mm_val:  # NaN check\n        print(\"Calculation returned None or NaN.\")\n        print(\"C3\")\n    else:\n        total_precip_cm = total_precip_mm_val / 10.0  # Convert mm to cm\n        print(f\"Total precipitation (Sep-Nov 2021): {total_precip_cm:.2f} cm\")\n        print(f\"Images processed: {num_images}\")\n        \n        # Check if at least 40cm\n        if total_precip_cm >= 40.0:\n            print(\"A\")\n        else:\n            print(\"B\")",
+            "exec_msg": "Precipitation images found (Sep-Nov 2021): 90\nTotal precipitation dict: {'precipitation': 388.27373346154116}\nTotal precipitation (Sep-Nov 2021): 38.83 cm\nImages processed: 90\nB\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nB\n</answer>",
+            "answer": "B",
+            "answer_thinking": null
+        }
+    ]
+}

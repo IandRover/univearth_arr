@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Does central Oklahoma experience more rainfall compared to northen Texas during August 10-20, 2007?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-haiku-4-5-20251001",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_09-39-16",
+        "url": "https://www.earthobservatory.nasa.gov/images/7980/",
+        "unique_id": 394
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:\n   - Central Oklahoma: ~35.5\u00b0N, 97.5\u00b0W\n   - Northern Texas: ~34.0\u00b0N, 101.0\u00b0W\n   - Date: August 10-20, 2007\n   - Collection: TRMM (Tropical Rainfall Measuring Mission) for historical rainfall data, or IMERG if available for 2007. TRMM has good coverage for this period.\n\n2. Masking strategy:\n   - Rainfall data doesn't require cloud masking in the traditional sense; we're using satellite-derived precipitation estimates. No need to filter by cloud cover\u2014we want the rainfall data itself.\n\n3. Logic:\n   - Extract mean rainfall for each region during the date range.\n   - Compare: Central Oklahoma rainfall > Northern Texas rainfall?\n   - Handle C1 (no data), C2 (all pixels masked/invalid), C3 (null results).\n   - Valid zero is possible (no rain), so distinguish carefully.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define geometries\ncentral_oklahoma = ee.Geometry.Point([-97.5, 35.5]).buffer(50000)  # ~50km radius\nnorthern_texas = ee.Geometry.Point([-101.0, 34.0]).buffer(50000)   # ~50km radius\n\n# 2. Time range\nstart_date = '2007-08-10'\nend_date = '2007-08-20'\n\n# 3. Acquire TRMM rainfall data\n# TRMM 3B42 daily rainfall (accumulated)\ntrmm = ee.ImageCollection('TRMM/3B42') \\\n    .filterDate(start_date, end_date) \\\n    .select('precipitation')\n\n# Check data availability\ntrmm_count = trmm.size().getInfo()\nprint(f\"TRMM Images (Aug 10-20, 2007): {trmm_count}\")\n\nif trmm_count == 0:\n    print(\"No TRMM data found. Attempting IMERG...\")\n    trmm = ee.ImageCollection('NOAA/IMERG/V06B') \\\n        .filterDate(start_date, end_date) \\\n        .select('precipitationCal')\n    trmm_count = trmm.size().getInfo()\n    print(f\"IMERG Images: {trmm_count}\")\n    if trmm_count == 0:\n        print(\"No rainfall data available.\")\n        print(\"C1\")\n        exit()\n\n# 4. Calculate mean rainfall for both regions\n# Sum rainfall over the period\nrainfall_stack = trmm.sum()\n\n# Central Oklahoma\nrainfall_ok = rainfall_stack.reduceRegion(\n    reducer=ee.Reducer.mean(),\n    geometry=central_oklahoma,\n    scale=25000,\n    maxPixels=1e8\n).get('precipitation').getInfo()\n\n# Northern Texas\nrainfall_tx = rainfall_stack.reduceRegion(\n    reducer=ee.Reducer.mean(),\n    geometry=northern_texas,\n    scale=25000,\n    maxPixels=1e8\n).get('precipitation').getInfo()\n\n# 5. Validation\nprint(f\"Central Oklahoma: {rainfall_ok} mm\")\nprint(f\"Northern Texas: {rainfall_tx} mm\")\n\n# Check for valid data\nif rainfall_ok is None or rainfall_tx is None:\n    print(\"C3\")\nelif rainfall_ok > rainfall_tx:\n    print(\"A\")\nelse:\n    print(\"B\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define geometries\ncentral_oklahoma = ee.Geometry.Point([-97.5, 35.5]).buffer(50000)  # ~50km radius\nnorthern_texas = ee.Geometry.Point([-101.0, 34.0]).buffer(50000)   # ~50km radius\n\n# 2. Time range\nstart_date = '2007-08-10'\nend_date = '2007-08-20'\n\n# 3. Acquire TRMM rainfall data\n# TRMM 3B42 daily rainfall (accumulated)\ntrmm = ee.ImageCollection('TRMM/3B42') \\\n    .filterDate(start_date, end_date) \\\n    .select('precipitation')\n\n# Check data availability\ntrmm_count = trmm.size().getInfo()\nprint(f\"TRMM Images (Aug 10-20, 2007): {trmm_count}\")\n\nif trmm_count == 0:\n    print(\"No TRMM data found. Attempting IMERG...\")\n    trmm = ee.ImageCollection('NOAA/IMERG/V06B') \\\n        .filterDate(start_date, end_date) \\\n        .select('precipitationCal')\n    trmm_count = trmm.size().getInfo()\n    print(f\"IMERG Images: {trmm_count}\")\n    if trmm_count == 0:\n        print(\"No rainfall data available.\")\n        print(\"C1\")\n        exit()\n\n# 4. Calculate mean rainfall for both regions\n# Sum rainfall over the period\nrainfall_stack = trmm.sum()\n\n# Central Oklahoma\nrainfall_ok = rainfall_stack.reduceRegion(\n    reducer=ee.Reducer.mean(),\n    geometry=central_oklahoma,\n    scale=25000,\n    maxPixels=1e8\n).get('precipitation').getInfo()\n\n# Northern Texas\nrainfall_tx = rainfall_stack.reduceRegion(\n    reducer=ee.Reducer.mean(),\n    geometry=northern_texas,\n    scale=25000,\n    maxPixels=1e8\n).get('precipitation').getInfo()\n\n# 5. Validation\nprint(f\"Central Oklahoma: {rainfall_ok} mm\")\nprint(f\"Northern Texas: {rainfall_tx} mm\")\n\n# Check for valid data\nif rainfall_ok is None or rainfall_tx is None:\n    print(\"C3\")\nelif rainfall_ok > rainfall_tx:\n    print(\"A\")\nelse:\n    print(\"B\")",
+            "exec_msg": "TRMM Images (Aug 10-20, 2007): 80\nCentral Oklahoma: 45.61880518171558 mm\nNorthern Texas: 9.418754527983861 mm\nA\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Is the forest loss from 2015 to 2022 larger than that from 2000 to 2015 at Macaya National Park?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-haiku-4-5-20251001",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_09-16-17",
+        "url": "https://landsat.gsfc.nasa.gov/article/hispaniolas-changing-forests/",
+        "unique_id": 349
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:\n   - Use Global Forest Change (GFC) dataset (Hansen et al.) which has forest loss data for 2000-2022\n   - Define Macaya National Park geometry (located in Haiti)\n   - Extract forest loss for two periods: 2000-2015 and 2015-2022\n\n2. Masking strategy:\n   - GFC data is pre-processed, no cloud masking needed\n   - Filter by loss year to get the two periods\n   - Sum pixel counts for each period\n\n3. Logic to distinguish Valid Zero from Null:\n   - Check if geometry is valid and intersects data\n   - Verify pixel counts are non-zero for each period\n   - Compare the sums: if period2 loss > period1 loss, answer A, else B\n   - If no loss pixels found in either period, could be C2 or valid zero\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Macaya National Park geometry (Haiti, approximate bounds)\nmacaya_coords = [\n    [-72.38, 18.95],\n    [-72.18, 18.95],\n    [-72.18, 18.75],\n    [-72.38, 18.75],\n    [-72.38, 18.95]\n]\nmacaya = ee.Geometry.Polygon(macaya_coords)\n\n# 2. Load Global Forest Change dataset\ngfc = ee.Image('UMD/hansen/global_forest_change_2022_v1_10')\n\n# Extract forest loss layer (year of loss, where 0=no loss, 1-22=year)\nloss = gfc.select('lossyear')\n\n# 3. Calculate forest loss for period 1: 2000-2015 (lossyear 1-15)\nloss_2000_2015 = loss.gte(1).And(loss.lte(15))\ncount_2000_2015 = loss_2000_2015.reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=macaya,\n    scale=30,\n    maxPixels=1e9\n).get('lossyear').getInfo()\n\n# 4. Calculate forest loss for period 2: 2015-2022 (lossyear 16-22)\nloss_2015_2022 = loss.gte(16).And(loss.lte(22))\ncount_2015_2022 = loss_2015_2022.reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=macaya,\n    scale=30,\n    maxPixels=1e9\n).get('lossyear').getInfo()\n\n# Handle None values\nif count_2000_2015 is None:\n    count_2000_2015 = 0\nif count_2015_2022 is None:\n    count_2015_2022 = 0\n\n# 5. Validation & Answer\nprint(f\"Forest Loss 2000-2015: {int(count_2000_2015)} pixels\")\nprint(f\"Forest Loss 2015-2022: {int(count_2015_2022)} pixels\")\n\nif count_2000_2015 == 0 and count_2015_2022 == 0:\n    print(\"C2\")\nelif count_2000_2015 is None or count_2015_2022 is None:\n    print(\"C3\")\nelif count_2015_2022 > count_2000_2015:\n    print(\"A\")\nelse:\n    print(\"B\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Macaya National Park geometry (Haiti, approximate bounds)\nmacaya_coords = [\n    [-72.38, 18.95],\n    [-72.18, 18.95],\n    [-72.18, 18.75],\n    [-72.38, 18.75],\n    [-72.38, 18.95]\n]\nmacaya = ee.Geometry.Polygon(macaya_coords)\n\n# 2. Load Global Forest Change dataset\ngfc = ee.Image('UMD/hansen/global_forest_change_2022_v1_10')\n\n# Extract forest loss layer (year of loss, where 0=no loss, 1-22=year)\nloss = gfc.select('lossyear')\n\n# 3. Calculate forest loss for period 1: 2000-2015 (lossyear 1-15)\nloss_2000_2015 = loss.gte(1).And(loss.lte(15))\ncount_2000_2015 = loss_2000_2015.reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=macaya,\n    scale=30,\n    maxPixels=1e9\n).get('lossyear').getInfo()\n\n# 4. Calculate forest loss for period 2: 2015-2022 (lossyear 16-22)\nloss_2015_2022 = loss.gte(16).And(loss.lte(22))\ncount_2015_2022 = loss_2015_2022.reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=macaya,\n    scale=30,\n    maxPixels=1e9\n).get('lossyear').getInfo()\n\n# Handle None values\nif count_2000_2015 is None:\n    count_2000_2015 = 0\nif count_2015_2022 is None:\n    count_2015_2022 = 0\n\n# 5. Validation & Answer\nprint(f\"Forest Loss 2000-2015: {int(count_2000_2015)} pixels\")\nprint(f\"Forest Loss 2015-2022: {int(count_2015_2022)} pixels\")\n\nif count_2000_2015 == 0 and count_2015_2022 == 0:\n    print(\"C2\")\nelif count_2000_2015 is None or count_2015_2022 is None:\n    print(\"C3\")\nelif count_2015_2022 > count_2000_2015:\n    print(\"A\")\nelse:\n    print(\"B\")",
+            "exec_msg": "Forest Loss 2000-2015: 3523 pixels\nForest Loss 2015-2022: 1830 pixels\nB\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for UMD/hansen/global_forest_change_2022_v1_10! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by UMD/hansen/global_forest_change_2024_v1_12\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/UMD_hansen_global_forest_change_2022_v1_10\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nB\n</answer>",
+            "answer": "B",
+            "answer_thinking": null
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Does the forest fire burn over 0.8 million hectares of land in Quebec, Canada in 2023?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-chat",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-28_21-32-05",
+        "url": "https://earthobservatory.nasa.gov/images/151985/tracking-canadas-extreme-2023-fire-season",
+        "unique_id": 194
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\nThe user is asking about forest fires in Quebec, Canada in 2023 burning over 0.8 million hectares. This requires:\n\n1. Data source: I'll use MODIS burned area product (MCD64A1) which provides burned area data\n2. Location: Quebec, Canada - need to define a geometry for Quebec\n3. Time: 2023\n4. Processing: Sum burned area pixels within Quebec for 2023 and convert to hectares\n5. Threshold: Compare against 0.8 million hectares (800,000 ha)\n\nFor burned area data, MCD64A1 has a 'BurnDate' band where values > 0 indicate burned pixels. I can sum the area of these pixels.\n\nLet me structure this:\n- Define Quebec geometry\n- Get MCD64A1 collection for 2023\n- Check if collection has data\n- Calculate total burned area\n- Validate the result\n- Compare against threshold\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nquebec = ee.Geometry.Polygon([[\n    [-79.762, 45.004], [-57.104, 45.004], \n    [-57.104, 62.583], [-79.762, 62.583], \n    [-79.762, 45.004]\n]])  # Approximate Quebec boundary\n\nstart_date = '2023-01-01'\nend_date = '2023-12-31'\n\n# 2. Data Acquisition - MODIS Burned Area\nburned_col = ee.ImageCollection('MODIS/061/MCD64A1') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(quebec)\n\n# Check if collection has data\nif burned_col.size().getInfo() == 0:\n    print(\"No burned area data found for 2023.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # Create burned area mask (BurnDate > 0 indicates burned)\n    burned_area = burned_col.select('BurnDate').max().gt(0)\n    \n    # Calculate pixel area in hectares (500m resolution for MODIS)\n    pixel_area = ee.Image.pixelArea().divide(10000)  # Convert m\u00b2 to hectares\n    \n    # Calculate total burned area\n    burned_hectares = burned_area.multiply(pixel_area)\n    \n    # Get statistics\n    stats = burned_hectares.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=quebec,\n        scale=500,\n        maxPixels=1e9\n    )\n    \n    total_burned = stats.get('BurnDate').getInfo()\n    \n    if total_burned is None:\n        print(\"Calculation failed - no valid result.\")\n        print(\"<answer>C3</answer>\")\n    else:\n        print(f\"2023 Burned Area: {total_burned:,.0f} hectares\")\n        print(f\"Threshold: 800,000 hectares\")\n        \n        if total_burned > 800000:\n            print(\"<answer>A</answer>\")\n        else:\n            print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nquebec = ee.Geometry.Polygon([[\n    [-79.762, 45.004], [-57.104, 45.004], \n    [-57.104, 62.583], [-79.762, 62.583], \n    [-79.762, 45.004]\n]])  # Approximate Quebec boundary\n\nstart_date = '2023-01-01'\nend_date = '2023-12-31'\n\n# 2. Data Acquisition - MODIS Burned Area\nburned_col = ee.ImageCollection('MODIS/061/MCD64A1') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(quebec)\n\n# Check if collection has data\nif burned_col.size().getInfo() == 0:\n    print(\"No burned area data found for 2023.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # Create burned area mask (BurnDate > 0 indicates burned)\n    burned_area = burned_col.select('BurnDate').max().gt(0)\n    \n    # Calculate pixel area in hectares (500m resolution for MODIS)\n    pixel_area = ee.Image.pixelArea().divide(10000)  # Convert m\u00b2 to hectares\n    \n    # Calculate total burned area\n    burned_hectares = burned_area.multiply(pixel_area)\n    \n    # Get statistics\n    stats = burned_hectares.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=quebec,\n        scale=500,\n        maxPixels=1e9\n    )\n    \n    total_burned = stats.get('BurnDate').getInfo()\n    \n    if total_burned is None:\n        print(\"Calculation failed - no valid result.\")\n        print(\"<answer>C3</answer>\")\n    else:\n        print(f\"2023 Burned Area: {total_burned:,.0f} hectares\")\n        print(f\"Threshold: 800,000 hectares\")\n        \n        if total_burned > 800000:\n            print(\"<answer>A</answer>\")\n        else:\n            print(\"<answer>B</answer>\")",
+            "exec_msg": "2023 Burned Area: 4,456,509 hectares\nThreshold: 800,000 hectares\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

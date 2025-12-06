@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "From January to mid-May, did Ja\u00e9n a few miles east of C\u00f3rdoba recieve more than 3 inches of rain fall in 2023?",
+        "answer": "no",
+        "strategy": "zero_shot",
+        "code_llm": "claude-haiku-4-5-20251001",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-11-28_20-50-41",
+        "url": "https://earthobservatory.nasa.gov/images/151366/spain-browned-by-drought",
+        "unique_id": 176
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. **Search Strategy**:\n   - Location: Ja\u00e9n, a few miles east of C\u00f3rdoba, Spain\n   - Time Period: January 1 to May 15, 2023\n   - Data Source: CHIRPS (Climate Hazards Group InfraRed Precipitation with Station data) - a precipitation dataset\n   - Need to convert inches to mm: 3 inches \u2248 76.2 mm\n\n2. **Masking Strategy**:\n   - CHIRPS is a precipitation product that doesn't require cloud masking\n   - Simply sum/aggregate rainfall over the time period\n\n3. **Logic to Distinguish Valid Zero from Null**:\n   - Valid Zero (A/B): If we get a numerical result (e.g., 45 mm or 200 mm), compare to 76.2 mm\n   - Null/Error (C3): If result is None, NaN, or invalid range (negative precipitation)\n   - Empty Collection (C1): If no images found in the date range\n   - No Valid Pixels (C2): If all pixels are masked/invalid after processing\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define geometry for Ja\u00e9n, Spain (east of C\u00f3rdoba)\n# Ja\u00e9n city center approximately at 37.77\u00b0N, 3.79\u00b0W\njaen_coords = [-3.79, 37.77]\njaen_point = ee.Geometry.Point(jaen_coords)\n# Create a small buffer around the point (approximately 5 km radius = 50,000 m\u00b2)\njaen_region = jaen_point.buffer(5000)\n\n# 2. Define time period: January 1 to May 15, 2023\nstart_date = '2023-01-01'\nend_date = '2023-05-15'\n\n# 3. Load CHIRPS precipitation data\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(jaen_region)\n\n# Check if data exists\ncollection_size = chirps.size().getInfo()\nprint(f\"CHIRPS images in date range: {collection_size}\")\n\nif collection_size == 0:\n    print(\"No precipitation data available for the period.\")\n    print(\"C1\")\nelse:\n    # 4. Sum precipitation over the entire period\n    total_precip = chirps.sum()\n    \n    # 5. Get statistics for the region\n    stats = total_precip.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=jaen_region,\n        scale=5000,\n        maxPixels=1e9\n    ).getInfo()\n    \n    precip_mm = stats.get('precipitation')\n    print(f\"Total precipitation (Jan 1 - May 15, 2023): {precip_mm} mm\")\n    \n    # Validate the result\n    if precip_mm is None:\n        print(\"Result is None - calculation failed.\")\n        print(\"C3\")\n    elif precip_mm < 0:\n        print(\"Invalid result - negative precipitation.\")\n        print(\"C3\")\n    else:\n        # Convert 3 inches to mm: 3 * 25.4 = 76.2 mm\n        threshold_mm = 76.2\n        print(f\"Threshold: {threshold_mm} mm\")\n        print(f\"Received: {precip_mm:.1f} mm\")\n        \n        if precip_mm > threshold_mm:\n            print(\"A\")\n        else:\n            print(\"B\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define geometry for Ja\u00e9n, Spain (east of C\u00f3rdoba)\n# Ja\u00e9n city center approximately at 37.77\u00b0N, 3.79\u00b0W\njaen_coords = [-3.79, 37.77]\njaen_point = ee.Geometry.Point(jaen_coords)\n# Create a small buffer around the point (approximately 5 km radius = 50,000 m\u00b2)\njaen_region = jaen_point.buffer(5000)\n\n# 2. Define time period: January 1 to May 15, 2023\nstart_date = '2023-01-01'\nend_date = '2023-05-15'\n\n# 3. Load CHIRPS precipitation data\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(jaen_region)\n\n# Check if data exists\ncollection_size = chirps.size().getInfo()\nprint(f\"CHIRPS images in date range: {collection_size}\")\n\nif collection_size == 0:\n    print(\"No precipitation data available for the period.\")\n    print(\"C1\")\nelse:\n    # 4. Sum precipitation over the entire period\n    total_precip = chirps.sum()\n    \n    # 5. Get statistics for the region\n    stats = total_precip.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=jaen_region,\n        scale=5000,\n        maxPixels=1e9\n    ).getInfo()\n    \n    precip_mm = stats.get('precipitation')\n    print(f\"Total precipitation (Jan 1 - May 15, 2023): {precip_mm} mm\")\n    \n    # Validate the result\n    if precip_mm is None:\n        print(\"Result is None - calculation failed.\")\n        print(\"C3\")\n    elif precip_mm < 0:\n        print(\"Invalid result - negative precipitation.\")\n        print(\"C3\")\n    else:\n        # Convert 3 inches to mm: 3 * 25.4 = 76.2 mm\n        threshold_mm = 76.2\n        print(f\"Threshold: {threshold_mm} mm\")\n        print(f\"Received: {precip_mm:.1f} mm\")\n        \n        if precip_mm > threshold_mm:\n            print(\"A\")\n        else:\n            print(\"B\")",
+            "exec_msg": "CHIRPS images in date range: 134\nTotal precipitation (Jan 1 - May 15, 2023): 83.45187774359943 mm\nThreshold: 76.2 mm\nReceived: 83.5 mm\nA\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}
