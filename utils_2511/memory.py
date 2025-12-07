@@ -46,6 +46,8 @@ class Memory:
             "raw_answer": info.get("raw_answer"),
             "answer": info.get("answer"),
             "answer_thinking": info.get("answer_thinking"),
+            "system_prompt": info.get("system_prompt"),
+            "dataset_choice": info.get("dataset_choice"),
         }
         self.data.append(temp)
 
@@ -64,6 +66,7 @@ def set_info(question,
              raw_code=None, code=None, 
              exec_msg=None, exec_stderr=None, exec_returncode=None,
              raw_answer=None, answer=None, answer_thinking=None, 
+             system_prompt=None, dataset_choice=None
              ):
     info = {
         "question": question,
@@ -75,5 +78,7 @@ def set_info(question,
         "raw_answer": raw_answer,
         "answer": answer,
         "answer_thinking": answer_thinking,
+        "system_prompt": system_prompt,
+        "dataset_choice": None,
     }
     return info

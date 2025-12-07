@@ -1,10 +1,20 @@
 import os, re, anthropic
+from shutil import copy
+from copy import deepcopy
 from typing import List, Dict, Optional
 from openai import OpenAI
 import json
 from google import genai
 from google.genai import types
 # from together import Together
+
+with open("./prompts_2511/landsat_coding_rules.txt", "r") as f:
+    LANDSAT_CODING_RULES = f.read()
+
+with open("./prompts_2511/choose_dataset_collection.txt", "r") as f:
+    CHOOSE_DATASET_COLLECTION_SYSTEM_PROMPT = f.read()
+
+
 
 class ChatLLM:
     def __init__(self, args, llm) -> None:
@@ -45,9 +55,14 @@ class ChatLLM:
         self.prompt_system_answer = open("./prompts_2511/2323_ANS_SYSTEM.txt").read()
         self.prompt_user_answer = open("./prompts_2511/2323_ANS_USER.txt").read()
 
+        self.spec_for_landsat = open("./prompts_2511/document_spec/landsat.txt").read()
+        self.spec_for_modis = open("./prompts_2511/document_spec/modis.txt").read()
+        self.spec_for_viirs = open("./prompts_2511/document_spec/viirs.txt").read()
+
         self.temp_code_system_prompt = None
         self.temp_code_user_prompts = []
         self.should_clean_utf8 = False
+        self.documentation = args.documentation
         
     def _make_api_call(self, system_prompt, user_prompts, info=None) -> str:
 
@@ -163,6 +178,8 @@ class ChatLLM:
             return found_options[0]
         else:
             return None
+        
+
 
     def _parse(self, content: str, patterns: List[str]) -> Dict[str, Optional[str]]:
         result = {}
@@ -219,16 +236,47 @@ class ChatLLM:
     def reset(self):
         self.cur_iter = 1
 
+    def choose_dataset_family(self, question: str) -> str:
+        user_prompt = [
+            (
+                "Question:\n"
+                f"{question}\n\n"
+                "Your task: choose exactly ONE dataset family from {landsat, modis, viirs, other}.\n"
+                "Return only <dataset>...</dataset> with the lowercase name."
+            )
+        ]
+
+        result = self._generate_v2(
+            CHOOSE_DATASET_COLLECTION_SYSTEM_PROMPT, user_prompt, ["dataset"]
+        )
+        choice = (result.get("dataset", "") or "").strip().lower()
+        if choice not in {"landsat", "modis", "viirs"}:
+            choice = "other"
+        return choice
+
     def generate_code(self, info: dict):
 
         if self.language == "javascript" and self.strategy == "zero_shot":
-            self.temp_code_system_prompt = self.prompt_system_zs_js
+            self.temp_code_system_prompt = deepcopy(self.prompt_system_zs_js)
             self.temp_code_user_prompts = [self.prompt_user_zs.format_map(info)] 
         elif self.language == "python" and self.strategy == "zero_shot":
-            self.temp_code_system_prompt = self.prompt_system_zs
+            self.temp_code_system_prompt = deepcopy(self.prompt_system_zs)
             self.temp_code_user_prompts = [self.prompt_user_zs.format_map(info)]
         else:
             raise ValueError(f"Invalid strategy or language: {self.strategy} + {self.language}")
+        
+        if self.documentation == "specific":
+            dataset_choice = self.choose_dataset_family(info["question"])
+            if dataset_choice in ["landsat", "modis", "viirs"]:
+                for option, spec_text in zip(["landsat", "modis", "viirs"], 
+                                             [self.spec_for_landsat, self.spec_for_modis, self.spec_for_viirs]):
+                    if dataset_choice == option:
+                        spec = spec_text
+                        self.temp_code_system_prompt = self.temp_code_system_prompt.replace("# Please structure your response as follows:", 
+                                                            f"# Use the following documentation for {dataset_choice} dataset:\n" +
+                                                            spec + "\n\n\n" + "# Please structure your response as follows:")
+                        info["system_prompt"] = self.temp_code_system_prompt     
+                        info["dataset_choice"] = dataset_choice
         
         self._get_client(self.text_generator)
         self.temp_response = ""
@@ -262,6 +310,16 @@ class ChatLLM:
             raise ValueError("Failed to generate valid answer")
         return {"raw_answer": self.temp_raw_answer, "answer": self.temp_answer, "answer_thinking": self.temp_thinking}
     
+    def _generate_v2(self, system_prompt, user_prompt, patterns):
+        
+        self._get_client(self.text_generator)
+        self.temp_assistant_response = self._make_api_call(system_prompt, user_prompt)
+        result = self._parse(self.temp_assistant_response, patterns)
+        if not result or not result[patterns[0]]:
+            return {}
+            # raise ValueError("Failed to generate valid code")
+        return result    
+
     def _get_client(self, model_name: str):
 
         # check if model_name is valid
@@ -425,3 +483,4 @@ class ChatLLM:
 
     def _set_top_p(self, top_p=1):
         self.top_p = max(min(top_p, 0.99), 0.01)
+

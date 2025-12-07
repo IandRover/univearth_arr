@@ -1,4 +1,4 @@
-
+import numpy as np
 
 def preprocess_function(examples, tokenizer, args):
 
@@ -59,3 +59,18 @@ def red(string: str) -> str:
 
 def yellow(string: str) -> str:
     return f"\033[93m{string}\033[0m"
+
+def is_landsat_modis_viirs_question(question, ref_dataset):
+
+    result = ref_dataset[ref_dataset['Question'] == question]
+    if len(result) > 0 and result.iloc[0]["Modality"] is not np.nan:
+        result = result.iloc[0]["Modality"].lower()
+    else:
+        return False
+    
+    if "modis" in result or "landsat"   in result or "viirs" in result:
+        print(green(f"Reference answer found: {result}"))
+        return True
+    else:
+        print(yellow(f"Reference answer found: {result}"))
+        return False

@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "From January to mid-May, did Ja\u00e9n a few miles east of C\u00f3rdoba recieve more than 3 inches of rain fall in 2023?",
+        "answer": "no",
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-reasoner",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_19-03-37",
+        "url": "https://earthobservatory.nasa.gov/images/151366/spain-browned-by-drought",
+        "unique_id": 176
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\njaen_point = ee.Geometry.Point([-3.7849, 37.7796])  # Ja\u00e9n, Spain\ngeometry = jaen_point.buffer(10e3)  # 10 km buffer\nstart_date = '2023-01-01'\nend_date = '2023-05-16'  # inclusive of May 15\n\n# 2. Data Acquisition & Check (CHIRPS Daily Precipitation)\ncollection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(geometry)\n\n# Check if collection is empty\nimg_count = collection.size().getInfo()\nif img_count == 0:\n    print(f\"Images in period: 0\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing: Sum precipitation and check valid pixels\n    total_precip = collection.sum()\n    \n    # Count valid pixels (CHIRPS has values >=0)\n    count_dict = total_precip.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=geometry,\n        scale=1000,\n        maxPixels=1e9\n    )\n    valid_pixels = count_dict.get('precipitation').getInfo()\n    \n    if valid_pixels == 0:\n        print(\"No valid pixels in region.\")\n        print(\"<answer>C2</answer>\")\n    else:\n        # 4. Calculation: Mean total precipitation (mm)\n        mean_dict = total_precip.reduceRegion(\n            reducer=ee.Reducer.mean(),\n            geometry=geometry,\n            scale=1000,\n            maxPixels=1e9\n        )\n        mean_mm = mean_dict.get('precipitation').getInfo()\n        \n        # 5. Validation & Final Answer\n        if mean_mm is None or mean_mm < 0:  # Negative rainfall invalid\n            print(f\"Invalid result: {mean_mm}\")\n            print(\"<answer>C3</answer>\")\n        else:\n            inches = mean_mm / 25.4\n            print(f\"Images: {img_count}, Valid pixels: {valid_pixels}\")\n            print(f\"Total rainfall (mm): {mean_mm:.1f}, inches: {inches:.2f}\")\n            \n            if inches > 3:\n                print(\"<answer>A</answer>\")\n            else:\n                print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\njaen_point = ee.Geometry.Point([-3.7849, 37.7796])  # Ja\u00e9n, Spain\ngeometry = jaen_point.buffer(10e3)  # 10 km buffer\nstart_date = '2023-01-01'\nend_date = '2023-05-16'  # inclusive of May 15\n\n# 2. Data Acquisition & Check (CHIRPS Daily Precipitation)\ncollection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(geometry)\n\n# Check if collection is empty\nimg_count = collection.size().getInfo()\nif img_count == 0:\n    print(f\"Images in period: 0\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing: Sum precipitation and check valid pixels\n    total_precip = collection.sum()\n    \n    # Count valid pixels (CHIRPS has values >=0)\n    count_dict = total_precip.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=geometry,\n        scale=1000,\n        maxPixels=1e9\n    )\n    valid_pixels = count_dict.get('precipitation').getInfo()\n    \n    if valid_pixels == 0:\n        print(\"No valid pixels in region.\")\n        print(\"<answer>C2</answer>\")\n    else:\n        # 4. Calculation: Mean total precipitation (mm)\n        mean_dict = total_precip.reduceRegion(\n            reducer=ee.Reducer.mean(),\n            geometry=geometry,\n            scale=1000,\n            maxPixels=1e9\n        )\n        mean_mm = mean_dict.get('precipitation').getInfo()\n        \n        # 5. Validation & Final Answer\n        if mean_mm is None or mean_mm < 0:  # Negative rainfall invalid\n            print(f\"Invalid result: {mean_mm}\")\n            print(\"<answer>C3</answer>\")\n        else:\n            inches = mean_mm / 25.4\n            print(f\"Images: {img_count}, Valid pixels: {valid_pixels}\")\n            print(f\"Total rainfall (mm): {mean_mm:.1f}, inches: {inches:.2f}\")\n            \n            if inches > 3:\n                print(\"<answer>A</answer>\")\n            else:\n                print(\"<answer>B</answer>\")",
+            "exec_msg": "Images: 135, Valid pixels: 391\nTotal rainfall (mm): 83.8, inches: 3.30\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

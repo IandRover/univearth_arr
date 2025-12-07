@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "In 2023, was there over 160,000 hectares of fires burning in Quebec?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-reasoner",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_17-30-44",
+        "url": "https://earthobservatory.nasa.gov/images/151430/fires-burn-across-quebec",
+        "unique_id": 179
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Quebec geometry using LSIB dataset\nquebec = ee.FeatureCollection(\"USDOS/LSIB_SIMPLE/2017\") \\\n    .filter(ee.Filter.eq(\"country_co\", \"CA\")) \\\n    .filter(ee.Filter.eq(\"name\", \"Quebec\")) \\\n    .geometry()\n\n# 2. Try MODIS Burned Area collection first\ncollection = ee.ImageCollection('MODIS/006/MCD64A1') \\\n    .filterDate('2023-01-01', '2023-12-31') \\\n    .filterBounds(quebec)\nsize = collection.size().getInfo()\nprint(f\"MODIS images: {size}\")\n\nif size == 0:\n    # Fallback to FireCCI\n    collection = ee.ImageCollection('ESA/CCI/FireCCI/5_1') \\\n        .filterDate('2023-01-01', '2023-12-31') \\\n        .filterBounds(quebec)\n    size = collection.size().getInfo()\n    print(f\"FireCCI images: {size}\")\n    if size == 0:\n        print(\"<answer>C1</answer>\")\n        exit()\n\n# 3. Process burned area: create binary mask of any burns in 2023\ndef set_burned(img):\n    return img.select('BurnDate').gt(0).rename('burned')\nburned_year = collection.map(set_burned).max().rename('burned')\n\n# 4. Count burned pixels to check for valid data\ncount = burned_year.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=quebec,\n    scale=500,\n    maxPixels=1e10,\n    tileScale=16\n).get('burned').getInfo()\nprint(f\"Burned pixels: {count}\")\n\nif count == 0:\n    # Valid zero: no fires detected\n    print(\"Total burned area (ha): 0.0\")\n    print(\"<answer>B</answer>\")\n    exit()\n\n# 5. Calculate total burned area in hectares\narea_img = burned_year.multiply(ee.Image.pixelArea()).divide(10000)\ntotal = area_img.reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=quebec,\n    scale=500,\n    maxPixels=1e10,\n    tileScale=16\n).get('burned').getInfo()\n\n# 6. Validate and output result\nif total is None or total != total:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Total burned area (ha): {total:.2f}\")\n    if total > 160000:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Quebec geometry using LSIB dataset\nquebec = ee.FeatureCollection(\"USDOS/LSIB_SIMPLE/2017\") \\\n    .filter(ee.Filter.eq(\"country_co\", \"CA\")) \\\n    .filter(ee.Filter.eq(\"name\", \"Quebec\")) \\\n    .geometry()\n\n# 2. Try MODIS Burned Area collection first\ncollection = ee.ImageCollection('MODIS/006/MCD64A1') \\\n    .filterDate('2023-01-01', '2023-12-31') \\\n    .filterBounds(quebec)\nsize = collection.size().getInfo()\nprint(f\"MODIS images: {size}\")\n\nif size == 0:\n    # Fallback to FireCCI\n    collection = ee.ImageCollection('ESA/CCI/FireCCI/5_1') \\\n        .filterDate('2023-01-01', '2023-12-31') \\\n        .filterBounds(quebec)\n    size = collection.size().getInfo()\n    print(f\"FireCCI images: {size}\")\n    if size == 0:\n        print(\"<answer>C1</answer>\")\n        exit()\n\n# 3. Process burned area: create binary mask of any burns in 2023\ndef set_burned(img):\n    return img.select('BurnDate').gt(0).rename('burned')\nburned_year = collection.map(set_burned).max().rename('burned')\n\n# 4. Count burned pixels to check for valid data\ncount = burned_year.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=quebec,\n    scale=500,\n    maxPixels=1e10,\n    tileScale=16\n).get('burned').getInfo()\nprint(f\"Burned pixels: {count}\")\n\nif count == 0:\n    # Valid zero: no fires detected\n    print(\"Total burned area (ha): 0.0\")\n    print(\"<answer>B</answer>\")\n    exit()\n\n# 5. Calculate total burned area in hectares\narea_img = burned_year.multiply(ee.Image.pixelArea()).divide(10000)\ntotal = area_img.reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=quebec,\n    scale=500,\n    maxPixels=1e10,\n    tileScale=16\n).get('burned').getInfo()\n\n# 6. Validate and output result\nif total is None or total != total:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Total burned area (ha): {total:.2f}\")\n    if total > 160000:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "MODIS images: 0\nFireCCI images: 0\n<answer>C1</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for MODIS/006/MCD64A1! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by MODIS/061/MCD64A1\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MCD64A1\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null
+        }
+    ]
+}

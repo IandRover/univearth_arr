@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Is the forest loss from 2015 to 2022 larger than that from 2000 to 2015 at Macaya National Park?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-reasoner",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_18-49-28",
+        "url": "https://landsat.gsfc.nasa.gov/article/hispaniolas-changing-forests/",
+        "unique_id": 349
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry - Macaya National Park, Haiti (coordinates from research)\npark = ee.Geometry.Polygon([[\n    [-74.063, 18.316], [-74.014, 18.316],\n    [-74.014, 18.367], [-74.063, 18.367],\n    [-74.063, 18.316]\n]])\n\n# 2. Load Hansen Forest Change dataset\nhansen = ee.Image('UMD/hansen/global_forest_change_2022_v1_10')\n\n# Create loss images for two periods\n# Loss year band: 1=2001, 2=2002, ..., 22=2022\nloss2000_2015 = hansen.select('lossyear').gte(1).And(\n    hansen.select('lossyear').lte(15))\nloss2015_2022 = hansen.select('lossyear').gte(16).And(\n    hansen.select('lossyear').lte(22))\n\n# 3. Calculate loss area (pixels * 0.0009 km\u00b2 per 30m pixel)\narea2000_2015 = loss2000_2015.multiply(0.0009).reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=park,\n    scale=1000,\n    maxPixels=1e9\n).get('lossyear')\n\narea2015_2022 = loss2015_2022.multiply(0.0009).reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=park,\n    scale=1000,\n    maxPixels=1e9\n).get('lossyear')\n\n# 4. Get pixel counts to check validity\ncount2000_2015 = loss2000_2015.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=park,\n    scale=1000,\n    maxPixels=1e9\n).get('lossyear')\n\ncount2015_2022 = loss2015_2022.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=park,\n    scale=1000,\n    maxPixels=1e9\n).get('lossyear')\n\n# 5. Extract values\nval_early = area2000_2015.getInfo()\nval_late = area2015_2022.getInfo()\ncount_early = count2000_2015.getInfo()\ncount_late = count2015_2022.getInfo()\n\nprint(f\"2000-2015 Loss: {val_early:.2f} km\u00b2 (Pixels: {int(count_early)})\")\nprint(f\"2015-2022 Loss: {val_late:.2f} km\u00b2 (Pixels: {int(count_late)})\")\n\n# 6. Validation and answer\nif val_early is None or val_late is None:\n    print(\"<answer>C3</answer>\")\nelif count_early == 0 and count_late == 0:\n    print(\"<answer>C2</answer>\")\nelif val_late > val_early:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry - Macaya National Park, Haiti (coordinates from research)\npark = ee.Geometry.Polygon([[\n    [-74.063, 18.316], [-74.014, 18.316],\n    [-74.014, 18.367], [-74.063, 18.367],\n    [-74.063, 18.316]\n]])\n\n# 2. Load Hansen Forest Change dataset\nhansen = ee.Image('UMD/hansen/global_forest_change_2022_v1_10')\n\n# Create loss images for two periods\n# Loss year band: 1=2001, 2=2002, ..., 22=2022\nloss2000_2015 = hansen.select('lossyear').gte(1).And(\n    hansen.select('lossyear').lte(15))\nloss2015_2022 = hansen.select('lossyear').gte(16).And(\n    hansen.select('lossyear').lte(22))\n\n# 3. Calculate loss area (pixels * 0.0009 km\u00b2 per 30m pixel)\narea2000_2015 = loss2000_2015.multiply(0.0009).reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=park,\n    scale=1000,\n    maxPixels=1e9\n).get('lossyear')\n\narea2015_2022 = loss2015_2022.multiply(0.0009).reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=park,\n    scale=1000,\n    maxPixels=1e9\n).get('lossyear')\n\n# 4. Get pixel counts to check validity\ncount2000_2015 = loss2000_2015.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=park,\n    scale=1000,\n    maxPixels=1e9\n).get('lossyear')\n\ncount2015_2022 = loss2015_2022.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=park,\n    scale=1000,\n    maxPixels=1e9\n).get('lossyear')\n\n# 5. Extract values\nval_early = area2000_2015.getInfo()\nval_late = area2015_2022.getInfo()\ncount_early = count2000_2015.getInfo()\ncount_late = count2015_2022.getInfo()\n\nprint(f\"2000-2015 Loss: {val_early:.2f} km\u00b2 (Pixels: {int(count_early)})\")\nprint(f\"2015-2022 Loss: {val_late:.2f} km\u00b2 (Pixels: {int(count_late)})\")\n\n# 6. Validation and answer\nif val_early is None or val_late is None:\n    print(\"<answer>C3</answer>\")\nelif count_early == 0 and count_late == 0:\n    print(\"<answer>C2</answer>\")\nelif val_late > val_early:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "2000-2015 Loss: 0.00 km\u00b2 (Pixels: 30)\n2015-2022 Loss: 0.01 km\u00b2 (Pixels: 30)\n<answer>A</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for UMD/hansen/global_forest_change_2022_v1_10! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by UMD/hansen/global_forest_change_2024_v1_12\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/UMD_hansen_global_forest_change_2022_v1_10\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

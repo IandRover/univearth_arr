@@ -1,0 +1,90 @@
+### Landsat Coding Rules
+
+You are working in a Python environment where you can import a small helper
+module that encapsulates Landsat Collection 2 Level-2 SURFACE REFLECTANCE
+logic.
+
+In your code, ALWAYS start with:
+
+    import ee
+    ee.Initialize()
+
+    from gee_landsat_utils import (
+        apply_landsat_sr_scale,
+        mask_landsat_c2_clouds,
+        add_index,
+        add_visible_brightness,
+        area_km2_from_mask,
+        mean_band_over_region,
+        build_landsat_sr_collection,
+        make_landsat_composite,
+    )
+
+Do NOT re-implement these helpers. Use them directly.
+
+Landsat rules:
+
+1. Use ONLY Surface Reflectance bands (SR_B*) for reflectance, brightness,
+   and index calculations. Use ST_B* (thermal) if the question asks about temperature or thermal properties.
+
+2. Always obtain Landsat images via:
+      build_landsat_sr_collection(collection_ids, region, start_date, end_date,
+                                  max_cloud=..., apply_cloud_mask=True,
+                                  apply_scale=True)
+
+   Examples of collection_ids:
+      - ['LANDSAT/LT05/C02/T1_L2']  (Landsat 5)
+      - ['LANDSAT/LE07/C02/T1_L2']  (Landsat 7)
+      - ['LANDSAT/LC08/C02/T1_L2', 'LANDSAT/LC09/C02/T1_L2']  (L8 + L9)
+
+3. After you have a cleaned collection, choose a composite method based on
+   the question using make_landsat_composite(collection, method=...):
+
+   - If the question is about a single specific date (e.g. “on 2015-05-21”):
+       * use a narrow date window (±1–2 days),
+       * optionally sort by CLOUD_COVER ascending, then
+       * method="single_best".
+
+   - If the question is about a month, season, or year (e.g. “August 1986”,
+     “summers 1984–1986”):
+       * use a wider date range,
+       * method="median".
+
+   - If you need to combine partial scenes within a short window:
+       * method="mosaic".
+
+4. For NDVI/NDWI or similar indices, use add_index(...) instead of writing
+   normalizedDifference manually. Examples:
+
+   - Landsat 5/7 NDVI:
+        image = add_index(image, 'SR_B4', 'SR_B3', 'NDVI')
+
+   - Landsat 8/9 NDVI:
+        image = add_index(image, 'SR_B5', 'SR_B4', 'NDVI')
+
+   - NDWI-like water index (Landsat 5):
+        image = add_index(image, 'SR_B2', 'SR_B4', 'NDWI')
+
+5. For “dark vs light” questions, use add_visible_brightness(...) to add
+   a 'brightness' band and then summarize that band over your regions
+   using mean_band_over_region(...). For example:
+
+   - Landsat 5/7 RGB:
+        image = add_visible_brightness(image,
+                                       ['SR_B3', 'SR_B2', 'SR_B1'],
+                                       name='brightness')
+
+   - Landsat 8/9 RGB:
+        image = add_visible_brightness(image,
+                                       ['SR_B4', 'SR_B3', 'SR_B2'],
+                                       name='brightness')
+
+6. For area of a class (forest, water, built-up) from a binary mask (1 where
+   class is present, 0/masked otherwise), use:
+
+       area_km2 = area_km2_from_mask(mask_image, region, scale)
+
+   where 'scale' is typically 30 for Landsat.
+
+Follow all other global instructions (max 20 lines of output, error handling,
+answer formatted as <answer>A/B/C</answer>, etc.).
