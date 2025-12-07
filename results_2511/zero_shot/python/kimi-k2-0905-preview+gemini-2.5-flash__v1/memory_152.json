@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "On July 19, 2022 did UK experience temperatures above 100 degrees fahrenheit?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-59-13",
+        "url": "https://earthobservatory.nasa.gov/images/150152/a-july-of-extremes",
+        "unique_id": 152
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use ERA5-Land 2-m air temperature (daily aggregates) for the UK on 19 Jul 2022. ERA5-Land is global, daily, and 0.1\u00b0 (~9 km) resolution, so we can get a reliable max for that day.\n\n2. Masking: none needed (temperature band is directly usable).\n\n3. Logic for \u201cabove 100 \u00b0F\u201d: Convert ERA5 Tmax from K \u2192 \u00b0C \u2192 \u00b0F. A value \u2265 37.78 \u00b0C (100 \u00b0F) anywhere inside a UK bounding box means the answer is Yes. Check only valid pixels; if 0 remain after bounding, C2; if result is None/NaN, C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize()\n\n# UK approximate bounding box\nuk = ee.Geometry.Rectangle([-8.2, 49.8, 1.8, 59.0])\n\n# ERA5-Land daily aggregates collection\nera5 = ee.ImageCollection('ECMWF/ERA5_LAND/DAILY_AGGR') \\\n          .filterDate('2022-07-19', '2022-07-20') \\\n          .select('temperature_2m_max')\n\nif era5.size().getInfo() == 0:\n    print(\"No images for 19 Jul 2022.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    img = era5.first()\n    # valid pixel count\n    cnt = img.reduceRegion(reducer=ee.Reducer.count(), geometry=uk, scale=10000, maxPixels=1e9).get('temperature_2m_max').getInfo()\n    if cnt == 0:\n        print(\"No valid pixels.\")\n        print(\"<answer>C2</answer>\")\n    else:\n        # ERA5 is in K; convert max to \u00b0F\n        maxK = img.reduceRegion(reducer=ee.Reducer.max(), geometry=uk, scale=10000, maxPixels=1e9).get('temperature_2m_max').getInfo()\n        if maxK is None:\n            print(\"Calculation failed.\")\n            print(\"<answer>C3</answer>\")\n        else:\n            maxF = (maxK - 273.15) * 9/5 + 32\n            print(f\"Max temp: {maxF:.1f} \u00b0F, Valid pixels: {int(cnt)}\")\n            print(\"<answer>A</answer>\" if maxF > 100 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize()\n\n# UK approximate bounding box\nuk = ee.Geometry.Rectangle([-8.2, 49.8, 1.8, 59.0])\n\n# ERA5-Land daily aggregates collection\nera5 = ee.ImageCollection('ECMWF/ERA5_LAND/DAILY_AGGR') \\\n          .filterDate('2022-07-19', '2022-07-20') \\\n          .select('temperature_2m_max')\n\nif era5.size().getInfo() == 0:\n    print(\"No images for 19 Jul 2022.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    img = era5.first()\n    # valid pixel count\n    cnt = img.reduceRegion(reducer=ee.Reducer.count(), geometry=uk, scale=10000, maxPixels=1e9).get('temperature_2m_max').getInfo()\n    if cnt == 0:\n        print(\"No valid pixels.\")\n        print(\"<answer>C2</answer>\")\n    else:\n        # ERA5 is in K; convert max to \u00b0F\n        maxK = img.reduceRegion(reducer=ee.Reducer.max(), geometry=uk, scale=10000, maxPixels=1e9).get('temperature_2m_max').getInfo()\n        if maxK is None:\n            print(\"Calculation failed.\")\n            print(\"<answer>C3</answer>\")\n        else:\n            maxF = (maxK - 273.15) * 9/5 + 32\n            print(f\"Max temp: {maxF:.1f} \u00b0F, Valid pixels: {int(cnt)}\")\n            print(\"<answer>A</answer>\" if maxF > 100 else \"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765076381614283.py\", line 2, in <module>\n    ee.Initialize()\n    ~~~~~~~~~~~~~^^\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/_utils.py\", line 39, in wrapper\n    return func(*args, **kwargs)\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/__init__.py\", line 232, in Initialize\n    raise EEException(NO_PROJECT_EXCEPTION) from None\nee.ee_exception.EEException: ee.Initialize: no project found. Call with project= or see http://goo.gle/ee-auth.\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}
