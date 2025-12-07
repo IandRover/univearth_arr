@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was the land surface temperature in California higher than in Mississippi during July 12-19, 2005?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_19-42-14",
+        "url": "https://earthobservatory.nasa.gov/images/15247/heatwave-in-the-united-states",
+        "unique_id": 202
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Collection: MODIS Land Surface Temperature (LST) \u2013 \u201cMODIS/061/MOD11A2\u201d (8-day L3, 1 km).  \n   - Date: exactly the 8-day composite that contains 12\u201319 July 2005 \u2192 2005-07-12 to 2005-07-19.  \n   - Location: simple ~100 km\u00b2 rectangles centered on each state (California Central Valley, Mississippi Delta) so scale=1000 m keeps pixel-count high and avoids timeout.\n\n2. Masking strategy:  \n   - MOD11A2 QA is in QC_Day; we mask pixels where QA \u2260 0 (good quality, LST produced).  \n   - Also mask 0 K fill values.  \n\n3. Logic to distinguish Valid Zero from Null/Error:  \n   - After QA masking, count valid pixels with ee.Reducer.count().  \n   - If either state has 0 valid pixels \u2192 C2.  \n   - If mean LST is None/NaN or outside physical range \u2192 C3.  \n   - Otherwise compare CA vs MS means \u2192 answer A (Yes) or B (No).\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nca = ee.Geometry.Rectangle([-120.5, 38.0, -119.5, 39.0])  # Central Valley\nms = ee.Geometry.Rectangle([-90.5, 32.5, -89.5, 33.5])   # Delta\ndate_filter = ee.Filter.date('2005-07-12', '2005-07-19')\n\n# 2. Acquire MODIS LST\ncol = ee.ImageCollection('MODIS/061/MOD11A2').filter(date_filter)\nif col.size().getInfo() == 0:\n    print(\"No 8-day composite for 12-19 Jul 2005.\")\n    print(\"<answer>C1</answer>\")\n\nimg = col.first()\nqa = img.select('QC_Day')\nmask = qa.eq(0).And(img.select('LST_Day_1km').gt(0))\nlst = img.select('LST_Day_1km').updateMask(mask).multiply(0.02).subtract(273.15)  # K\u2192\u00b0C\n\n# 3. Reduce\nca_val = lst.reduceRegion(reducer=ee.Reducer.mean(), geometry=ca, scale=1000, maxPixels=1e9).get('LST_Day_1km')\nms_val = lst.reduceRegion(reducer=ee.Reducer.mean(), geometry=ms, scale=1000, maxPixels=1e9).get('LST_Day_1km')\nca_count = lst.reduceRegion(reducer=ee.Reducer.count(), geometry=ca, scale=1000, maxPixels=1e9).get('LST_Day_1km')\nca_val, ms_val, ca_count = [v.getInfo() for v in [ca_val, ms_val, ca_count]]\n\n# 4. Validate\nif None in [ca_val, ms_val] or ca_count == 0:\n    print(\"Pixels CA:\", ca_count)\n    print(\"<answer>C2</answer>\")\nif ca_val is None or ms_val is None:\n    print(\"<answer>C3</answer>\")\n\n# 5. Answer\nprint(f\"CA LST: {ca_val:.2f} \u00b0C, MS LST: {ms_val:.2f} \u00b0C, Valid pixels CA: {ca_count}\")\nprint(\"<answer>A</answer>\" if ca_val > ms_val else \"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nca = ee.Geometry.Rectangle([-120.5, 38.0, -119.5, 39.0])  # Central Valley\nms = ee.Geometry.Rectangle([-90.5, 32.5, -89.5, 33.5])   # Delta\ndate_filter = ee.Filter.date('2005-07-12', '2005-07-19')\n\n# 2. Acquire MODIS LST\ncol = ee.ImageCollection('MODIS/061/MOD11A2').filter(date_filter)\nif col.size().getInfo() == 0:\n    print(\"No 8-day composite for 12-19 Jul 2005.\")\n    print(\"<answer>C1</answer>\")\n\nimg = col.first()\nqa = img.select('QC_Day')\nmask = qa.eq(0).And(img.select('LST_Day_1km').gt(0))\nlst = img.select('LST_Day_1km').updateMask(mask).multiply(0.02).subtract(273.15)  # K\u2192\u00b0C\n\n# 3. Reduce\nca_val = lst.reduceRegion(reducer=ee.Reducer.mean(), geometry=ca, scale=1000, maxPixels=1e9).get('LST_Day_1km')\nms_val = lst.reduceRegion(reducer=ee.Reducer.mean(), geometry=ms, scale=1000, maxPixels=1e9).get('LST_Day_1km')\nca_count = lst.reduceRegion(reducer=ee.Reducer.count(), geometry=ca, scale=1000, maxPixels=1e9).get('LST_Day_1km')\nca_val, ms_val, ca_count = [v.getInfo() for v in [ca_val, ms_val, ca_count]]\n\n# 4. Validate\nif None in [ca_val, ms_val] or ca_count == 0:\n    print(\"Pixels CA:\", ca_count)\n    print(\"<answer>C2</answer>\")\nif ca_val is None or ms_val is None:\n    print(\"<answer>C3</answer>\")\n\n# 5. Answer\nprint(f\"CA LST: {ca_val:.2f} \u00b0C, MS LST: {ms_val:.2f} \u00b0C, Valid pixels CA: {ca_count}\")\nprint(\"<answer>A</answer>\" if ca_val > ms_val else \"<answer>B</answer>\")",
+            "exec_msg": "CA LST: 33.28 \u00b0C, MS LST: 27.59 \u00b0C, Valid pixels CA: 9535\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<thinking>\n1. Analyze <exec_error>: No error occurred during execution.\n2. Analyze <execution_message>: The output clearly shows \"CA LST: 33.28 \u00b0C, MS LST: 27.59 \u00b0C, Valid pixels CA: 9535\" and ends with `<answer>A</answer>`.\n3. Analyze <Code>: The code successfully calculated and compared the LST values for California and Mississippi. The final print statement and tag are based on the comparison `ca_val > ms_val`. The values are valid numbers, and the pixel count for CA is non-zero, indicating valid data was processed.\n</thinking>\n<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": "1. Analyze <exec_error>: No error occurred during execution.\n2. Analyze <execution_message>: The output clearly shows \"CA LST: 33.28 \u00b0C, MS LST: 27.59 \u00b0C, Valid pixels CA: 9535\" and ends with `<answer>A</answer>`.\n3. Analyze <Code>: The code successfully calculated and compared the LST values for California and Mississippi. The final print statement and tag are based on the comparison `ca_val > ms_val`. The values are valid numbers, and the pixel count for CA is non-zero, indicating valid data was processed.",
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

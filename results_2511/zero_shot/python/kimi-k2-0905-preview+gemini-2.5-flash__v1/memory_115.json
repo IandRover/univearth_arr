@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was the nighttime brightness over Mayfield, Kentucky higher in November 2021 than on December 10-12, 2021?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-18-01",
+        "url": "https://earthobservatory.nasa.gov/images/149215/nighttime-images-detail-kentucky-blackout",
+        "unique_id": 115
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:\n   - Collection: VIIRS DNB Black Marble Night Light \"NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG\" (monthly composites)\n   - Date A: November 2021 (2021-11)\n   - Date B: December 2021 (2021-12) \u2013 the 10-12 span is still fully captured by the monthly composite\n   - Location: Mayfield, KY \u2013 build a small Point geometry around the city center\n2. Masking strategy: monthly composites are cloud-free radiance, no cloud mask needed; just select the \"avg_rad\" band (nW cm\u207b\u00b2 sr\u207b\u00b9)\n3. Logic:\n   - Pull the two images (November 2021 and December 2021) \u2192 each month is a single-image collection\n   - If either collection is empty \u2192 C1\n   - Sample mean radiance over a ~2 km buffer of Mayfield; after reduceRegion, confirm count > 0 (else C2) and value not None/NaN (else C3)\n   - Compare: if Nov2021_mean > Dec2021_mean \u2192 A (Yes), else B (No)\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Location & time definitions\nmayfield = ee.Geometry.Point([-88.6367, 36.7415]).buffer(2000)  # 2 km buffer\nnov2021 = ('2021-11-01', '2021-12-01')   # November composite\ndec2021 = ('2021-12-01', '2022-01-01')   # December composite\n\n# 2. Acquire monthly Black Marble nightlight composites\ncol = 'NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG'\nnov_img = ee.ImageCollection(col).filterDate(*nov2021).select('avg_rad')\ndec_img = ee.ImageCollection(col).filterDate(*dec2021).select('avg_rad')\n\n# Check data presence\nif nov_img.size().getInfo() == 0 or dec_img.size().getInfo() == 0:\n    print(\"Monthly composite missing for Nov or Dec 2021.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Reduce to mean radiance\n    nov_mean = nov_img.first().reduceRegion(\n        reducer=ee.Reducer.mean(), geometry=mayfield, scale=1000, maxPixels=1e9\n    ).get('avg_rad').getInfo()\n    dec_mean = dec_img.first().reduceRegion(\n        reducer=ee.Reducer.mean(), geometry=mayfield, scale=1000, maxPixels=1e9\n    ).get('avg_rad').getInfo()\n    \n    # 4. Validation\n    if nov_mean is None or dec_mean is None:\n        print(\"<answer>C3</answer>\")\n    else:\n        print(f\"Nov2021 rad: {nov_mean:.2f} | Dec2021 rad: {dec_mean:.2f}\")\n        if nov_mean > dec_mean:\n            print(\"<answer>A</answer>\")\n        else:\n            print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Location & time definitions\nmayfield = ee.Geometry.Point([-88.6367, 36.7415]).buffer(2000)  # 2 km buffer\nnov2021 = ('2021-11-01', '2021-12-01')   # November composite\ndec2021 = ('2021-12-01', '2022-01-01')   # December composite\n\n# 2. Acquire monthly Black Marble nightlight composites\ncol = 'NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG'\nnov_img = ee.ImageCollection(col).filterDate(*nov2021).select('avg_rad')\ndec_img = ee.ImageCollection(col).filterDate(*dec2021).select('avg_rad')\n\n# Check data presence\nif nov_img.size().getInfo() == 0 or dec_img.size().getInfo() == 0:\n    print(\"Monthly composite missing for Nov or Dec 2021.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Reduce to mean radiance\n    nov_mean = nov_img.first().reduceRegion(\n        reducer=ee.Reducer.mean(), geometry=mayfield, scale=1000, maxPixels=1e9\n    ).get('avg_rad').getInfo()\n    dec_mean = dec_img.first().reduceRegion(\n        reducer=ee.Reducer.mean(), geometry=mayfield, scale=1000, maxPixels=1e9\n    ).get('avg_rad').getInfo()\n    \n    # 4. Validation\n    if nov_mean is None or dec_mean is None:\n        print(\"<answer>C3</answer>\")\n    else:\n        print(f\"Nov2021 rad: {nov_mean:.2f} | Dec2021 rad: {dec_mean:.2f}\")\n        if nov_mean > dec_mean:\n            print(\"<answer>A</answer>\")\n        else:\n            print(\"<answer>B</answer>\")",
+            "exec_msg": "Nov2021 rad: 16.70 | Dec2021 rad: 10.70\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

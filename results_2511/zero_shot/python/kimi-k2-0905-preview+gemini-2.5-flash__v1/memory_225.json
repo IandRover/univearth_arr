@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did Cairns, Queensland receive more rainfall than Cooktown, Queensland (-15.475923, 145.248920) between January 31 and February 4, 2025?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-40-07",
+        "url": "https://earthobservatory.nasa.gov/images/153914/nishinoshima-belches-ash-and-lava",
+        "unique_id": 225
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. **Location & Geometry**: Cairns, Queensland is at approximately -16.9186, 145.7781. Cooktown is given at -15.475923, 145.248920.\n2. **Collection**: Use IMERG (GPM) daily precipitation at 0.1\u00b0 (\u224810 km). Works in remote Queensland.\n3. **Date window**: Jan 31 \u2013 Feb 4, 2025 (5 days inclusive). We\u2019ll accumulate total mm over those 5 days.\n4. **Masking**: No cloud masking needed; IMERG is a merged-satellite product, no optical bands.\n5. **Processing steps**:\n   - Build 2 collections (one for each point) for the date window.\n   - If any collection.size()==0 \u2192 C1.\n   - For each point, sum precipitation (with `.sum()` over time) and reduceRegion with `Reducers.sum()` (kg\u00b7m\u207b\u00b2 \u2248 mm).\n   - Check pixel count (1 pixel expected for points). If count == 0 \u2192 C2.\n   - Pull the totals. If either is None/NaN \u2192 C3.\n   - Compare totals: if Cairns_sum > Cooktown_sum \u2192 A, else B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\ncairns = ee.Geometry.Point(145.7781, -16.9186)  # Cairns\ncook = ee.Geometry.Point(145.248920, -15.475923)  # Cooktown\n\nstart, end = '2025-01-31', '2025-02-05'  # 5-day window\n\ndef get_rainfall(pt):\n    col = (ee.ImageCollection('NASA/GPM_L3/IMERG_V06')\n           .filterDate(start, end)\n           .filterBounds(pt)\n           .select('precipitationCal'))  # mm/hr \u2192 summed with .sum()\n    if col.size().getInfo() == 0:\n        return None, 0\n    total = col.sum().multiply(24).rename('total_mm')  # hr \u2192 day\n    cnt = total.reduceRegion(reducer=ee.Reducer.count(),\n                             geometry=pt, scale=10000, maxPixels=1e9).get('total_mm').getInfo()\n    val = total.reduceRegion(reducer=ee.Reducer.first(),  # single pixel\n                             geometry=pt, scale=10000, maxPixels=1e9).get('total_mm').getInfo()\n    return val, cnt\n\nc_val, c_cnt = get_rainfall(cairns)\nk_val, k_cnt = get_rainfall(cook)\n\nif c_val is None or k_val is None:\n    print(\"Cairns Collection:\", \"None\" if c_val is None else \"Found\")\n    print(\"Cooktown Collection:\", \"None\" if k_val is None else \"Found\")\n    print(\"<answer>C1</answer>\")\nelif c_cnt == 0 or k_cnt == 0:\n    print(\"Valid Pixels Cairns:\", c_cnt, \"Cooktown:\", k_cnt)\n    print(\"<answer>C2</answer>\")\nelif c_val is None or k_val is None:\n    print(\"Cairns Sum:\", c_val, \"Cooktown Sum:\", k_val)\n    print(\"<answer>C3</answer>\")\nelse:\n    print(\"Cairns Total: %.1f mm\" % c_val)\n    print(\"Cooktown Total: %.1f mm\" % k_val)\n    print(\"Pixels used:\", c_cnt, k_cnt)\n    print(\"<answer>A</answer>\" if c_val > k_val else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\ncairns = ee.Geometry.Point(145.7781, -16.9186)  # Cairns\ncook = ee.Geometry.Point(145.248920, -15.475923)  # Cooktown\n\nstart, end = '2025-01-31', '2025-02-05'  # 5-day window\n\ndef get_rainfall(pt):\n    col = (ee.ImageCollection('NASA/GPM_L3/IMERG_V06')\n           .filterDate(start, end)\n           .filterBounds(pt)\n           .select('precipitationCal'))  # mm/hr \u2192 summed with .sum()\n    if col.size().getInfo() == 0:\n        return None, 0\n    total = col.sum().multiply(24).rename('total_mm')  # hr \u2192 day\n    cnt = total.reduceRegion(reducer=ee.Reducer.count(),\n                             geometry=pt, scale=10000, maxPixels=1e9).get('total_mm').getInfo()\n    val = total.reduceRegion(reducer=ee.Reducer.first(),  # single pixel\n                             geometry=pt, scale=10000, maxPixels=1e9).get('total_mm').getInfo()\n    return val, cnt\n\nc_val, c_cnt = get_rainfall(cairns)\nk_val, k_cnt = get_rainfall(cook)\n\nif c_val is None or k_val is None:\n    print(\"Cairns Collection:\", \"None\" if c_val is None else \"Found\")\n    print(\"Cooktown Collection:\", \"None\" if k_val is None else \"Found\")\n    print(\"<answer>C1</answer>\")\nelif c_cnt == 0 or k_cnt == 0:\n    print(\"Valid Pixels Cairns:\", c_cnt, \"Cooktown:\", k_cnt)\n    print(\"<answer>C2</answer>\")\nelif c_val is None or k_val is None:\n    print(\"Cairns Sum:\", c_val, \"Cooktown Sum:\", k_val)\n    print(\"<answer>C3</answer>\")\nelse:\n    print(\"Cairns Total: %.1f mm\" % c_val)\n    print(\"Cooktown Total: %.1f mm\" % k_val)\n    print(\"Pixels used:\", c_cnt, k_cnt)\n    print(\"<answer>A</answer>\" if c_val > k_val else \"<answer>B</answer>\")",
+            "exec_msg": "Cairns Collection: None\nCooktown Collection: None\n<answer>C1</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for NASA/GPM_L3/IMERG_V06! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by NASA/GPM_L3/IMERG_V07\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/NASA_GPM_L3_IMERG_V06\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

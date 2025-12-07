@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the surface water extent along the Lower Mississippi River (e.g., Mississippi, Louisiana) increase in February 2, 2020 compared to December 4, 2019?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-09-05",
+        "url": "https://www.earthobservatory.nasa.gov/images/146251/",
+        "unique_id": 358
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy (Collection, Date, Location).\n   * Collection: Surface-water proxy \u2013 JRC Global Surface Water \u201coccurrence\u201d band gives permanent water, but this is a static layer; instead, we use Sentinel-1 SAR GRD (C-band) which is sensitive to open water (VV < -15 dB threshold is a standard water mask) and is collected every 6-12 days regardless of clouds \u2013 perfect for winter months.\n   * Date: 2019-12-04 \u00b13 days and 2020-02-02 \u00b13 days (window 7 days each to guarantee a scene).\n   * Location: Bounding box along the Lower Mississippi River, ~Mississippi/Louisiana; simple polygon to avoid hitting memory/time-out (\u224880 km stretch).\n\n2. Masking strategy (Should I mask clouds? Or is the question about clouds?).\n   * SAR data are cloud-independent; no cloud mask needed. Apply orbit pass filter (IW, both ascending/descending) and a low-data mask ( Sentinel-1 \u201cvalidData\u201d flag).\n\n3. Logic to distinguish Valid Zero (A/B) from Null/Error (C3).\n   * After thresholding water (VV <-15 dB), compute total water pixel count inside the AOI for each date.\n   * If either collection is empty (size = 0) \u2192 C1.\n   * If after masking, count of water pixels is 0 for either date \u2192 C2 (no valid pixels for comparison).\n   * Compute the ratio (percent): \u0394 = (Feb \u2013 Dec)/Dec. If \u0394 is None/NaN, return C3.\n   * If \u0394 > 0, adopt \u201cincrease\u201d as A; otherwise B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry (Lower Mississippi, centered on MS/LA border)\nloMiss = ee.Geometry.Polygon(\n    [[-91.3,32.9],[-91.3,30.9],[-89.2,30.9],[-89.2,32.9]])\n\n# 2. Acquisition\ndef water_area(dt):\n  col = (ee.ImageCollection('COPERNICUS/S1_GRD')\n           .filterBounds(loMiss)\n           .filter(ee.Filter.date(dt, ee.Date(dt).advance(3,'day')))\n           .filter(ee.Filter.eq('instrumentMode','IW'))\n           .filter(ee.Filter.listContains('transmitterReceiverPolarisation','VV')))\n  if col.size().getInfo()==0:\n    return None,0\n  img = col.select('VV').mean().clip(loMiss)\n  water = img.lt(-15)   # water=1\n  pxCount = (water.reduceRegion(reducer=ee.Reducer.sum(),\n                                geometry=loMiss, scale=1000,\n                                maxPixels=1e9).get('VV').getInfo())\n  return pxCount, int(water.reduceRegion(ee.Reducer.count(),\n                                         loMiss,1000, maxPixels=1e9).get('VV').getInfo())\n\ndec19, n1 = water_area('2019-12-04')\nfeb20, n2 = water_area('2020-02-02')\n\nprint(f\"Dec2019 water pixels: {dec19} (valid px: {n1})\")\nprint(f\"Feb2020 water pixels: {feb20} (valid px: {n2})\")\n\nif dec19 is None or feb20 is None:\n  print(\"<answer>C1</answer>\")\nelif n1==0 or n2==0:\n  print(\"<answer>C2</answer>\")\nelse:\n  diff = feb20 - dec19\n  print(f\"\u0394 water pixels: {diff}\")\n  if diff is None:\n    print(\"<answer>C3</answer>\")\n  elif diff > 0:\n    print(\"<answer>A</answer>\")\n  else:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry (Lower Mississippi, centered on MS/LA border)\nloMiss = ee.Geometry.Polygon(\n    [[-91.3,32.9],[-91.3,30.9],[-89.2,30.9],[-89.2,32.9]])\n\n# 2. Acquisition\ndef water_area(dt):\n  col = (ee.ImageCollection('COPERNICUS/S1_GRD')\n           .filterBounds(loMiss)\n           .filter(ee.Filter.date(dt, ee.Date(dt).advance(3,'day')))\n           .filter(ee.Filter.eq('instrumentMode','IW'))\n           .filter(ee.Filter.listContains('transmitterReceiverPolarisation','VV')))\n  if col.size().getInfo()==0:\n    return None,0\n  img = col.select('VV').mean().clip(loMiss)\n  water = img.lt(-15)   # water=1\n  pxCount = (water.reduceRegion(reducer=ee.Reducer.sum(),\n                                geometry=loMiss, scale=1000,\n                                maxPixels=1e9).get('VV').getInfo())\n  return pxCount, int(water.reduceRegion(ee.Reducer.count(),\n                                         loMiss,1000, maxPixels=1e9).get('VV').getInfo())\n\ndec19, n1 = water_area('2019-12-04')\nfeb20, n2 = water_area('2020-02-02')\n\nprint(f\"Dec2019 water pixels: {dec19} (valid px: {n1})\")\nprint(f\"Feb2020 water pixels: {feb20} (valid px: {n2})\")\n\nif dec19 is None or feb20 is None:\n  print(\"<answer>C1</answer>\")\nelif n1==0 or n2==0:\n  print(\"<answer>C2</answer>\")\nelse:\n  diff = feb20 - dec19\n  print(f\"\u0394 water pixels: {diff}\")\n  if diff is None:\n    print(\"<answer>C3</answer>\")\n  elif diff > 0:\n    print(\"<answer>A</answer>\")\n  else:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Dec2019 water pixels: None (valid px: 0)\nFeb2020 water pixels: None (valid px: 0)\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

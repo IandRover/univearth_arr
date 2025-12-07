@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the water extent in the northern part of Lake Eyre increase between June 20, 2025 and September 15, 2025?",
+        "answer": "No",
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-31-38",
+        "url": "https://earthobservatory.nasa.gov/images/154803/cooper-creek-replenishes-lake-eyre",
+        "unique_id": 255
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use Sentinel-2 surface reflectance (10 m) over Lake Eyre to map open water by MNDWI for June 20 and Sep 15, 2025.  \n   - Collection: COPERNICUS/S2_SR_HARMONIZED  \n   - Date windows: \u00b17 days around each target date  \n   - Location: northern lobe of Lake Eyre (polygon around -28.4, 137.3)\n\n2. Masking:  \n   - Apply SCL-based cloud mask (keep 4,5,6)  \n   - Compute MNDWI = (Green \u2212 SWIR)/(Green + SWIR); threshold \u2265 0.2 to label water  \n   - Reproject to 30 m for fast regional stats (still \u2248 0.3 M pixels, safe)\n\n3. Logic:  \n   - If either window yields 0 images \u2192 C1  \n   - After compositing & masking, if valid-pixel count = 0 \u2192 C2  \n   - Compute water area (ha) for each composite; compare Sep vs Jun  \n   - If Sep area > Jun area \u2192 A, else B  \n   - If any area result is None/NaN \u2192 C3\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. northern Lake Eyre\ngeom = ee.Geometry.Polygon([[-137.6,-28.2],[-137.0,-28.2],[-137.0,-28.6],[-137.6,-28.6]])\n\ndef roi_water(d):\n    c = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\\\n           .filterBounds(geom).filterDate(ee.Date(d).advance(-7,'day'),ee.Date(d).advance(7,'day'))\n    n = c.size().getInfo()\n    print(f\"{d} images: {n}\")\n    if n==0:\n        print(\"<answer>C1</answer>\"); raise SystemExit\n    comp = c.map(lambda i: i.updateMask(i.select('SCL').gte(4).And(i.select('SCL').lte(6))))\\\n            .median().clip(geom)\n    mndwi = comp.normalizedDifference(['B3','B11']).rename('mndwi')\n    water = mndwi.gte(0.2)\n    px = water.reduceRegion(reducer=ee.Reducer.sum(), geometry=geom, scale=30,\n                            maxPixels=1e9).get('mndwi').getInfo()\n    if px is None or px==0:\n        print(\"<answer>C2</answer>\"); raise SystemExit\n    return px*900/1e4   # ha\n\njun = roi_water('2025-06-20')\nsep = roi_water('2025-09-15')\n\nprint(f\"Jun water: {jun:.0f} ha, Sep water: {sep:.0f} ha\")\nif sep > jun:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. northern Lake Eyre\ngeom = ee.Geometry.Polygon([[-137.6,-28.2],[-137.0,-28.2],[-137.0,-28.6],[-137.6,-28.6]])\n\ndef roi_water(d):\n    c = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\\\n           .filterBounds(geom).filterDate(ee.Date(d).advance(-7,'day'),ee.Date(d).advance(7,'day'))\n    n = c.size().getInfo()\n    print(f\"{d} images: {n}\")\n    if n==0:\n        print(\"<answer>C1</answer>\"); raise SystemExit\n    comp = c.map(lambda i: i.updateMask(i.select('SCL').gte(4).And(i.select('SCL').lte(6))))\\\n            .median().clip(geom)\n    mndwi = comp.normalizedDifference(['B3','B11']).rename('mndwi')\n    water = mndwi.gte(0.2)\n    px = water.reduceRegion(reducer=ee.Reducer.sum(), geometry=geom, scale=30,\n                            maxPixels=1e9).get('mndwi').getInfo()\n    if px is None or px==0:\n        print(\"<answer>C2</answer>\"); raise SystemExit\n    return px*900/1e4   # ha\n\njun = roi_water('2025-06-20')\nsep = roi_water('2025-09-15')\n\nprint(f\"Jun water: {jun:.0f} ha, Sep water: {sep:.0f} ha\")\nif sep > jun:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "2025-06-20 images: 0\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

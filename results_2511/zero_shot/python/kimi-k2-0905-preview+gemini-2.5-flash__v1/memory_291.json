@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the tropical rainfall rate increase in the western Pacific Ocean during 2009 compared to 1998?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-12-56",
+        "url": "https://earthobservatory.nasa.gov/images/85571",
+        "unique_id": 291
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy  \n   - Collection: NASA\u2019s TRMM/IMERG or the extended GPM \u201cNASA/GPM_L3/IMERG_V06\u201d rainfall rate (mm/hr).  \n   - Dates: 1998-01-01 \u2013 1998-12-31 and 2009-01-01 \u2013 2009-12-31.  \n   - Region: Western Pacific Ocean (roughly 120\u00b0E\u2013160\u00b0E, 10\u00b0S\u201320\u00b0N).  \n2. Masking strategy  \n   - Rainfall products are already masked over land by design; no extra cloud-mask needed.  \n   - We will simply sum annual rainfall (mean rate \u00d7 hours) to compare total rainfall.  \n3. Logic to distinguish Valid Zero vs Null/Error  \n   - Check collection size first \u2192 C1 if 0.  \n   - After reducing total rainfall, verify result is a finite positive number; null/NaN \u2192 C3.  \n   - If 2009 total > 1998 total \u2192 A, else B.  \n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nwPac = ee.Geometry.Rectangle(120, -10, 160, 20)\nyears = {'1998': ('1998-01-01', '1999-01-01'),\n         '2009': ('2009-01-01', '2010-01-01')}\n\n# 2. Acquire & Check\ndef annual_rain(year):\n    col = (ee.ImageCollection('NASA/GPM_L3/IMERG_V06')\n           .select('precipitationCal')\n           .filterDate(*years[year])\n           .filterBounds(wPac))\n    n = col.size().getInfo()\n    if n == 0:\n        print(f\"{year} Images: 0\")\n        return None\n    total = (col.sum()\n             .multiply(0.5)  # half-hourly \u2192 hours\n             .reduceRegion(reducer=ee.Reducer.sum(),\n                           geometry=wPac, scale=10000,\n                           maxPixels=1e9)\n             .get('precipitationCal')\n             .getInfo())\n    return total\n\nr98 = annual_rain('1998')\nr09 = annual_rain('2009')\n\n# 3. Validate\nif r98 is None or r09 is None:\n    print(\"<answer>C1</answer>\")\nelif r98 < 0 or r09 < 0 or ee.Algorithms.IsNaN(r98).getInfo() or ee.Algorithms.IsNaN(r09).getInfo():\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"1998 mm: {r98:.1e}  2009 mm: {r09:.1e}\")\n    print(\"<answer>A</answer>\" if r09 > r98 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nwPac = ee.Geometry.Rectangle(120, -10, 160, 20)\nyears = {'1998': ('1998-01-01', '1999-01-01'),\n         '2009': ('2009-01-01', '2010-01-01')}\n\n# 2. Acquire & Check\ndef annual_rain(year):\n    col = (ee.ImageCollection('NASA/GPM_L3/IMERG_V06')\n           .select('precipitationCal')\n           .filterDate(*years[year])\n           .filterBounds(wPac))\n    n = col.size().getInfo()\n    if n == 0:\n        print(f\"{year} Images: 0\")\n        return None\n    total = (col.sum()\n             .multiply(0.5)  # half-hourly \u2192 hours\n             .reduceRegion(reducer=ee.Reducer.sum(),\n                           geometry=wPac, scale=10000,\n                           maxPixels=1e9)\n             .get('precipitationCal')\n             .getInfo())\n    return total\n\nr98 = annual_rain('1998')\nr09 = annual_rain('2009')\n\n# 3. Validate\nif r98 is None or r09 is None:\n    print(\"<answer>C1</answer>\")\nelif r98 < 0 or r09 < 0 or ee.Algorithms.IsNaN(r98).getInfo() or ee.Algorithms.IsNaN(r09).getInfo():\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"1998 mm: {r98:.1e}  2009 mm: {r09:.1e}\")\n    print(\"<answer>A</answer>\" if r09 > r98 else \"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Execution timed out after 120 seconds",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

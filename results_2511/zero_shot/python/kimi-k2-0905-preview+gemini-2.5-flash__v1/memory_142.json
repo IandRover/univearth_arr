@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did nighttime lights in Obolon, Ukraine, decrease in May 2022 compared to March 2022?",
+        "answer": "No",
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-32-47",
+        "url": "https://earthobservatory.nasa.gov/images/150002/tracking-night-lights-in-ukraine",
+        "unique_id": 142
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Collection: VIIRS Nighttime Day/Night Band (VNP46A2 or DNB_MONTHLY_V1) \u2013 I will use the monthly DNB composites from the NASA \u201cBlack Marble\u201d collection C1: \u201cNOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG\u201d.\n2. Dates: March and May 2022 (exactly \u201c2022-03-01\u201d and \u201c2022-05-01\u201d).\n3. Location: Obolon, Ukraine (place name \u2248 50.51\u00b0N, 30.49\u00b0E). Build a small 1 km Point/Buffer geometry.\n4. Masking: Nighttime lights product has no clouds over land in monthly composites; no masking needed.\n5. Logic: average radiance for each month; if May average < March average \u2192 decrease \u2192 \u201cA\u201d, else \u201cB\u201d. If any month has no images (impossible here in monthly composites) \u2192 C1. If valid pixel count = 0 \u2192 C2. If any mean is None/NaN \u2192 C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\ngeom = ee.Geometry.Point([30.49, 50.51]).buffer(1000)   # Obolon ~1 km radius\nmar = ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG\").filter(ee.Filter.date(\"2022-03-01\", \"2022-04-01\"))\nmay = ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG\").filter(ee.Filter.date(\"2022-05-01\", \"2022-06-01\"))\n\n# 2. Check availability\nif mar.size().getInfo() == 0 or may.size().getInfo() == 0:\n    print(\"C1: Empty collection.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Extract mean radiance\nmeanMar = mar.first().select(\"avg_rad\").reduceRegion(\n    reducer=ee.Reducer.mean(), geometry=geom, scale=1000, maxPixels=1e9)\nmeanMay = may.first().select(\"avg_rad\").reduceRegion(\n    reducer=ee.Reducer.mean(), geometry=geom, scale=1000, maxPixels=1e9)\n\nvalMar = meanMar.get(\"avg_rad\").getInfo()\nvalMay = meanMay.get(\"avg_rad\").getInfo()\n\n# 4. Validation\nif valMar is None or valMay is None:\n    print(\"<answer>C3</answer>\")\ncount = ee.Image.cat([mar.first(), may.first()]).select(\"avg_rad\")\\\n          .reduceRegion(ee.Reducer.count(), geom, 1000, maxPixels=1e9).get(\"avg_rad\").getInfo()\nif count == 0:\n    print(\"<answer>C2</answer>\")\n\nprint(f\"Mar 2022: {valMar:.2f}, May 2022: {valMay:.2f}, Pixels: {int(count)}\")\nprint(\"<answer>A</answer>\" if valMay < valMar else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\ngeom = ee.Geometry.Point([30.49, 50.51]).buffer(1000)   # Obolon ~1 km radius\nmar = ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG\").filter(ee.Filter.date(\"2022-03-01\", \"2022-04-01\"))\nmay = ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG\").filter(ee.Filter.date(\"2022-05-01\", \"2022-06-01\"))\n\n# 2. Check availability\nif mar.size().getInfo() == 0 or may.size().getInfo() == 0:\n    print(\"C1: Empty collection.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Extract mean radiance\nmeanMar = mar.first().select(\"avg_rad\").reduceRegion(\n    reducer=ee.Reducer.mean(), geometry=geom, scale=1000, maxPixels=1e9)\nmeanMay = may.first().select(\"avg_rad\").reduceRegion(\n    reducer=ee.Reducer.mean(), geometry=geom, scale=1000, maxPixels=1e9)\n\nvalMar = meanMar.get(\"avg_rad\").getInfo()\nvalMay = meanMay.get(\"avg_rad\").getInfo()\n\n# 4. Validation\nif valMar is None or valMay is None:\n    print(\"<answer>C3</answer>\")\ncount = ee.Image.cat([mar.first(), may.first()]).select(\"avg_rad\")\\\n          .reduceRegion(ee.Reducer.count(), geom, 1000, maxPixels=1e9).get(\"avg_rad\").getInfo()\nif count == 0:\n    print(\"<answer>C2</answer>\")\n\nprint(f\"Mar 2022: {valMar:.2f}, May 2022: {valMay:.2f}, Pixels: {int(count)}\")\nprint(\"<answer>A</answer>\" if valMay < valMar else \"<answer>B</answer>\")",
+            "exec_msg": "Mar 2022: 6.56, May 2022: 0.00, Pixels: 4\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

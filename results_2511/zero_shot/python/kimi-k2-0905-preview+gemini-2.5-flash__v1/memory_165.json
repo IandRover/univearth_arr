@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the rainfall in Somalia decrease during March-September 2022 compared to the 1981-2021 average?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_19-33-33",
+        "url": "https://earthobservatory.nasa.gov/images/150712/worst-drought-on-record-parches-horn-of-africa",
+        "unique_id": 165
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use CHIRPS daily rainfall for Somalia.  \n   - Collection: `UCSB-CHG/CHIRPS/DAILY` (precipitation in mm).  \n   - Periods: 1981-2021 climatology vs 1 Mar \u2013 30 Sep 2022.  \n   - Region: Somalia (country bounds).  \n2. Masking: None needed \u2013 CHIRPS is a merged satellite-station product with no clouds.  \n3. Logic:  \n   - Compute total rainfall for each period (Mar\u2013Sep).  \n   - If any collection is empty \u2192 C1.  \n   - After summing, if pixel count is 0 \u2192 C2.  \n   - If result is None/NaN \u2192 C3.  \n   - Compare 2022 total vs 41-yr average: if 2022 < average \u2192 A (Yes), else \u2192 B (No).\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\nsom = ee.FeatureCollection(\"USDOS/LSIB_SIMPLE/2017\").filter(ee.Filter.eq('country_na', 'Somalia')).geometry()\n\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n\ndef seasonal_sum(start, end, years):\n    col = chirps.filterDate(ee.Date.fromYMD(years[0], 3, 1), ee.Date.fromYMD(years[1], 9, 30)) \\\n                .filter(ee.Filter.calendarRange(3, 9, 'month')) \\\n                .sum().multiply(1)  # mm\n    return col.set('years', f'{years[0]}-{years[1]}')\n\nhist = seasonal_sum(3, 9, [1981, 2021])\nrecent = seasonal_sum(3, 9, [2022, 2022])\n\nfor era in [hist, recent]:\n    if era.bandNames().size().getInfo() == 0:\n        print(\"Empty collection\")\n        print(\"<answer>C1</answer>\")\n        quit()\n\nscale = 5000\ncount = hist.reduceRegion(reducer=ee.Reducer.count(), geometry=som, scale=scale, maxPixels=1e9).get('precipitation').getInfo()\nif count == 0:\n    print(\"No valid pixels\")\n    print(\"<answer>C2</answer>\")\n    quit()\n\nhist_mm = hist.reduceRegion(reducer=ee.Reducer.mean(), geometry=som, scale=scale, maxPixels=1e9).get('precipitation').getInfo()\nrecent_mm = recent.reduceRegion(reducer=ee.Reducer.mean(), geometry=som, scale=scale, maxPixels=1e9).get('precipitation').getInfo()\n\nif hist_mm is None or recent_mm is None:\n    print(\"Calculation failed\")\n    print(\"<answer>C3</answer>\")\n    quit()\n\nprint(f\"1981-2021 avg Mar-Sep: {hist_mm:.1f} mm\")\nprint(f\"2022 Mar-Sep: {recent_mm:.1f} mm\")\nprint(f\"Pixels: {int(count)}\")\n\nif recent_mm < hist_mm:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\nsom = ee.FeatureCollection(\"USDOS/LSIB_SIMPLE/2017\").filter(ee.Filter.eq('country_na', 'Somalia')).geometry()\n\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n\ndef seasonal_sum(start, end, years):\n    col = chirps.filterDate(ee.Date.fromYMD(years[0], 3, 1), ee.Date.fromYMD(years[1], 9, 30)) \\\n                .filter(ee.Filter.calendarRange(3, 9, 'month')) \\\n                .sum().multiply(1)  # mm\n    return col.set('years', f'{years[0]}-{years[1]}')\n\nhist = seasonal_sum(3, 9, [1981, 2021])\nrecent = seasonal_sum(3, 9, [2022, 2022])\n\nfor era in [hist, recent]:\n    if era.bandNames().size().getInfo() == 0:\n        print(\"Empty collection\")\n        print(\"<answer>C1</answer>\")\n        quit()\n\nscale = 5000\ncount = hist.reduceRegion(reducer=ee.Reducer.count(), geometry=som, scale=scale, maxPixels=1e9).get('precipitation').getInfo()\nif count == 0:\n    print(\"No valid pixels\")\n    print(\"<answer>C2</answer>\")\n    quit()\n\nhist_mm = hist.reduceRegion(reducer=ee.Reducer.mean(), geometry=som, scale=scale, maxPixels=1e9).get('precipitation').getInfo()\nrecent_mm = recent.reduceRegion(reducer=ee.Reducer.mean(), geometry=som, scale=scale, maxPixels=1e9).get('precipitation').getInfo()\n\nif hist_mm is None or recent_mm is None:\n    print(\"Calculation failed\")\n    print(\"<answer>C3</answer>\")\n    quit()\n\nprint(f\"1981-2021 avg Mar-Sep: {hist_mm:.1f} mm\")\nprint(f\"2022 Mar-Sep: {recent_mm:.1f} mm\")\nprint(f\"Pixels: {int(count)}\")\n\nif recent_mm < hist_mm:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Execution timed out after 120 seconds",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

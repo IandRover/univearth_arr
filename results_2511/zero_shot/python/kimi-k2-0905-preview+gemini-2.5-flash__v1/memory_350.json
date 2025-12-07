@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the Lut Desert experience land surface temperatures above 75 degrees Celsius in 2018?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-04-32",
+        "url": "https://modis.gsfc.nasa.gov/gallery/individual.php?db_date=2024-04-06",
+        "unique_id": 350
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use MODIS Land Surface Temperature (LST) collection MOD11A1 for daily 1-km LST, or MYD11A1 as fallback, for year 2018 over the Lut Desert (Iran).  \n2. Masking strategy: Use the QC band to mask low-quality pixels (keep only \u201cgood\u201d & \u201caverage\u201d LST pixels).  \n3. Validation: Check collection size \u2192 if 0 \u2192 C1. After masking, count valid pixels; if 0 \u2192 C2. Compute max LST; if result is None/NaN or outside physical range \u2192 C3. If max > 75 \u00b0C \u2192 A, else B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\nlut = ee.Geometry.Point(58.2, 30.6)  # central Lut Desert\ncol = ee.ImageCollection('MODIS/006/MOD11A1')\\\n        .filterBounds(lut).filterDate('2018-01-01', '2019-01-01')\n\nif col.size().getInfo() == 0:\n    print(\"No 2018 MOD11A1 images.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\ndef mask_qc(img):\n    qc = img.select('QC_Day')\n    mask = qc.rightShift(6).bitwiseAnd(3).lte(2)  # keep good/average LST\n    return img.updateMask(mask)\n\ncol = col.map(mask_qc)\ncount = col.first().reduceRegion(\n    reducer=ee.Reducer.count(), geometry=lut, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\nif count == 0:\n    print(\"No valid pixels after masking.\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\nmaxLST = col.reduce(ee.Reducer.max()).reduceRegion(\n    reducer=ee.Reducer.first(), geometry=lut, scale=1000, maxPixels=1e9).get('LST_Day_1km_max').getInfo()\n\nprint(f\"2018 max LST: {maxLST:.2f} \u00b0C, Valid pixels: {count}\")\n\nif maxLST is None or maxLST != maxLST or maxLST > 100 or maxLST < -50:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(\"<answer>A</answer>\" if maxLST > 75 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\nlut = ee.Geometry.Point(58.2, 30.6)  # central Lut Desert\ncol = ee.ImageCollection('MODIS/006/MOD11A1')\\\n        .filterBounds(lut).filterDate('2018-01-01', '2019-01-01')\n\nif col.size().getInfo() == 0:\n    print(\"No 2018 MOD11A1 images.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\ndef mask_qc(img):\n    qc = img.select('QC_Day')\n    mask = qc.rightShift(6).bitwiseAnd(3).lte(2)  # keep good/average LST\n    return img.updateMask(mask)\n\ncol = col.map(mask_qc)\ncount = col.first().reduceRegion(\n    reducer=ee.Reducer.count(), geometry=lut, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\nif count == 0:\n    print(\"No valid pixels after masking.\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\nmaxLST = col.reduce(ee.Reducer.max()).reduceRegion(\n    reducer=ee.Reducer.first(), geometry=lut, scale=1000, maxPixels=1e9).get('LST_Day_1km_max').getInfo()\n\nprint(f\"2018 max LST: {maxLST:.2f} \u00b0C, Valid pixels: {count}\")\n\nif maxLST is None or maxLST != maxLST or maxLST > 100 or maxLST < -50:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(\"<answer>A</answer>\" if maxLST > 75 else \"<answer>B</answer>\")",
+            "exec_msg": "2018 max LST: 16988.00 \u00b0C, Valid pixels: 1\n<answer>C3</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for MODIS/006/MOD11A1! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by MODIS/061/MOD11A1\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MOD11A1\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C3</answer>",
+            "answer": "C3",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

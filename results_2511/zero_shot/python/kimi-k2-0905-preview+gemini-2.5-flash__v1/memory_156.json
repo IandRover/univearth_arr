@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did Sacramento, California experience 2-meter air temperatures above 110 degrees fahrenheit in September 2022?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-52-28",
+        "url": "https://earthobservatory.nasa.gov/images/150318/a-long-lasting-western-heatwave",
+        "unique_id": 156
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Collection: ERA5-Land hourly 2-m air temperature (ECMWF/ERA5_LAND/HOURLY)  \n   - Date: September 2022 (2022-09-01 \u2192 2022-09-30)  \n   - Location: Sacramento, CA (approx 38.58 N, \u2013121.49 W)  \n\n2. Masking:  \n   - ERA5-Land is a reanalysis product \u2013 no cloud masking needed.  \n   - Simply select the temperature band (temperature_2m) and convert from Kelvin to Fahrenheit.  \n\n3. Logic:  \n   - Take the maximum 2-m temperature over September 2022.  \n   - Threshold: 110 \u00b0F (\u2248 316.48 K).  \n   - Check .size() of collection first; if 0 \u2192 C1.  \n   - After reducing to max, check that the result is not None/NaN \u2192 else C3.  \n   - If max \u2264 110 \u00b0F \u2192 B; if any hour > 110 \u00b0F \u2192 A.  \n   - Also count valid pixels to confirm data exist (avoid C2).  \n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\npt = ee.Geometry.Point(-121.49, 38.58)  # Sacramento\nsept2022 = ee.DateRange('2022-09-01', '2022-09-30')\n\n# 2. Acquire ERA5-Land 2-m temperature\ncol = (ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')\n       .select('temperature_2m')\n       .filterBounds(pt)\n       .filterDate(sept2022))\n\nn = col.size().getInfo()\nprint(f'Sept 2022 images: {n}')\nif n == 0:\n    print('<answer>C1</answer>')\n\n# 3. Max temperature for month\nmaxK = col.max().reduceRegion(reducer=ee.Reducer.first(),\n                              geometry=pt,\n                              scale=1000,\n                              maxPixels=1e9).get('temperature_2m').getInfo()\nif maxK is None or maxK != maxK:          # NaN guard\n    print('<answer>C3</answer>')\n\nmaxF = (maxK - 273.15) * 9/5 + 32\nprint(f'Max 2-m temp (K): {maxK:.2f}  ->  (\u00b0F): {maxF:.2f}')\n\n# 4. Answer\nprint('<answer>A</answer>' if maxF > 110 else '<answer>B</answer>')\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\npt = ee.Geometry.Point(-121.49, 38.58)  # Sacramento\nsept2022 = ee.DateRange('2022-09-01', '2022-09-30')\n\n# 2. Acquire ERA5-Land 2-m temperature\ncol = (ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')\n       .select('temperature_2m')\n       .filterBounds(pt)\n       .filterDate(sept2022))\n\nn = col.size().getInfo()\nprint(f'Sept 2022 images: {n}')\nif n == 0:\n    print('<answer>C1</answer>')\n\n# 3. Max temperature for month\nmaxK = col.max().reduceRegion(reducer=ee.Reducer.first(),\n                              geometry=pt,\n                              scale=1000,\n                              maxPixels=1e9).get('temperature_2m').getInfo()\nif maxK is None or maxK != maxK:          # NaN guard\n    print('<answer>C3</answer>')\n\nmaxF = (maxK - 273.15) * 9/5 + 32\nprint(f'Max 2-m temp (K): {maxK:.2f}  ->  (\u00b0F): {maxF:.2f}')\n\n# 4. Answer\nprint('<answer>A</answer>' if maxF > 110 else '<answer>B</answer>')",
+            "exec_msg": "Sept 2022 images: 696\nMax 2-m temp (K): 319.95  ->  (\u00b0F): 116.23\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

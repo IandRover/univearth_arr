@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "In April 2023, did southern Spain experience temperatures over 90 degrees Fahrenheit?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-30-17",
+        "url": "https://earthobservatory.nasa.gov/images/151366/spain-browned-by-drought",
+        "unique_id": 177
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy  \n   \u2013 Collection: ERA5-Land daily aggregated 2-m air temperature (\u00b0C), or if that fails, MODIS LST (\u00b0C) and convert to \u00b0F.  \n   \u2013 Date: April 1-30 2023.  \n   \u2013 Location: southern Spain (Andaluc\u00eda) \u2013 a representative polygon or a buffered point around Seville/M\u00e1laga so we stay within one tile and avoid huge computation.\n\n2. Masking strategy  \n   \u2013 ERA5 is re-analysis, no clouds to mask; just clip to region.\n\n3. Logic to distinguish Valid-Zero vs Null  \n   \u2013 After mean/max reduction, check the result is a finite number and within reasonable range (\u201350 \u2192 60 \u00b0C).  \n   \u2013 If result is None/NaN or outside range \u2192 C3.  \n   \u2013 If max temperature \u2264 32.2 \u00b0C (90 \u00b0F) \u2192 B, else \u2192 A.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Region: Andaluc\u00eda rough bounding box\nspain = ee.Geometry.Rectangle([-7.5, 36.0, -1.5, 38.5])   # west, south, east, north\n\n# 2. Acquire ERA5-Land 2-m temperature for April 2023 (\u00b0C)\napr2023 = ee.ImageCollection('ECMWF/ERA5_LAND/DAILY_AGGR') \\\n            .select('temperature_2m') \\\n            .filter(ee.Filter.date('2023-04-01', '2023-05-01'))\n\nif apr2023.size().getInfo() == 0:\n    print(\"No ERA5 images found.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Compute max temperature (\u00b0C) over the month in the region\ntmax_k = apr2023.max()                                 # daily max already in K\ntmax_c = tmax_k.subtract(273.15)                       # convert to \u00b0C\ntmax_f = tmax_c.multiply(1.8).add(32)                  # convert to \u00b0F\n\n# 4. Reduce to regional maximum\nval = tmax_f.reduceRegion(reducer=ee.Reducer.max(),\n                          geometry=spain, scale=10000, maxPixels=1e9) \\\n             .get('temperature_2m').getInfo()\n\n# 5. Validation\nif val is None or not (-50 <= (val-32)/1.8 <= 60):\n    print(\"Invalid temperature result.\")\n    print(\"<answer>C3</answer>\")\n\nprint(f\"Max April 2023 temp: {val:.1f} \u00b0F\")\n\nif val > 90:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Region: Andaluc\u00eda rough bounding box\nspain = ee.Geometry.Rectangle([-7.5, 36.0, -1.5, 38.5])   # west, south, east, north\n\n# 2. Acquire ERA5-Land 2-m temperature for April 2023 (\u00b0C)\napr2023 = ee.ImageCollection('ECMWF/ERA5_LAND/DAILY_AGGR') \\\n            .select('temperature_2m') \\\n            .filter(ee.Filter.date('2023-04-01', '2023-05-01'))\n\nif apr2023.size().getInfo() == 0:\n    print(\"No ERA5 images found.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Compute max temperature (\u00b0C) over the month in the region\ntmax_k = apr2023.max()                                 # daily max already in K\ntmax_c = tmax_k.subtract(273.15)                       # convert to \u00b0C\ntmax_f = tmax_c.multiply(1.8).add(32)                  # convert to \u00b0F\n\n# 4. Reduce to regional maximum\nval = tmax_f.reduceRegion(reducer=ee.Reducer.max(),\n                          geometry=spain, scale=10000, maxPixels=1e9) \\\n             .get('temperature_2m').getInfo()\n\n# 5. Validation\nif val is None or not (-50 <= (val-32)/1.8 <= 60):\n    print(\"Invalid temperature result.\")\n    print(\"<answer>C3</answer>\")\n\nprint(f\"Max April 2023 temp: {val:.1f} \u00b0F\")\n\nif val > 90:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Max April 2023 temp: 84.1 \u00b0F\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

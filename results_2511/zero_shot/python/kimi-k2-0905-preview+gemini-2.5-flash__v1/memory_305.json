@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did nighttime light intensity across Puerto Rico decline between September 21, 2016, and September 22, 2016?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-27-44",
+        "url": "https://earthobservatory.nasa.gov/images/88796/puerto-rico-goes-dark",
+        "unique_id": 305
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: We will use VIIRS DNB (Black Marble) Nighttime Day/Night Band for nighttime lights. These data are available daily at 15-arcsecond (~450 m) resolution.  \n2. Date range: Exactly 2016-09-21 and 2016-09-22 (two consecutive dates).  \n3. Location: Puerto Rico \u2013 we will build a small coastline-area buffer polygon to avoid striping artefacts only over water.  \n4. Masking: No cloud masking is needed for night band; instead, the data include a quality flag. We will mask \u201cpoor+no data\u201d pixels using the mandatory \u201ccfmask\u201d layer (QE flag).  \n5. Logic: Compute mean radiance across Puerto Rico for each day. Compare 2016-09-22 vs 2016-09-21. If 2016-09-22 < 2016-09-21 \u2192 A (Yes). Otherwise B (No). If one collection is empty \u2192 C1. If after masking we have 0 valid pixels \u2192 C2. If result is None/NaN \u2192 C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# Geometry: Puerto Rico land mask (outline buffered 1 km inland to ignore ocean strips)\npr = ee.FeatureCollection(\"USDOS/LSIB_SIMPLE/2017\") \\\n         .filter(ee.Filter.eq('country_na', 'Puerto Rico')).geometry()\nroi = pr.buffer(-1000)  # shrink 1 km to stay over land\n\n# Data: VIIRS Black Marble daily VNP46A1 (Nighttime Day/Night Band)\ndef get_day(yyyymmdd):\n    col = ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG\") \\\n              .filterDate(yyyymmdd, ee.Date(yyyymmdd).advance(1, 'day'))\n    return col\n\nd1 = get_day('2016-09-21')\nd2 = get_day('2016-09-22')\n\nif d1.size().getInfo() == 0 or d2.size().getInfo() == 0:\n    print(\"C1: Missing day collection\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# VIIRS monthly product uses 'avg_rad' band (mean radiance)\nimg1 = d1.first().select('avg_rad')\nimg2 = d2.first().select('avg_rad')\n\n# Pixel counts after masking fill (0 = good data in this layer)\ndef mean_rad(img, label):\n    good = img.mask()  # 1=valid\n    count = good.reduceRegion(reducer=ee.Reducer.count(),\n                              geometry=roi, scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\n    mean = img.reduceRegion(reducer=ee.Reducer.mean(),\n                            geometry=roi, scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\n    print(f\"{label} count: {int(count)}, mean: {mean:.4f}\")\n    return mean\n\nrad1 = mean_rad(img1, \"2016-09-21\")\nrad2 = mean_rad(img2, \"2016-09-22\")\n\nif rad1 is None or rad2 is None:\n    print(\"<answer>C3</answer>\")\nelif rad2 < rad1:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# Geometry: Puerto Rico land mask (outline buffered 1 km inland to ignore ocean strips)\npr = ee.FeatureCollection(\"USDOS/LSIB_SIMPLE/2017\") \\\n         .filter(ee.Filter.eq('country_na', 'Puerto Rico')).geometry()\nroi = pr.buffer(-1000)  # shrink 1 km to stay over land\n\n# Data: VIIRS Black Marble daily VNP46A1 (Nighttime Day/Night Band)\ndef get_day(yyyymmdd):\n    col = ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG\") \\\n              .filterDate(yyyymmdd, ee.Date(yyyymmdd).advance(1, 'day'))\n    return col\n\nd1 = get_day('2016-09-21')\nd2 = get_day('2016-09-22')\n\nif d1.size().getInfo() == 0 or d2.size().getInfo() == 0:\n    print(\"C1: Missing day collection\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# VIIRS monthly product uses 'avg_rad' band (mean radiance)\nimg1 = d1.first().select('avg_rad')\nimg2 = d2.first().select('avg_rad')\n\n# Pixel counts after masking fill (0 = good data in this layer)\ndef mean_rad(img, label):\n    good = img.mask()  # 1=valid\n    count = good.reduceRegion(reducer=ee.Reducer.count(),\n                              geometry=roi, scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\n    mean = img.reduceRegion(reducer=ee.Reducer.mean(),\n                            geometry=roi, scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\n    print(f\"{label} count: {int(count)}, mean: {mean:.4f}\")\n    return mean\n\nrad1 = mean_rad(img1, \"2016-09-21\")\nrad2 = mean_rad(img2, \"2016-09-22\")\n\nif rad1 is None or rad2 is None:\n    print(\"<answer>C3</answer>\")\nelif rad2 < rad1:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "C1: Missing day collection\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

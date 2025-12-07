@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "question": "Does the nighttime light intensity in Kyiv decrease in March 2022 compared to January 2022?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-reasoner",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-20-19",
+        "url": "https://earthobservatory.nasa.gov/images/150002/tracking-night-lights-in-ukraine",
+        "unique_id": 143
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nkyiv = ee.Geometry.Point([30.5233, 50.4500]).buffer(10000)  # 10 km buffer around Kyiv center\njan_date = ('2022-01-01', '2022-01-31')\nmar_date = ('2022-03-01', '2022-03-31')\n\n# 2. Data Acquisition\nviirs = ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG\")\n\ndef get_monthly_mean(date_range):\n    \"\"\"Extract mean radiance and valid pixel count for a given month.\"\"\"\n    col = viirs.filterDate(*date_range).filterBounds(kyiv)\n    if col.size().getInfo() == 0:\n        return None, 0, 0\n    img = col.first()\n    # Mask pixels with zero cloud-free observations\n    masked = img.updateMask(img.select('cf_cvg').gt(0))\n    # Compute statistics\n    stats = masked.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=kyiv,\n        scale=1000,\n        maxPixels=1e9\n    )\n    count = masked.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=kyiv,\n        scale=1000,\n        maxPixels=1e9\n    ).get('avg_rad')\n    mean_rad = stats.get('avg_rad')\n    return mean_rad, count.getInfo()\n\n# Process both months\njan_mean, jan_count = get_monthly_mean(jan_date)\nmar_mean, mar_count = get_monthly_mean(mar_date)\n\n# 3. Check for missing data or no valid pixels\nif jan_mean is None or mar_mean is None:\n    print(f\"January images: {0 if jan_mean is None else 1}, March images: {0 if mar_mean is None else 1}\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\nif jan_count == 0 or mar_count == 0:\n    print(f\"January valid pixels: {jan_count}, March valid pixels: {mar_count}\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\n# 4. Validate and compare values\njan_val = jan_mean.getInfo()\nmar_val = mar_mean.getInfo()\n\n# Check for invalid numerical results\nif jan_val is None or mar_val is None or not (-0.1 <= jan_val <= 100) or not (-0.1 <= mar_val <= 100):\n    print(f\"January radiance: {jan_val}, March radiance: {mar_val}\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\n# 5. Final comparison\nprint(f\"January radiance: {jan_val:.3f} nW/cm\u00b2/sr, Valid pixels: {jan_count}\")\nprint(f\"March radiance: {mar_val:.3f} nW/cm\u00b2/sr, Valid pixels: {mar_count}\")\n\nif mar_val < jan_val:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nkyiv = ee.Geometry.Point([30.5233, 50.4500]).buffer(10000)  # 10 km buffer around Kyiv center\njan_date = ('2022-01-01', '2022-01-31')\nmar_date = ('2022-03-01', '2022-03-31')\n\n# 2. Data Acquisition\nviirs = ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG\")\n\ndef get_monthly_mean(date_range):\n    \"\"\"Extract mean radiance and valid pixel count for a given month.\"\"\"\n    col = viirs.filterDate(*date_range).filterBounds(kyiv)\n    if col.size().getInfo() == 0:\n        return None, 0, 0\n    img = col.first()\n    # Mask pixels with zero cloud-free observations\n    masked = img.updateMask(img.select('cf_cvg').gt(0))\n    # Compute statistics\n    stats = masked.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=kyiv,\n        scale=1000,\n        maxPixels=1e9\n    )\n    count = masked.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=kyiv,\n        scale=1000,\n        maxPixels=1e9\n    ).get('avg_rad')\n    mean_rad = stats.get('avg_rad')\n    return mean_rad, count.getInfo()\n\n# Process both months\njan_mean, jan_count = get_monthly_mean(jan_date)\nmar_mean, mar_count = get_monthly_mean(mar_date)\n\n# 3. Check for missing data or no valid pixels\nif jan_mean is None or mar_mean is None:\n    print(f\"January images: {0 if jan_mean is None else 1}, March images: {0 if mar_mean is None else 1}\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\nif jan_count == 0 or mar_count == 0:\n    print(f\"January valid pixels: {jan_count}, March valid pixels: {mar_count}\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\n# 4. Validate and compare values\njan_val = jan_mean.getInfo()\nmar_val = mar_mean.getInfo()\n\n# Check for invalid numerical results\nif jan_val is None or mar_val is None or not (-0.1 <= jan_val <= 100) or not (-0.1 <= mar_val <= 100):\n    print(f\"January radiance: {jan_val}, March radiance: {mar_val}\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\n# 5. Final comparison\nprint(f\"January radiance: {jan_val:.3f} nW/cm\u00b2/sr, Valid pixels: {jan_count}\")\nprint(f\"March radiance: {mar_val:.3f} nW/cm\u00b2/sr, Valid pixels: {mar_count}\")\n\nif mar_val < jan_val:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "January radiance: 29.562 nW/cm\u00b2/sr, Valid pixels: 490\nMarch radiance: 11.086 nW/cm\u00b2/sr, Valid pixels: 490\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null
+        }
+    ]
+}

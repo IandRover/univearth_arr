@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the forest fire burn over 0.8 million hectares of land in Quebec, Canada in 2023?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-25-36",
+        "url": "https://earthobservatory.nasa.gov/images/151985/tracking-canadas-extreme-2023-fire-season",
+        "unique_id": 194
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:\n   - Collection: Use MODIS Fire CCI Burned Area (MCD64A1) for 2023, as it provides monthly burned area masks at 500 m resolution globally.\n   - Date: 2023-01-01 to 2023-12-31.\n   - Location: Quebec, Canada \u2013 use a simplified polygon around the province (already defined below).\n\n2. Masking strategy:\n   - MCD64A1 contains a \u201cBurnDate\u201d band (0 = unburned, 1\u2013366 = Julian day of burn).\n   - Create a binary burn mask: 1 where BurnDate > 0, 0 otherwise.\n\n3. Logic to distinguish Valid Zero vs Null/Error:\n   - After masking, sum the area (each pixel = 500 m \u00d7 500 m = 0.25 km\u00b2 = 25 ha).\n   - If collection size is 0 \u2192 C1.\n   - If total burned ha is None/NaN or negative \u2192 C3.\n   - If total burned ha \u2265 0.8 million ha (800 000 ha) \u2192 A, else \u2192 B.\n   - If reducer returns 0 ha, that is a valid zero \u2192 B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry \u2013 Quebec province (simplified bounding box)\nquebec = ee.Geometry.Polygon(\n    [[-79.8, 44.9], [-79.8, 62.5], [-57.1, 62.5], [-57.1, 44.9]])\n\n# 2. Data acquisition & check\ncol = ee.ImageCollection('MODIS/006/MCD64A1')\\\n        .filterDate('2023-01-01', '2023-12-31')\\\n        .filterBounds(quebec)\nif col.size().getInfo() == 0:\n    print(\"No MCD64A1 images for 2023.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Burn mask and area calc\n    burned = col.select('BurnDate').map(lambda img: img.gt(0)).max()  # 1=burned, 0=unburned\n    areaHa = burned.multiply(ee.Image.pixelArea()).divide(1e4)  # m\u00b2 \u2192 ha\n    totalHa = areaHa.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=quebec,\n        scale=1000,\n        maxPixels=1e9\n    ).get('constant').getInfo()\n    \n    # 4. Validation\n    if totalHa is None or totalHa < 0:\n        print(\"<answer>C3</answer>\")\n    else:\n        print(f\"2023 Burned area: {totalHa/1e6:.2f} Mha\")\n        print(\"<answer>A</answer>\" if totalHa >= 0.8e6 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry \u2013 Quebec province (simplified bounding box)\nquebec = ee.Geometry.Polygon(\n    [[-79.8, 44.9], [-79.8, 62.5], [-57.1, 62.5], [-57.1, 44.9]])\n\n# 2. Data acquisition & check\ncol = ee.ImageCollection('MODIS/006/MCD64A1')\\\n        .filterDate('2023-01-01', '2023-12-31')\\\n        .filterBounds(quebec)\nif col.size().getInfo() == 0:\n    print(\"No MCD64A1 images for 2023.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Burn mask and area calc\n    burned = col.select('BurnDate').map(lambda img: img.gt(0)).max()  # 1=burned, 0=unburned\n    areaHa = burned.multiply(ee.Image.pixelArea()).divide(1e4)  # m\u00b2 \u2192 ha\n    totalHa = areaHa.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=quebec,\n        scale=1000,\n        maxPixels=1e9\n    ).get('constant').getInfo()\n    \n    # 4. Validation\n    if totalHa is None or totalHa < 0:\n        print(\"<answer>C3</answer>\")\n    else:\n        print(f\"2023 Burned area: {totalHa/1e6:.2f} Mha\")\n        print(\"<answer>A</answer>\" if totalHa >= 0.8e6 else \"<answer>B</answer>\")",
+            "exec_msg": "No MCD64A1 images for 2023.\n<answer>C1</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for MODIS/006/MCD64A1! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by MODIS/061/MCD64A1\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MCD64A1\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

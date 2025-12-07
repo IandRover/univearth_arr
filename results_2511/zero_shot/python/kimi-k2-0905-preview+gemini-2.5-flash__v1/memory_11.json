@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did Washington D.C. experience an air temperature difference of at least 24 degrees Celcius between January 29 and February 5, 2019?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-54-37",
+        "url": "https://earthobservatory.nasa.gov/images/144516/wild-winter-temperature-swings",
+        "unique_id": 11
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: We want air temperature, so ERA5-Land hourly data is appropriate (for mid-latitudes), as it gives 2-m temperature in Kelvin at ~9 km resolution.  \n2. Geometry: Washington DC \u2192 centroid of Washington DC city limits (lat=38.9, lon=-77.0).  \n3. Date/time span: The question specifies two points in time \u2013 29 Jan 2019 and 5 Feb 2019.  \n   Because ERA5-Land is hourly, we\u2019ll treat \u201cthat day\u201d as the daily mean of all images acquired between 00:00\u201323:59 on each date; each image covers one hour.  \n4. Masking/clean-up: ERA5-Land has no cloud mask. However, we still need to compute mean daily values and verify we actually have 24 valid images per day.  \n5. Logic: Compute T_mean(29 Jan 2019) and T_mean(5 Feb 2019) in \u00b0C, report both and their difference.  \n   If |T1\u2013T2| \u2265 24 \u00b0C \u2192 A (Yes); else B (No).  \n   No images at all for either date \u2192 C1.  \n   After averaging, we still require \u22651 valid pixel; if count = 0 \u2192 C2.  \n   If either mean is None/NaN or the difference is None/NaN \u2192 C3.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\ndc = ee.Geometry.Point([-77.0, 38.9])\nt1_start = ee.Date('2019-01-29')\nt1_end = ee.Date('2019-01-30')\nt2_start = ee.Date('2019-02-05')\nt2_end = ee.Date('2019-02-06')\n\n# 2. ERA5-Land daily mean temperature for the two dates\ndef daily_mean_K(date_start, date_end, label):\n    col = (ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')\n             .select('temperature_2m')\n             .filterDate(date_start, date_end))\n    n = col.size().getInfo()\n    if n == 0:\n        print(f'{label} collection size = 0')\n        return None, 0\n    # daily mean in Kelvin (mean over 24 hourly images)\n    daily = col.mean()\n    # reduce at DC point\n    out = daily.reduceRegion(\n        reducer  = ee.Reducer.mean(),\n        geometry = dc,\n        scale    = 10000,\n        maxPixels= 1e9\n    ).get('temperature_2m').getInfo()\n    if out is None or str(out) == 'None':\n        return None, 0\n    return float(out), n\n\nT1_K, n1 = daily_mean_K(t1_start, t1_end, '2019-01-29')\nT2_K, n2 = daily_mean_K(t2_start, t2_end, '2019-02-05')\n\nif T1_K is None or T2_K is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    T1_C = T1_K - 273.15\n    T2_C = T2_K - 273.15\n    diff = abs(T1_C - T2_C)\n    print(f\"2019-01-29 T: {T1_C:.1f} \u00b0C (n={n1})\")\n    print(f\"2019-02-05 T: {T2_C:.1f} \u00b0C (n={n2})\")\n    print(f\"Difference: {diff:.1f} \u00b0C\")\n    if diff >= 24:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\ndc = ee.Geometry.Point([-77.0, 38.9])\nt1_start = ee.Date('2019-01-29')\nt1_end = ee.Date('2019-01-30')\nt2_start = ee.Date('2019-02-05')\nt2_end = ee.Date('2019-02-06')\n\n# 2. ERA5-Land daily mean temperature for the two dates\ndef daily_mean_K(date_start, date_end, label):\n    col = (ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')\n             .select('temperature_2m')\n             .filterDate(date_start, date_end))\n    n = col.size().getInfo()\n    if n == 0:\n        print(f'{label} collection size = 0')\n        return None, 0\n    # daily mean in Kelvin (mean over 24 hourly images)\n    daily = col.mean()\n    # reduce at DC point\n    out = daily.reduceRegion(\n        reducer  = ee.Reducer.mean(),\n        geometry = dc,\n        scale    = 10000,\n        maxPixels= 1e9\n    ).get('temperature_2m').getInfo()\n    if out is None or str(out) == 'None':\n        return None, 0\n    return float(out), n\n\nT1_K, n1 = daily_mean_K(t1_start, t1_end, '2019-01-29')\nT2_K, n2 = daily_mean_K(t2_start, t2_end, '2019-02-05')\n\nif T1_K is None or T2_K is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    T1_C = T1_K - 273.15\n    T2_C = T2_K - 273.15\n    diff = abs(T1_C - T2_C)\n    print(f\"2019-01-29 T: {T1_C:.1f} \u00b0C (n={n1})\")\n    print(f\"2019-02-05 T: {T2_C:.1f} \u00b0C (n={n2})\")\n    print(f\"Difference: {diff:.1f} \u00b0C\")\n    if diff >= 24:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "2019-01-29 T: -0.6 \u00b0C (n=24)\n2019-02-05 T: 8.0 \u00b0C (n=24)\nDifference: 8.5 \u00b0C\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

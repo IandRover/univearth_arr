@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Were the agricultural fields between the Kakhovka and North Crimean Canals in Ukraine browner on June 18, 2023 than on May 17, 2023?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-37-39",
+        "url": "https://earthobservatory.nasa.gov/images/151622/canals-in-ukraine-are-drying-up",
+        "unique_id": 186
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: We need Sentinel-2 surface reflectance (L2A, NDVI band) over a polygon spanning the canal corridor on two dates:  \n   - Collection: COPERNICUS/S2_SR  \n   - Date windows: 17 May 2023 \u00b17 d and 18 June 2023 \u00b17 d (snap to same relative orbit whenever possible).  \n   - Lat/lon of centre \u2248 46.75 N, 33.3 E \u2013 an irrigated zone near Nova Kakhovka linking Kakhovka canal to the North-Crimean canal. We\u2019ll draw a ~25 km\u00b2 agricultural polygon to capture many irrigated fields.\n\n2. Masking: We DO mask clouds/snow/shadow via the \u2018QA60\u2019 and \u2018SCL\u2019 bands, because the question is about surface colour (NDVI), not cloud area.\n\n3. Logic for valid-zero vs null/error:  \n   - If either collection size is 0 \u2192 C1.  \n   - After cloud masking if the pixel count inside the polygon is 0 \u2192 C2.  \n   - Compute median NDVI for each date; if any median is None/NaN or outside [-1,1] \u2192 C3.  \n   - \u201cBrowner\u201d means lower NDVI \u2192 we\u2019ll answer A if median NDVI(18 Jun) < median NDVI(17 May).\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define agricultural polygon between the two canals\ncoords = [[33.15,46.7],[33.5,46.7],[33.5,46.8],[33.15,46.8]]\npoly = ee.Geometry.Polygon(coords)\n\nwindow_may = ('2023-05-10','2023-05-24')\nwindow_jun = ('2023-06-11','2023-06-25')\n\n# 2. Acquire Sentinel-2\ndef get_med_ndvi(date_range,label):\n    col = (ee.ImageCollection('COPERNICUS/S2_SR')\n             .filterBounds(poly)\n             .filterDate(*date_range)\n             .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE',40))\n             .map(lambda img: img.updateMask(\n                  img.select('QA60').eq(0).And(img.select('SCL').eq(4)))  # keep vegetation\n                  .normalizedDifference(['B8','B4']).rename('NDVI')))\n    n = col.size().getInfo()\n    if n == 0: \n        print(f\"{label} Images: 0\")\n        return None, 0\n    img = col.median()\n    count = img.select('NDVI').reduceRegion(\n                reducer=ee.Reducer.count(),\n                geometry=poly, scale=1000, maxPixels=1e9).get('NDVI').getInfo()\n    ndvi = img.select('NDVI').reduceRegion(\n                reducer=ee.Reducer.median(),\n                geometry=poly, scale=1000, maxPixels=1e9).get('NDVI').getInfo()\n    print(f\"{label} Images: {n}  ValidPixels: {count}  MedNDVI: {ndvi:.3f}\")\n    return ndvi, count\n\nndvi_may, cnt_may = get_med_ndvi(window_may, \"May17\")\nndvi_jun, cnt_jun = get_med_ndvi(window_jun, \"Jun18\")\n\nif ndvi_may is None or ndvi_jun is None:\n    print(\"<answer>C1</answer>\")\nelif cnt_may == 0 or cnt_jun == 0:\n    print(\"<answer>C2</answer>\")\nelif ndvi_may is None or ndvi_jun is None or abs(ndvi_may)>1 or abs(ndvi_jun)>1:\n    print(\"<answer>C3</answer>\")\nelif ndvi_jun < ndvi_may:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define agricultural polygon between the two canals\ncoords = [[33.15,46.7],[33.5,46.7],[33.5,46.8],[33.15,46.8]]\npoly = ee.Geometry.Polygon(coords)\n\nwindow_may = ('2023-05-10','2023-05-24')\nwindow_jun = ('2023-06-11','2023-06-25')\n\n# 2. Acquire Sentinel-2\ndef get_med_ndvi(date_range,label):\n    col = (ee.ImageCollection('COPERNICUS/S2_SR')\n             .filterBounds(poly)\n             .filterDate(*date_range)\n             .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE',40))\n             .map(lambda img: img.updateMask(\n                  img.select('QA60').eq(0).And(img.select('SCL').eq(4)))  # keep vegetation\n                  .normalizedDifference(['B8','B4']).rename('NDVI')))\n    n = col.size().getInfo()\n    if n == 0: \n        print(f\"{label} Images: 0\")\n        return None, 0\n    img = col.median()\n    count = img.select('NDVI').reduceRegion(\n                reducer=ee.Reducer.count(),\n                geometry=poly, scale=1000, maxPixels=1e9).get('NDVI').getInfo()\n    ndvi = img.select('NDVI').reduceRegion(\n                reducer=ee.Reducer.median(),\n                geometry=poly, scale=1000, maxPixels=1e9).get('NDVI').getInfo()\n    print(f\"{label} Images: {n}  ValidPixels: {count}  MedNDVI: {ndvi:.3f}\")\n    return ndvi, count\n\nndvi_may, cnt_may = get_med_ndvi(window_may, \"May17\")\nndvi_jun, cnt_jun = get_med_ndvi(window_jun, \"Jun18\")\n\nif ndvi_may is None or ndvi_jun is None:\n    print(\"<answer>C1</answer>\")\nelif cnt_may == 0 or cnt_jun == 0:\n    print(\"<answer>C2</answer>\")\nelif ndvi_may is None or ndvi_jun is None or abs(ndvi_may)>1 or abs(ndvi_jun)>1:\n    print(\"<answer>C3</answer>\")\nelif ndvi_jun < ndvi_may:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Execution timed out after 120 seconds",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

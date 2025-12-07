@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did New York experience an air temperature difference of at least 24 degrees Celcius between January 29 and February 5, 2019?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-13-44",
+        "url": "https://earthobservatory.nasa.gov/images/144516/wild-winter-temperature-swings",
+        "unique_id": 10
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use ERA5-Land hourly reanalysis data (temperature 2m above surface) for New York area.\n2. Masking strategy: No cloud masking needed since ERA5-Land is reanalysis data. Locate correct pixel near New York city center.\n3. Logic: Extract mean air temperature for Jan 29 and Feb 5, 2019. Compute absolute difference. Report C3 if any value is NaN/null/invalid.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Location: Central NYC\nloc = ee.Geometry.Point([-73.9857, 40.7484])  # Times Square\n\ndef get_era5_daily(date_str):\n    day = ee.Date(date_str)\n    col = (ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')\n           .select('temperature_2m')\n           .filterDate(day, day.advance(1, 'day')))\n    # Daily mean\n    img = col.mean()\n    # Convert Kelvin to Celsius, sample 1113m scale\n    c = img.multiply(0).add(img).subtract(273.15)\n    val = c.reduceRegion(reducer=ee.Reducer.mean(), geometry=loc, scale=1113, maxPixels=1e9).get('temperature_2m')\n    return val.getInfo()\n\n# 2. Temperatures\nt1 = get_era5_daily('2019-01-29')\nt2 = get_era5_daily('2019-02-05')\n\nprint(f\"Jan 29: {t1:.2f} C\")\nprint(f\"Feb 05: {t2:.2f} C\")\n\nif t1 is None or t2 is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    delta = abs(t1 - t2)\n    print(f\"Delta: {delta:.2f} C\")\n    if delta >= 24:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Location: Central NYC\nloc = ee.Geometry.Point([-73.9857, 40.7484])  # Times Square\n\ndef get_era5_daily(date_str):\n    day = ee.Date(date_str)\n    col = (ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')\n           .select('temperature_2m')\n           .filterDate(day, day.advance(1, 'day')))\n    # Daily mean\n    img = col.mean()\n    # Convert Kelvin to Celsius, sample 1113m scale\n    c = img.multiply(0).add(img).subtract(273.15)\n    val = c.reduceRegion(reducer=ee.Reducer.mean(), geometry=loc, scale=1113, maxPixels=1e9).get('temperature_2m')\n    return val.getInfo()\n\n# 2. Temperatures\nt1 = get_era5_daily('2019-01-29')\nt2 = get_era5_daily('2019-02-05')\n\nprint(f\"Jan 29: {t1:.2f} C\")\nprint(f\"Feb 05: {t2:.2f} C\")\n\nif t1 is None or t2 is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    delta = abs(t1 - t2)\n    print(f\"Delta: {delta:.2f} C\")\n    if delta >= 24:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "Jan 29: -0.77 C\nFeb 05: 5.67 C\nDelta: 6.44 C\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

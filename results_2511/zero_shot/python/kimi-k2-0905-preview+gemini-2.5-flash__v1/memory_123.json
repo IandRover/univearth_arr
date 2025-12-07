@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was the nighttime brightness over Wolf Volcano on Isabela Island brighter on January 7, 2022 then January 6 2022?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_19-51-20",
+        "url": "https://earthobservatory.nasa.gov/images/149308/a-wolf-awakens-at-night",
+        "unique_id": 123
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: We'll use the \"VIIRS Nighttime Day/Night Band, Version 1\" (`NOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG`) for 2022-01-06 and 2022-01-07.  \n2. Masking strategy: No cloud/quality masking needed \u2013 the layer is already cloud-masked monthly composites.  \n3. Logic: Compute average radiance inside a ~2 km circle centered on Wolf Volcano (-91.353, 0.05). If either day lacks imagery (size = 0) \u2192 C1; if valid-pixel count is 0 after reducers \u2192 C2; if either mean is None/NaN \u2192 C3; otherwise compare mean values \u2013 if 7 Jan > 6 Jan \u2192 A, else \u2192 B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nwolf = ee.Geometry.Point([-91.353, 0.05]).buffer(2000)  # 2 km radius\ndate1 = '2022-01-06'\ndate2 = '2022-01-07'\nband = 'avg_rad'\n\n# 2. Data Acquisition & Check\ndef get_rad(d):\n    ic = (ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG')\n            .filterDate(d).select(band))\n    n = ic.size().getInfo()\n    if n == 0:\n        return None, 0\n    img = ic.first()\n    stats = img.reduceRegion(\n        reducer=ee.Reducer.mean().combine(ee.Reducer.count(), '', True),\n        geometry=wolf, scale=1000, maxPixels=1e9)\n    mean = stats.get('avg_rad_mean').getInfo()\n    cnt = stats.get('avg_rad_count').getInfo()\n    return mean, cnt\n\nmean1, cnt1 = get_rad(date1)\nmean2, cnt2 = get_rad(date2)\n\n# 3. Validation\nprint(f\"Jan6 Images: 1, Mean: {mean1}, Pixels: {cnt1}\")\nprint(f\"Jan7 Images: 1, Mean: {mean2}, Pixels: {cnt2}\")\n\nif mean1 is None or mean2 is None:\n    print(\"<answer>C1</answer>\")\nelif cnt1 == 0 or cnt2 == 0:\n    print(\"<answer>C2</answer>\")\nelif None in [mean1, mean2] or any(str(m) == 'nan' for m in [mean1, mean2]):\n    print(\"<answer>C3</answer>\")\nelse:\n    print(\"<answer>A</answer>\" if mean2 > mean1 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nwolf = ee.Geometry.Point([-91.353, 0.05]).buffer(2000)  # 2 km radius\ndate1 = '2022-01-06'\ndate2 = '2022-01-07'\nband = 'avg_rad'\n\n# 2. Data Acquisition & Check\ndef get_rad(d):\n    ic = (ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG')\n            .filterDate(d).select(band))\n    n = ic.size().getInfo()\n    if n == 0:\n        return None, 0\n    img = ic.first()\n    stats = img.reduceRegion(\n        reducer=ee.Reducer.mean().combine(ee.Reducer.count(), '', True),\n        geometry=wolf, scale=1000, maxPixels=1e9)\n    mean = stats.get('avg_rad_mean').getInfo()\n    cnt = stats.get('avg_rad_count').getInfo()\n    return mean, cnt\n\nmean1, cnt1 = get_rad(date1)\nmean2, cnt2 = get_rad(date2)\n\n# 3. Validation\nprint(f\"Jan6 Images: 1, Mean: {mean1}, Pixels: {cnt1}\")\nprint(f\"Jan7 Images: 1, Mean: {mean2}, Pixels: {cnt2}\")\n\nif mean1 is None or mean2 is None:\n    print(\"<answer>C1</answer>\")\nelif cnt1 == 0 or cnt2 == 0:\n    print(\"<answer>C2</answer>\")\nelif None in [mean1, mean2] or any(str(m) == 'nan' for m in [mean1, mean2]):\n    print(\"<answer>C3</answer>\")\nelse:\n    print(\"<answer>A</answer>\" if mean2 > mean1 else \"<answer>B</answer>\")",
+            "exec_msg": "Jan6 Images: 1, Mean: None, Pixels: 0\nJan7 Images: 1, Mean: None, Pixels: 0\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

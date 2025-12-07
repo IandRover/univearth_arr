@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the burn scar area in Apalachicola National Forest's Bradwell Bay Wilderness increase between early April, 2004, and late April, 2004?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-25-56",
+        "url": "https://www.earthobservatory.nasa.gov/images/4411/",
+        "unique_id": 390
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Landsat 7 ETM+ (available 1999-2021) with SR, April 2004, over Bradwell Bay Wilderness in Apalachicola National Forest.  \n   \u2013 Early April window: 1\u201310 Apr 2004  \n   \u2013 Late April window: 21\u201330 Apr 2004  \n2. Masking: QA_PIXEL cloud/shadow mask, then water mask (burn scars are on land).  \n3. Burn proxy: NBR = (NIR-SWIR2)/(NIR+SWIR2).  A lower NBR indicates char/bare soil; a negative \u0394NBR (late \u2013 early) means more burning.  \n   \u2013 If either period has 0 images \u2192 C1.  \n   \u2013 After compositing/masking, if valid-pixel count is 0 \u2192 C2.  \n   \u2013 Mean \u0394NBR must be a real number (not None/NaN); otherwise C3.  \n   \u2013 Decision: if \u0394NBR < \u20130.05 (clear decrease / more scar) \u2192 A (Yes, scar increased); else B (No).\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Area\nbradwell = ee.Geometry.Rectangle([-84.85, 30.05, -84.60, 30.25])  # Bradwell Bay Wilderness\n\n# 2. Image collections\nearly = (ee.ImageCollection('LANDSAT/LE07/C02/T1_L2')\n           .filterBounds(bradwell)\n           .filterDate('2004-04-01', '2004-04-10'))\nlate  = (ee.ImageCollection('LANDSAT/LE07/C02/T1_L2')\n           .filterBounds(bradwell)\n           .filterDate('2004-04-21', '2004-04-30'))\n\nn_early = early.size().getInfo()\nn_late  = late.size().getInfo()\nprint(f\"Early-Apr 2004 images: {n_early}\")\nprint(f\"Late-Apr 2004 images:  {n_late}\")\nif n_early == 0 or n_late == 0:\n    print(\"<answer>C1</answer>\")\n\n# 3. Cloud/water mask helper\ndef mask_l7(img):\n    qa = img.select('QA_PIXEL')\n    cloud = qa.bitwiseAnd(1 << 3).Or(qa.bitwiseAnd(1 << 4))  # cloud & shadow\n    water = qa.bitwiseAnd(1 << 7)\n    return img.updateMask(cloud.Not()).updateMask(water.Not())\n\n# 4. Composite and NBR\ndef comp_nbr(col):\n    return (col.map(mask_l7)\n              .median()\n              .normalizedDifference(['SR_B4', 'SR_B7'])   # NIR = B4, SWIR2 = B7\n              .rename('NBR'))\n\nnbr_early = comp_nbr(early)\nnbr_late  = comp_nbr(late)\n\n# 5. Valid pixels\npix = nbr_early.multiply(0).add(1).reduceRegion(\n        reducer=ee.Reducer.count(), geometry=bradwell, scale=1000, maxPixels=1e9).get('NBR').getInfo()\nif pix == 0:\n    print(\"<answer>C2</answer>\")\n\n# 6. Delta\ndelta = (nbr_late.subtract(nbr_early)\n                 .reduceRegion(reducer=ee.Reducer.mean(), geometry=bradwell,\n                               scale=1000, maxPixels=1e9)\n                 .get('NBR').getInfo())\nprint(f\"\u0394NBR (late-early): {delta:.3f}, pixels: {int(pix)}\")\nif delta is None:\n    print(\"<answer>C3</answer>\")\n\nprint(\"<answer>A</answer>\" if delta < -0.05 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Area\nbradwell = ee.Geometry.Rectangle([-84.85, 30.05, -84.60, 30.25])  # Bradwell Bay Wilderness\n\n# 2. Image collections\nearly = (ee.ImageCollection('LANDSAT/LE07/C02/T1_L2')\n           .filterBounds(bradwell)\n           .filterDate('2004-04-01', '2004-04-10'))\nlate  = (ee.ImageCollection('LANDSAT/LE07/C02/T1_L2')\n           .filterBounds(bradwell)\n           .filterDate('2004-04-21', '2004-04-30'))\n\nn_early = early.size().getInfo()\nn_late  = late.size().getInfo()\nprint(f\"Early-Apr 2004 images: {n_early}\")\nprint(f\"Late-Apr 2004 images:  {n_late}\")\nif n_early == 0 or n_late == 0:\n    print(\"<answer>C1</answer>\")\n\n# 3. Cloud/water mask helper\ndef mask_l7(img):\n    qa = img.select('QA_PIXEL')\n    cloud = qa.bitwiseAnd(1 << 3).Or(qa.bitwiseAnd(1 << 4))  # cloud & shadow\n    water = qa.bitwiseAnd(1 << 7)\n    return img.updateMask(cloud.Not()).updateMask(water.Not())\n\n# 4. Composite and NBR\ndef comp_nbr(col):\n    return (col.map(mask_l7)\n              .median()\n              .normalizedDifference(['SR_B4', 'SR_B7'])   # NIR = B4, SWIR2 = B7\n              .rename('NBR'))\n\nnbr_early = comp_nbr(early)\nnbr_late  = comp_nbr(late)\n\n# 5. Valid pixels\npix = nbr_early.multiply(0).add(1).reduceRegion(\n        reducer=ee.Reducer.count(), geometry=bradwell, scale=1000, maxPixels=1e9).get('NBR').getInfo()\nif pix == 0:\n    print(\"<answer>C2</answer>\")\n\n# 6. Delta\ndelta = (nbr_late.subtract(nbr_early)\n                 .reduceRegion(reducer=ee.Reducer.mean(), geometry=bradwell,\n                               scale=1000, maxPixels=1e9)\n                 .get('NBR').getInfo())\nprint(f\"\u0394NBR (late-early): {delta:.3f}, pixels: {int(pix)}\")\nif delta is None:\n    print(\"<answer>C3</answer>\")\n\nprint(\"<answer>A</answer>\" if delta < -0.05 else \"<answer>B</answer>\")",
+            "exec_msg": "Early-Apr 2004 images: 1\nLate-Apr 2004 images:  1\n\u0394NBR (late-early): -0.014, pixels: 388\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

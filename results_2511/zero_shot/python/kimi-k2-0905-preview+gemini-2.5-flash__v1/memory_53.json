@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the Jianghan District of Wuhan show lower nightime light intensity on February 4, 2020, compared to January 19, 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-36-31",
+        "url": "https://earthobservatory.nasa.gov/images/146481/nighttime-images-capture-change-in-china",
+        "unique_id": 53
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: We need night-time light data. The VIIRS Day/Night Band (VNP46A1 or VNP46A2) is ideal, but it is not publicly available in GEE. Instead we use the annual VIIRS VNL V2 or monthly averages. The closest monthly composites are 2020-01 and 2020-02. We will extract the mean radiance from the Jianghan District polygon on those two dates.\n\n2. Masking: VIIRS nighttime products already screen clouds and aurora; we just mask negative fill values.\n\n3. Logic: Compute mean radiance for January 2020 and February 2020 composites. If either composite yields null/NaN or no valid pixels, return C2/C3. Otherwise compare: if mean_Feb < mean_Jan \u2192 A; else B.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\njianghan = ee.Geometry.Rectangle([114.25, 30.58, 114.32, 30.63])  # ~Jianghan District\njan = ee.Date('2020-01-01'); feb = ee.Date('2020-02-01')\n\n# 2. Data Acquisition (monthly VIIRS VNL V2)\nnl = ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG\")\njan_img = nl.filter(ee.Filter.date(jan, jan.advance(1, 'month'))).first()\nfeb_img = nl.filter(ee.Filter.date(feb, feb.advance(1, 'month'))).first()\n\nif jan_img is None or feb_img is None:\n    print(\"Missing required monthly composite.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Processing\njan_img = jan_img.updateMask(jan_img.gt(0))\nfeb_img = feb_img.updateMask(feb_img.gt(0))\n\ndef get_mean(img, label):\n    stats = img.reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=jianghan, scale=1000, maxPixels=1e9)\n    mean = stats.get('avg_rad').getInfo()\n    count = img.reduceRegion(reducer=ee.Reducer.count(),\n                             geometry=jianghan, scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\n    print(f\"{label} mean: {mean:.2f}, pixels: {int(count)}\")\n    return mean, count\n\njan_mean, jan_cnt = get_mean(jan_img, \"Jan 2020\")\nfeb_mean, feb_cnt = get_mean(feb_img, \"Feb 2020\")\n\n# 4. Validation\nif jan_mean is None or feb_mean is None:\n    print(\"<answer>C3</answer>\")\nif jan_cnt == 0 or feb_cnt == 0:\n    print(\"<answer>C2</answer>\")\n\n# 5. Answer\nprint(\"<answer>A</answer>\" if feb_mean < jan_mean else \"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\njianghan = ee.Geometry.Rectangle([114.25, 30.58, 114.32, 30.63])  # ~Jianghan District\njan = ee.Date('2020-01-01'); feb = ee.Date('2020-02-01')\n\n# 2. Data Acquisition (monthly VIIRS VNL V2)\nnl = ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG\")\njan_img = nl.filter(ee.Filter.date(jan, jan.advance(1, 'month'))).first()\nfeb_img = nl.filter(ee.Filter.date(feb, feb.advance(1, 'month'))).first()\n\nif jan_img is None or feb_img is None:\n    print(\"Missing required monthly composite.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Processing\njan_img = jan_img.updateMask(jan_img.gt(0))\nfeb_img = feb_img.updateMask(feb_img.gt(0))\n\ndef get_mean(img, label):\n    stats = img.reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=jianghan, scale=1000, maxPixels=1e9)\n    mean = stats.get('avg_rad').getInfo()\n    count = img.reduceRegion(reducer=ee.Reducer.count(),\n                             geometry=jianghan, scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\n    print(f\"{label} mean: {mean:.2f}, pixels: {int(count)}\")\n    return mean, count\n\njan_mean, jan_cnt = get_mean(jan_img, \"Jan 2020\")\nfeb_mean, feb_cnt = get_mean(feb_img, \"Feb 2020\")\n\n# 4. Validation\nif jan_mean is None or feb_mean is None:\n    print(\"<answer>C3</answer>\")\nif jan_cnt == 0 or feb_cnt == 0:\n    print(\"<answer>C2</answer>\")\n\n# 5. Answer\nprint(\"<answer>A</answer>\" if feb_mean < jan_mean else \"<answer>B</answer>\")",
+            "exec_msg": "Jan 2020 mean: 36.80, pixels: 48\nFeb 2020 mean: 49.66, pixels: 48\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

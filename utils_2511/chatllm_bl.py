@@ -29,6 +29,7 @@ class ChatLLM:
             # Anthropic
             "claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929", 
             # OpenAI
+            "gpt-5",
             "gpt-4o", "gpt-4o-mini", "o3-mini", "o5-mini",
             # "qwen-2.5-coder-32b-instruct",
             "Llama-3.1-8B-Instruct",
@@ -45,7 +46,8 @@ class ChatLLM:
             # Gemini
             "gemini", 'gemini-2.5-pro', "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.5-flash",
             "gemini-3-pro-preview",
-            # OpenRouter
+            # Kimi
+            "kimi-k2-0905-preview",
             ]
         
         self.prompt_system_zs = open("./prompts_2511/2323_ZS_SYSTEM.txt").read()
@@ -165,6 +167,19 @@ class ChatLLM:
                 messages=messages,
                 )
             
+            return response.choices[0].message.content
+        
+        elif self.request_type == "kimi":
+
+            messages = [{ "role": "system", "content": system_prompt}]
+            messages.append({ "role": "user", "content": user_prompts[-1]})            
+            self.temp_messages = messages 
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature = 1.0
+            )
             return response.choices[0].message.content
         
     def _check_option(self, content: str, options: List[str]) -> bool:
@@ -377,6 +392,13 @@ class ChatLLM:
             model = "gpt-5-mini"
             request_type = 'openai'
             self.should_clean_utf8 = True
+        elif model_name == "gpt-5.1-codex-max":
+            model = "gpt-5.1-codex-max"
+            request_type = 'openai'
+        elif model_name == "gpt-5":
+            model = "gpt-5"
+            request_type = 'openai'
+
 
         # anthropic
         elif model_name == "claude-haiku-4-5-20251001":
@@ -443,6 +465,10 @@ class ChatLLM:
             model = "Qwen/Qwen2.5-72B-Instruct-Turbo"
             request_type = "together"
 
+        elif model_name == "kimi-k2-0905-preview":
+            model = "kimi-k2-0905-preview"
+            request_type = "kimi"
+
             
         if request_type == "anthropic":
             self.client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
@@ -464,6 +490,10 @@ class ChatLLM:
         elif request_type == "gemini":
             self.client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
             # self.chat = self.client.chats.create(model="gemini-2.0-flash")
+
+        elif request_type == "kimi":
+            self.client = OpenAI(api_key=os.environ.get('KIMI_API_KEY'),
+                                 base_url="https://api.moonshot.ai/v1")
 
         # elif request_type == "openrouter":
         #     self.client = OpenAI(

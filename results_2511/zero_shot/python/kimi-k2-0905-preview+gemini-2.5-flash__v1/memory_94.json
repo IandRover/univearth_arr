@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does Dorsoidong Co Lake have a lighter blue color than Chibzhang Co Lake in October 12, 1987?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-11-12",
+        "url": "https://earthobservatory.nasa.gov/images/148966/shrinking-glaciers-and-growing-lakes",
+        "unique_id": 94
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use Landsat 5 for 1987 (OLI is not available). Lakes are in Tibet; I need points for Dorsoidong Co and Chibzhang Co. Mask clouds with QA_PIXEL using Landsat 5 SR.  \n2. Masking: Apply QA_PIXEL cloud mask, keep only clear (non-cloud) pixels. Then extract mean surface-reflectance blue band (SR_B1) for both lakes to compare \u201cblueness.\u201d  \n3. Logic: If either collection is empty \u2192 C1. After masking, if either lake has 0 valid pixels \u2192 C2. If any result is None/NaN \u2192 C3. Otherwise compare: if Dorsoidong Co blue value > Chibzhang Co \u2192 lighter (A); else (B).\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Date definitions\ndate = '1987-10-12'\ndorso = ee.Geometry.Point([85.33, 31.98])  # Dorsoidong Co\nchibz = ee.Geometry.Point([85.75, 31.55])  # Chibzhang Co\n\n# 2. Image acquisition (Landsat 5 SR)\ncol = (ee.ImageCollection('LANDSAT/LT05/C02/T1_L2')\n       .filterBounds(dorso).filterBounds(chibz)\n       .filterDate(ee.Date(date).advance(-1, 'day'), ee.Date(date).advance(1, 'day')))\n\nif col.size().getInfo() == 0:\n    print(\"No images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Cloud mask and blue band processing\ndef mask_l5_sr(img):\n    qa = img.select('QA_PIXEL')\n    clear = qa.bitwiseAnd(int('11111',2)).eq(0)\n    return img.select('SR_B1').updateMask(clear).multiply(0.0001).copyProperties(img,['system:time_start'])\n\nimg = col.map(mask_l5_sr).median()\n\n# 4. Extract blue reflectance\nfor (nm,pt) in [('Dorso', dorso), ('Chibz', chibz)]:\n    vv = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=pt, scale=1000, maxPixels=1e9)\n    v = vv.get('SR_B1').getInfo()\n    cc = img.reduceRegion(reducer=ee.Reducer.count(), geometry=pt, scale=1000, maxPixels=1e9).get('SR_B1').getInfo()\n    print(f\"{nm}: blue={v:.3f}, pixels={int(cc)}\")\n    if cc ==0:\n        print(\"<answer>C2</answer>\")\n        exit()\n    if v is None: v=float('nan')\n    globals()[nm.lower()] = v\n\n# 5. Compare blueness\nif dorso is None or chibz is None or any([pd.isna(dorso), pd.isna(chibz)]):\n    print(\"<answer>C3</answer>\")\nelse:\n    print(\"<answer>A</answer>\" if dorso > chibz else \"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Date definitions\ndate = '1987-10-12'\ndorso = ee.Geometry.Point([85.33, 31.98])  # Dorsoidong Co\nchibz = ee.Geometry.Point([85.75, 31.55])  # Chibzhang Co\n\n# 2. Image acquisition (Landsat 5 SR)\ncol = (ee.ImageCollection('LANDSAT/LT05/C02/T1_L2')\n       .filterBounds(dorso).filterBounds(chibz)\n       .filterDate(ee.Date(date).advance(-1, 'day'), ee.Date(date).advance(1, 'day')))\n\nif col.size().getInfo() == 0:\n    print(\"No images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Cloud mask and blue band processing\ndef mask_l5_sr(img):\n    qa = img.select('QA_PIXEL')\n    clear = qa.bitwiseAnd(int('11111',2)).eq(0)\n    return img.select('SR_B1').updateMask(clear).multiply(0.0001).copyProperties(img,['system:time_start'])\n\nimg = col.map(mask_l5_sr).median()\n\n# 4. Extract blue reflectance\nfor (nm,pt) in [('Dorso', dorso), ('Chibz', chibz)]:\n    vv = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=pt, scale=1000, maxPixels=1e9)\n    v = vv.get('SR_B1').getInfo()\n    cc = img.reduceRegion(reducer=ee.Reducer.count(), geometry=pt, scale=1000, maxPixels=1e9).get('SR_B1').getInfo()\n    print(f\"{nm}: blue={v:.3f}, pixels={int(cc)}\")\n    if cc ==0:\n        print(\"<answer>C2</answer>\")\n        exit()\n    if v is None: v=float('nan')\n    globals()[nm.lower()] = v\n\n# 5. Compare blueness\nif dorso is None or chibz is None or any([pd.isna(dorso), pd.isna(chibz)]):\n    print(\"<answer>C3</answer>\")\nelse:\n    print(\"<answer>A</answer>\" if dorso > chibz else \"<answer>B</answer>\")",
+            "exec_msg": "No images found.\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

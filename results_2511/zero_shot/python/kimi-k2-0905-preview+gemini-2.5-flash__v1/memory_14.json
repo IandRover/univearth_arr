@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the regions around Mount Isa and Townsville in Queensland experience over 65 centimeters of rainfall between January 27 to February 10, 2019?",
+        "answer": "no",
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-50-09",
+        "url": "https://earthobservatory.nasa.gov/images/144545/summer-floods-in-australia",
+        "unique_id": 14
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: We need rainfall data for two Australian towns in Queensland around late Jan\u2013early Feb 2019.  \n   ERA5-Land hourly dataset has total_precipitation band (units: meters).  \n   GPM IMERG Final (daily) is another option but ERA5-Land is global, gap-free, and quick to compute, so we\u2019ll start with it.  \n   Date window: 2019-01-27 to 2019-02-10 inclusive (15 days).\n\n2. Location:  \n   Mount Isa \u2248 20.7\u00b0S 139.5\u00b0E  \n   Townsville \u2248 19.3\u00b0S 146.8\u00b0E  \n   Create small buffered points (~5 km) to ensure we sample several pixels.\n\n3. Processing:  \n   - Sum total_precipitation over the 15 days (ERA5-Land scale 0.1\u00b0 \u2248 11 km).  \n   - Convert meters \u2192 centimeters (\u00d7100).  \n   - Check collection size; if 0 \u2192 C1.  \n   - After sum, check pixel count; if 0 \u2192 C2.  \n   - If result is None/NaN \u2192 C3.  \n   - If either region \u2265 65 cm \u2192 A, else B.\n\n4. Output: print summed rainfall (cm) and pixel counts for both places, then the tag.\n</thinking>\n\n<code>\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Locations & period\nisa = ee.Geometry.Point([139.5, -20.7]).buffer(5000)\ntown = ee.Geometry.Point([146.8, -19.3]).buffer(5000)\nstart, end = '2019-01-27', '2019-02-10'\n\n# 2. Rainfall collection (ERA5-Land)\npr = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY') \\\n        .select('total_precipitation') \\\n        .filterDate(start, end)\n\nif pr.size().getInfo() == 0:\n    print(\"No ERA5-Land images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Sum precipitation (meters \u2192 cm)\ntotal_pr = pr.sum().multiply(100)  # cm\nscale = 10000  # ERA5-Land native ~0.1\u00b0 (~11 km); 10 km safe\nisa_cm = total_pr.reduceRegion(reducer=ee.Reducer.mean(),\n                               geometry=isa, scale=scale, maxPixels=1e9) \\\n                  .get('total_precipitation').getInfo()\ntown_cm = total_pr.reduceRegion(reducer=ee.Reducer.mean(),\n                                geometry=town, scale=scale, maxPixels=1e9) \\\n                   .get('total_precipitation').getInfo()\n\n# 4. Validation\nif isa_cm is None or town_cm is None:\n    print(\"<answer>C3</answer>\")\n    exit()\nisa_ok = (isa_cm is not None) and (isa_cm >= 0)\ntown_ok = (town_cm is not None) and (town_cm >= 0)\nif not (isa_ok and town_ok):\n    print(\"<answer>C3</answer>\")\n    exit()\n\n# 5. Report & decide\nprint(f\"Mount Isa rainfall: {isa_cm:.1f} cm\")\nprint(f\"Townsville rainfall: {town_cm:.1f} cm\")\nif isa_cm >= 65 or town_cm >= 65:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Locations & period\nisa = ee.Geometry.Point([139.5, -20.7]).buffer(5000)\ntown = ee.Geometry.Point([146.8, -19.3]).buffer(5000)\nstart, end = '2019-01-27', '2019-02-10'\n\n# 2. Rainfall collection (ERA5-Land)\npr = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY') \\\n        .select('total_precipitation') \\\n        .filterDate(start, end)\n\nif pr.size().getInfo() == 0:\n    print(\"No ERA5-Land images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Sum precipitation (meters \u2192 cm)\ntotal_pr = pr.sum().multiply(100)  # cm\nscale = 10000  # ERA5-Land native ~0.1\u00b0 (~11 km); 10 km safe\nisa_cm = total_pr.reduceRegion(reducer=ee.Reducer.mean(),\n                               geometry=isa, scale=scale, maxPixels=1e9) \\\n                  .get('total_precipitation').getInfo()\ntown_cm = total_pr.reduceRegion(reducer=ee.Reducer.mean(),\n                                geometry=town, scale=scale, maxPixels=1e9) \\\n                   .get('total_precipitation').getInfo()\n\n# 4. Validation\nif isa_cm is None or town_cm is None:\n    print(\"<answer>C3</answer>\")\n    exit()\nisa_ok = (isa_cm is not None) and (isa_cm >= 0)\ntown_ok = (town_cm is not None) and (town_cm >= 0)\nif not (isa_ok and town_ok):\n    print(\"<answer>C3</answer>\")\n    exit()\n\n# 5. Report & decide\nprint(f\"Mount Isa rainfall: {isa_cm:.1f} cm\")\nprint(f\"Townsville rainfall: {town_cm:.1f} cm\")\nif isa_cm >= 65 or town_cm >= 65:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Mount Isa rainfall: 339.8 cm\nTownsville rainfall: 1605.7 cm\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

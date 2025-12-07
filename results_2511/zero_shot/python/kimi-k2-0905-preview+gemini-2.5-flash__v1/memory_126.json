@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was the area covered by solar panels in the Bhadla Solar Park in Rajasthan greater than 7,000 hectares in January 2022?",
+        "answer": "No",
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-53-14",
+        "url": "https://earthobservatory.nasa.gov/images/149442/soaking-up-sun-in-the-thar-desert",
+        "unique_id": 126
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. **Search Strategy**: Need a reliable, remotely sensed indicator of solar infrastructure. A well-known index is the Land Use/Land Cover map from ESA WorldCover (10 m, annual) which has class 16 = \u201cSolar Plant\u201d. As the park is sparsely vegetated I can fetch cloud-free Sentinel-2 short-term median for Jan 2022 as well. My **collection** choice:\n   - PRIMARY: ESA WorldCover 2021 (covers 2021-01-01\u21922021-12-31; accepted as closest annual proxy to \u201cJanuary 2022\u201d)  \n   - FALLBACK: If WorldCover unavailable I could derive solar vs non-solar via Sentinel-2 NBRSI or simple SWIR1/Green threshold, but here I\u2019ll rely on the LULC product because solar park pixels are explicitly labelled and avoids complex threshold tuning.\n\n2. **Masking strategy**: because the product is annual composite, no explicit cloud mask is needed. If I switch to Sentinel-2 to support cloud-free median I apply s2cloudless mask; WorldCover needs none.\n\n3. **Logic**: \"area greater than 7,000 ha?\"  \n   - Compute solar pixel count, multiply by 100 m\u00b2 (10 m \u00d7 10 m).  \n   - A single valid sum is acceptable (>0); zero pixels \u21d2 C2; null/NaN \u21d2 C3.  \n   - Final: Area > 7000 ha \u2192 A, else B.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nbhadla = ee.Geometry.Polygon(\n    [[[71.84, 27.55], [71.93, 27.55], [71.93, 27.65], [71.84, 27.65]]])\ntarget_year = 2022\ntarget_pixels = 7000 * 100 * 100  # 7000 ha -> m\u00b2 (7000\u00d710\u2074 m\u00b2)\n\n# 2. Data Acquisition & Check\nwc = ee.ImageCollection(\"ESA/WorldCover/v200\").filterBounds(bhadla) \\\n              .filterDate(str(target_year-1)+\"-01-01\", str(target_year)+\"-12-31\")\nif wc.size().getInfo() == 0:\n    print(\"No WorldCover image for Bhadla period.\")\n    print(\"<answer>C1</answer>\")\n    exit()\nimg = wc.first()                # get single annual mosaic\n\n# 3. Processing \u2013 map class 16 (Solar Plant)\nsolarMask = img.eq(16)\nsolarArea = solarMask.multiply(ee.Image.pixelArea()).rename('solar_area')\n\n# 4. Calculation \u2013 area sum\narea_m2 = solarArea.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=bhadla,\n        scale=10,\n        maxPixels=1e9).get('solar_area').getInfo()\n\n# 5. Validation & Final Answer\nif area_m2 is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    area_ha = area_m2 / 1e4\n    print(f\"Solar area: {area_ha:.0f} ha, Estimated pixels: {int(area_m2/100)}\")\n    print(\"<answer>A</answer>\" if area_ha > 7000 else \"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nbhadla = ee.Geometry.Polygon(\n    [[[71.84, 27.55], [71.93, 27.55], [71.93, 27.65], [71.84, 27.65]]])\ntarget_year = 2022\ntarget_pixels = 7000 * 100 * 100  # 7000 ha -> m\u00b2 (7000\u00d710\u2074 m\u00b2)\n\n# 2. Data Acquisition & Check\nwc = ee.ImageCollection(\"ESA/WorldCover/v200\").filterBounds(bhadla) \\\n              .filterDate(str(target_year-1)+\"-01-01\", str(target_year)+\"-12-31\")\nif wc.size().getInfo() == 0:\n    print(\"No WorldCover image for Bhadla period.\")\n    print(\"<answer>C1</answer>\")\n    exit()\nimg = wc.first()                # get single annual mosaic\n\n# 3. Processing \u2013 map class 16 (Solar Plant)\nsolarMask = img.eq(16)\nsolarArea = solarMask.multiply(ee.Image.pixelArea()).rename('solar_area')\n\n# 4. Calculation \u2013 area sum\narea_m2 = solarArea.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=bhadla,\n        scale=10,\n        maxPixels=1e9).get('solar_area').getInfo()\n\n# 5. Validation & Final Answer\nif area_m2 is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    area_ha = area_m2 / 1e4\n    print(f\"Solar area: {area_ha:.0f} ha, Estimated pixels: {int(area_m2/100)}\")\n    print(\"<answer>A</answer>\" if area_ha > 7000 else \"<answer>B</answer>\")",
+            "exec_msg": "Solar area: 0 ha, Estimated pixels: 0\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

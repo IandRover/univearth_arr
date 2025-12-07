@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the land area of Great Fox Island decrease between 1999 and 2019?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-34-06",
+        "url": "https://earthobservatory.nasa.gov/images/145927/great-fox-is-disappearing",
+        "unique_id": 35
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use Sentinel-2 SR (2017+) or Landsat 5/7/8 SR for 1999 & 2019.  \n   - Great Fox Island is a tiny (\u22484 ha) Chesapeake Bay island, USA.  \n   - Coordinates from USGS GNIS: 37.8784 N, \u221275.9069 W.  \n   - Buffer a 500 m Point for region processing (scale 30 m).  \n2. Masking strategy: Mask clouds via collection\u2019s \u2018QA60\u2019/\u2018pixel_qa\u2019 bits, then extract land/water with a single dynamic NDWI threshold for each epoch (NDWI = (Green \u2013 NIR)/(Green + NIR)).  \n3. Logic: Compute vegetated/dry-land area = total pixels \u2212 water pixels (NDWI > threshold) for each year.  \n   - Valid zero change \u2192 A/B; missing collection \u2192 C1; zero valid pixels after masking \u2192 C2; None/NaN \u2192 C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point([-75.9069, 37.8784])\nroi = pt.buffer(500)\n\ndef get_col(sensor, y):\n    return (ee.ImageCollection(sensor)\n              .filterBounds(pt)\n              .filterDate(f'{y}-01-01', f'{y}-12-31')\n              .filter(ee.Filter.lt('CLOUD_COVER', 20))\n              .map(lambda img: img.clip(roi))\n              .sort('CLOUD_COVER').first())\n\nl5_99 = get_col('LANDSAT/LE07/C02/T1_L2', 1999)  # Landsat 7 for 1999 (fallback to 5 if needed)\nl8_19 = get_col('LANDSAT/LC08/C02/T1_L2', 2019)\n\ndef land_area(img, yr):\n    if img is None: return None\n    qa = img.select('QA_PIXEL')\n    mask = qa.bitwiseAnd(0b1110).eq(0)  # clear & water mask off\n    g = img.select('SR_B2').multiply(0.0001).rename('green')\n    nir = img.select('SR_B4').multiply(0.0001).rename('nir')\n    ndwi = g.subtract(nir).divide(g.add(nir)).updateMask(mask)\n    water = ndwi.gt(-0.1)  # conservative land/water split\n    tot = mask.reduceRegion(reducer=ee.Reducer.count(), geometry=roi, scale=30, maxPixels=1e9).get('green')\n    wat = water.reduceRegion(reducer=ee.Reducer.sum(), geometry=roi, scale=30, maxPixels=1e9).get('green')\n    try:\n        t, w = tot.getInfo(), wat.getInfo()\n        if t is None or w is None: return None\n        return (t - w) * 900  # m\u00b2\n    except ee.EEException:\n        return None\n\na99 = land_area(l5_99, 1999)\na19 = land_area(l8_19, 2019)\nprint(f'1999 land area: {a99} m\u00b2')\nprint(f'2019 land area: {a19} m\u00b2')\n\nif a99 is None or a19 is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Change: {a19 - a99} m\u00b2\")\n    print(\"<answer>A</answer>\" if a19 < a99 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point([-75.9069, 37.8784])\nroi = pt.buffer(500)\n\ndef get_col(sensor, y):\n    return (ee.ImageCollection(sensor)\n              .filterBounds(pt)\n              .filterDate(f'{y}-01-01', f'{y}-12-31')\n              .filter(ee.Filter.lt('CLOUD_COVER', 20))\n              .map(lambda img: img.clip(roi))\n              .sort('CLOUD_COVER').first())\n\nl5_99 = get_col('LANDSAT/LE07/C02/T1_L2', 1999)  # Landsat 7 for 1999 (fallback to 5 if needed)\nl8_19 = get_col('LANDSAT/LC08/C02/T1_L2', 2019)\n\ndef land_area(img, yr):\n    if img is None: return None\n    qa = img.select('QA_PIXEL')\n    mask = qa.bitwiseAnd(0b1110).eq(0)  # clear & water mask off\n    g = img.select('SR_B2').multiply(0.0001).rename('green')\n    nir = img.select('SR_B4').multiply(0.0001).rename('nir')\n    ndwi = g.subtract(nir).divide(g.add(nir)).updateMask(mask)\n    water = ndwi.gt(-0.1)  # conservative land/water split\n    tot = mask.reduceRegion(reducer=ee.Reducer.count(), geometry=roi, scale=30, maxPixels=1e9).get('green')\n    wat = water.reduceRegion(reducer=ee.Reducer.sum(), geometry=roi, scale=30, maxPixels=1e9).get('green')\n    try:\n        t, w = tot.getInfo(), wat.getInfo()\n        if t is None or w is None: return None\n        return (t - w) * 900  # m\u00b2\n    except ee.EEException:\n        return None\n\na99 = land_area(l5_99, 1999)\na19 = land_area(l8_19, 2019)\nprint(f'1999 land area: {a99} m\u00b2')\nprint(f'2019 land area: {a19} m\u00b2')\n\nif a99 is None or a19 is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Change: {a19 - a99} m\u00b2\")\n    print(\"<answer>A</answer>\" if a19 < a99 else \"<answer>B</answer>\")",
+            "exec_msg": "1999 land area: None m\u00b2\n2019 land area: None m\u00b2\n<answer>C3</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

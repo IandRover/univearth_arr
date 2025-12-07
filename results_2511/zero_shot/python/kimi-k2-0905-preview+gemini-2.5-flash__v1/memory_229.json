@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the floodplain along Cooper Creek, downstream of Windorah, 10 km radius around (-27.667421, 141.780304), show higher vegetation greenness on April 22, 2025 than on April 6, 2025?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-20-55",
+        "url": "https://earthobservatory.nasa.gov/images/154233/floods-give-way-to-a-burst-of-desert-life",
+        "unique_id": 229
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use Sentinel-2 (20 m, 5-day) for Green-Red NDVI-like greenness in April 2025. Require only two individual images, one per DOY \u2013 112 and 126.  \n2. Masking: Run S2_CLOUD_PROB threshold at 60 % (\u20182\u2019-\u20184\u2019 in QA60) to keep clear pixels, then clip to the 10 km buffer.  \n3. Logic: safe mean NDVI, accept valid numerical ranges [-1,1]. If no suitable image in a period extend \u00b13 days; if still 0 images \u2192 C1. After cloud/mask if the valid pixel count is zero \u2192 C2. If mean NDVI is None/NaN \u2192 C3. Otherwise compare the two dates and print A/B.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point([141.780304, -27.667421])\nroi = pt.buffer(10000)\n\ndef get_ndvi(doy, max_cloud=60):\n    start = ee.Date.fromYMD(2025, 1, 1).advance(doy-1, 'day')\n    col = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n           .filterBounds(roi)\n           .filterDate(start, start.advance(6, 'day'))\n           .filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', max_cloud)))\n    size = col.size().getInfo()\n    if size == 0:\n        return None, 0, 0          # C1 indication\n    img = ee.Image(col.sort('CLOUDY_PIXEL_PERCENTAGE').first())\n    clear = img.select('QA60').eq(0).And(img.select('B2').gt(0))\n    ndvi = img.normalizedDifference(['B8','B4']).updateMask(clear)\n    num = ndvi.reduceRegion(reducer=ee.Reducer.count(),\n                            geometry=roi, scale=1000, maxPixels=1e9).get('nd').getInfo()\n    mean = ndvi.reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=roi, scale=1000, maxPixels=1e9).get('nd').getInfo()\n    return mean, num, size\n\n# April 6 (DOY 96) and April 22 (DOY 112)\nmean1, n1, s1 = get_ndvi(96)\nmean2, n2, s2 = get_ndvi(112)\n\nprint(f\"2025-04-06 NDVI: {mean1:.3f} Count: {n1} Imgs: {s1}\")\nprint(f\"2025-04-22 NDVI: {mean2:.3f} Count: {n2} Imgs: {s2}\")\n\nif any([mean1 is None, mean2 is None]):\n    print(\"<answer>C1</answer>\")\nelif n1 == 0 or n2 == 0:\n    print(\"<answer>C2</answer>\")\nelif any([v is None for v in [mean1, mean2]]):\n    print(\"<answer>C3</answer>\")\nelif mean2 > mean1:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point([141.780304, -27.667421])\nroi = pt.buffer(10000)\n\ndef get_ndvi(doy, max_cloud=60):\n    start = ee.Date.fromYMD(2025, 1, 1).advance(doy-1, 'day')\n    col = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n           .filterBounds(roi)\n           .filterDate(start, start.advance(6, 'day'))\n           .filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', max_cloud)))\n    size = col.size().getInfo()\n    if size == 0:\n        return None, 0, 0          # C1 indication\n    img = ee.Image(col.sort('CLOUDY_PIXEL_PERCENTAGE').first())\n    clear = img.select('QA60').eq(0).And(img.select('B2').gt(0))\n    ndvi = img.normalizedDifference(['B8','B4']).updateMask(clear)\n    num = ndvi.reduceRegion(reducer=ee.Reducer.count(),\n                            geometry=roi, scale=1000, maxPixels=1e9).get('nd').getInfo()\n    mean = ndvi.reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=roi, scale=1000, maxPixels=1e9).get('nd').getInfo()\n    return mean, num, size\n\n# April 6 (DOY 96) and April 22 (DOY 112)\nmean1, n1, s1 = get_ndvi(96)\nmean2, n2, s2 = get_ndvi(112)\n\nprint(f\"2025-04-06 NDVI: {mean1:.3f} Count: {n1} Imgs: {s1}\")\nprint(f\"2025-04-22 NDVI: {mean2:.3f} Count: {n2} Imgs: {s2}\")\n\nif any([mean1 is None, mean2 is None]):\n    print(\"<answer>C1</answer>\")\nelif n1 == 0 or n2 == 0:\n    print(\"<answer>C2</answer>\")\nelif any([v is None for v in [mean1, mean2]]):\n    print(\"<answer>C3</answer>\")\nelif mean2 > mean1:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "2025-04-06 NDVI: -0.041 Count: 309 Imgs: 2\n2025-04-22 NDVI: -0.078 Count: 309 Imgs: 2\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

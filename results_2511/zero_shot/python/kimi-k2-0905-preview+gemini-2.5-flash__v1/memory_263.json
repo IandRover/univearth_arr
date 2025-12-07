@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Is the Kalahari Desert greener on April 19, 2009 compared to August 6, 2008, based on NDVI measurements?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-03-56",
+        "url": "https://earthobservatory.nasa.gov/images/38367/how-birds-respond-to-extreme-weather",
+        "unique_id": 263
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use MODIS NDVI (MOD13Q1) for consistent global coverage and 16-day composites. Location: Kalahari Desert centroid (~23 \u00b0E, 24 \u00b0S). Date: exact 2009-04-19 and 2008-08-06.\n2. Masking: MOD13Q1 has a built-in \u201cSummaryQA\u201d \u2013 keep only pixels flagged \u201cGood\u201d (0) to avoid bad retrievals.\n3. Logic: compute NDVI mean for each date inside a 50-km buffer; compare. If either collection is empty \u2192 C1; if after masking 0 pixels remain \u2192 C2; if any mean is None/NaN \u2192 C3; else A (Apr NDVI > Aug NDVI) or B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nkalahari = ee.Geometry.Point(23, -24).buffer(50000)   # 50 km radius\napr_date = '2009-04-19'\naug_date = '2008-08-06'\n\n# 2. Data Acquisition\ndef get_modis_ndvi(date):\n    start = ee.Date(date).advance(-8, 'day')\n    end   = ee.Date(date).advance( 8, 'day')\n    col = (ee.ImageCollection('MODIS/061/MOD13Q1')\n             .filterDate(start, end)\n             .filterBounds(kalahari))\n    if col.size().getInfo() == 0:\n        return None\n    img = col.first()\n    qa = img.select('SummaryQA')\n    mask = qa.eq(0)\n    ndvi = img.select('NDVI').updateMask(mask)\n    return ndvi\n\nndvi_apr = get_modis_ndvi(apr_date)\nndvi_aug = get_modis_ndvi(aug_date)\n\nif ndvi_apr is None or ndvi_aug is None:\n    print(\"One date has no images.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Pixel counts\ndef get_mean(ndvi_img, label):\n    count = ndvi_img.reduceRegion(reducer=ee.Reducer.count(),\n                                  geometry=kalahari, scale=1000,\n                                  maxPixels=1e9).get('NDVI').getInfo()\n    mean  = ndvi_img.reduceRegion(reducer=ee.Reducer.mean(),\n                                  geometry=kalahari, scale=1000,\n                                  maxPixels=1e9).get('NDVI').getInfo()\n    print(f\"{label}: Mean NDVI={mean:.3f}, Pixels={int(count)}\")\n    return mean, count\n\nmean_apr, count_apr = get_mean(ndvi_apr, \"Apr 2009\")\nmean_aug, count_aug = get_mean(ndvi_aug, \"Aug 2008\")\n\nif count_apr == 0 or count_aug == 0:\n    print(\"<answer>C2</answer>\")\n    exit()\nif mean_apr is None or mean_aug is None:\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(\"<answer>A</answer>\" if mean_apr > mean_aug else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nkalahari = ee.Geometry.Point(23, -24).buffer(50000)   # 50 km radius\napr_date = '2009-04-19'\naug_date = '2008-08-06'\n\n# 2. Data Acquisition\ndef get_modis_ndvi(date):\n    start = ee.Date(date).advance(-8, 'day')\n    end   = ee.Date(date).advance( 8, 'day')\n    col = (ee.ImageCollection('MODIS/061/MOD13Q1')\n             .filterDate(start, end)\n             .filterBounds(kalahari))\n    if col.size().getInfo() == 0:\n        return None\n    img = col.first()\n    qa = img.select('SummaryQA')\n    mask = qa.eq(0)\n    ndvi = img.select('NDVI').updateMask(mask)\n    return ndvi\n\nndvi_apr = get_modis_ndvi(apr_date)\nndvi_aug = get_modis_ndvi(aug_date)\n\nif ndvi_apr is None or ndvi_aug is None:\n    print(\"One date has no images.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Pixel counts\ndef get_mean(ndvi_img, label):\n    count = ndvi_img.reduceRegion(reducer=ee.Reducer.count(),\n                                  geometry=kalahari, scale=1000,\n                                  maxPixels=1e9).get('NDVI').getInfo()\n    mean  = ndvi_img.reduceRegion(reducer=ee.Reducer.mean(),\n                                  geometry=kalahari, scale=1000,\n                                  maxPixels=1e9).get('NDVI').getInfo()\n    print(f\"{label}: Mean NDVI={mean:.3f}, Pixels={int(count)}\")\n    return mean, count\n\nmean_apr, count_apr = get_mean(ndvi_apr, \"Apr 2009\")\nmean_aug, count_aug = get_mean(ndvi_aug, \"Aug 2008\")\n\nif count_apr == 0 or count_aug == 0:\n    print(\"<answer>C2</answer>\")\n    exit()\nif mean_apr is None or mean_aug is None:\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(\"<answer>A</answer>\" if mean_apr > mean_aug else \"<answer>B</answer>\")",
+            "exec_msg": "Apr 2009: Mean NDVI=2889.491, Pixels=7757\nAug 2008: Mean NDVI=2158.569, Pixels=7754\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

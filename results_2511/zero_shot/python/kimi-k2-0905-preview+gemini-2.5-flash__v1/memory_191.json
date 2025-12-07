@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did active fire detections in Sumatra and Borneo, Indonesia, increase in 2023 compared to 2022?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-51-22",
+        "url": "https://earthobservatory.nasa.gov/images/151929/indonesian-fires-return-in-2023",
+        "unique_id": 191
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use the MODIS FireCCI v6.1 collection 'ESA/CCI/FireCCI/61/v1' which provides monthly fire pixel counts by land cover class.  \n   - Areas: Sumatra and Borneo polygons (built from a few representative coordinates that cover each island).  \n   - Periods: 2022-01-01 \u2192 2022-12-31 and 2023-01-01 \u2192 2023-12-31.  \n2. Masking strategy: No cloud/snow masking needed \u2013 the CCI product is already a mask of fire presence per 250 m pixel.  \n3. Logic: Sum the \u2018Forest\u2019, \u2018Shrub\u2019, \u2018Grass\u2019, \u2018Crop\u2019 and \u2018Other\u2019 layers across all months within each year to get total detected fire pixels for 2022 vs 2023.  \n   - If either yearly total is exactly 0 pixels, flag C2 (valid images but no fire detections).  \n   - If the reducer returns None/NaN, flag C3.  \n   - Otherwise, compare 2023 total > 2022 total \u2192 A (Yes), else B (No).  \n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# --- 1. Geometry: rough hand-digitised polygons for Sumatra & Borneo\nsumatra = ee.Geometry.Polygon(\n    [[[95, 6], [105, 6], [105, -6], [95, -6], [95, 6]]])\nborneo = ee.Geometry.Polygon(\n    [[[108, 8], [120, 8], [120, -5], [108, -5], [108, 8]]])\nroi = sumatra.union(borneo)\n\n# --- 2. Load MODIS FireCCI 61 monthly fire pixels\ndef yearly_total(year):\n    col = (ee.ImageCollection('ESA/CCI/FireCCI/61/v1')\n           .filterBounds(roi)\n           .filterDate(f'{year}-01-01', f'{year}-12-31'))\n    n = col.size().getInfo()\n    if n == 0:\n        return None\n    # Sum all fire-pixel bands (Forest,Shrub,Grass,Crop,Other)\n    sumImg = col.select(['Forest','Shrub','Grass','Crop','Other']).sum()\n    tot = (sumImg.reduceRegion(reducer=ee.Reducer.sum(),\n                               geometry=roi, scale=2500, maxPixels=1e9)\n                 .values().reduce(ee.Reducer.sum())).getInfo())\n    return tot\n\nt22 = yearly_total(2022)\nt23 = yearly_total(2023)\n\nprint(f'2022 total fire pixels: {t22}')\nprint(f'2023 total fire pixels: {t23}')\n\nif t22 is None or t23 is None:\n    print('<answer>C1</answer>')\nelif t22 == 0 and t23 == 0:\n    print('<answer>C2</answer>')\nelif t22 is None or t23 is None or (t22 != t22) or (t23 != t23):  # NaN guard\n    print('<answer>C3</answer>')\nelif t23 > t22:\n    print('<answer>A</answer>')\nelse:\n    print('<answer>B</answer>')\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# --- 1. Geometry: rough hand-digitised polygons for Sumatra & Borneo\nsumatra = ee.Geometry.Polygon(\n    [[[95, 6], [105, 6], [105, -6], [95, -6], [95, 6]]])\nborneo = ee.Geometry.Polygon(\n    [[[108, 8], [120, 8], [120, -5], [108, -5], [108, 8]]])\nroi = sumatra.union(borneo)\n\n# --- 2. Load MODIS FireCCI 61 monthly fire pixels\ndef yearly_total(year):\n    col = (ee.ImageCollection('ESA/CCI/FireCCI/61/v1')\n           .filterBounds(roi)\n           .filterDate(f'{year}-01-01', f'{year}-12-31'))\n    n = col.size().getInfo()\n    if n == 0:\n        return None\n    # Sum all fire-pixel bands (Forest,Shrub,Grass,Crop,Other)\n    sumImg = col.select(['Forest','Shrub','Grass','Crop','Other']).sum()\n    tot = (sumImg.reduceRegion(reducer=ee.Reducer.sum(),\n                               geometry=roi, scale=2500, maxPixels=1e9)\n                 .values().reduce(ee.Reducer.sum())).getInfo())\n    return tot\n\nt22 = yearly_total(2022)\nt23 = yearly_total(2023)\n\nprint(f'2022 total fire pixels: {t22}')\nprint(f'2023 total fire pixels: {t23}')\n\nif t22 is None or t23 is None:\n    print('<answer>C1</answer>')\nelif t22 == 0 and t23 == 0:\n    print('<answer>C2</answer>')\nelif t22 is None or t23 is None or (t22 != t22) or (t23 != t23):  # NaN guard\n    print('<answer>C3</answer>')\nelif t23 > t22:\n    print('<answer>A</answer>')\nelse:\n    print('<answer>B</answer>')",
+            "exec_msg": "",
+            "exec_stderr": "  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/17650723175773802.py\", line 23\n    .values().reduce(ee.Reducer.sum())).getInfo())\n                                                 ^\nSyntaxError: unmatched ')'\n",
+            "exec_returncode": 1,
+            "raw_answer": "<thinking>\n1. Analyze <exec_error>: The error log clearly indicates a `SyntaxError: unmatched ')'` at a specific line and character. This is a Python parsing error, not a GEE runtime error.\n\n2. Analyze <execution_message>: The execution output is empty, which is consistent with a Python syntax error preventing the script from even starting to print.\n\n3. Analyze <Code>: The code has a syntax error. It will not execute the GEE computations or print any diagnostic messages.\nTherefore, the execution failed due to a fundamental syntax issue.\n</thinking>\n\n<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": "1. Analyze <exec_error>: The error log clearly indicates a `SyntaxError: unmatched ')'` at a specific line and character. This is a Python parsing error, not a GEE runtime error.\n\n2. Analyze <execution_message>: The execution output is empty, which is consistent with a Python syntax error preventing the script from even starting to print.\n\n3. Analyze <Code>: The code has a syntax error. It will not execute the GEE computations or print any diagnostic messages.\nTherefore, the execution failed due to a fundamental syntax issue.",
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

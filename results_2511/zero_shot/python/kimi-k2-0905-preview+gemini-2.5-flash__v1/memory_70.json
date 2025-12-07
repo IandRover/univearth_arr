@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the vegetation cover in Robinson Crusoe Island show higher greenness compared to Santa Clara Island in November 2018?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-27-34",
+        "url": "https://earthobservatory.nasa.gov/images/147731/robinson-crusoe-island",
+        "unique_id": 70
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: I'll use Sentinel-2 MSI (10 m) NDVI for November 2018 over both islands.  \n   - Collection: COPERNICUS/S2_SR  \n   - Date: 2018-11-01 \u2192 2018-11-30  \n   - Location: Robinson Crusoe ~(-33.64, -78.85), Santa Clara ~(-33.69, -78.87)  \n\n2. Masking: standard Sentinel-2 QA60 cloud mask, then keep only NDVI \u2208 [0,1].  \n\n3. Logic: compute median NDVI per island for valid pixels; if either has 0 valid pixels \u2192 C2; if mean NDVI Robinson > Santa Clara \u2192 A, else B; None/NaN \u2192 C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nrobinson = ee.Geometry.Point([-78.85, -33.64])\nsanta_clara = ee.Geometry.Point([-78.87, -33.69])\nstart, end = '2018-11-01', '2018-11-30'\n\n# 2. Data Acquisition & QA mask\ndef ndvi_monthly(pt):\n    col = (ee.ImageCollection('COPERNICUS/S2_SR')\n             .filterBounds(pt)\n             .filterDate(start, end)\n             .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 50)))\n    if col.size().getInfo() == 0:\n        return None, 0\n    def add_ndvi(img):\n        nd = img.normalizedDifference(['B8','B4']).updateMask(img.select('QA60').eq(0))\n        return nd.updateMask(nd.gte(0).And(nd.lte(1)))\n    ndvi = col.map(add_ndvi).median()\n    count = ndvi.reduceRegion(reducer=ee.Reducer.count(), geometry=pt.buffer(1000), scale=1000, maxPixels=1e9).get('nd').getInfo()\n    mean = ndvi.reduceRegion(reducer=ee.Reducer.mean(), geometry=pt.buffer(1000), scale=1000, maxPixels=1e9).get('nd').getInfo()\n    return mean, count\n\nndvi_r, cnt_r = ndvi_monthly(robinson)\nndvi_s, cnt_s = ndvi_monthly(santa_clara)\n\nprint(f\"Robinson NDVI: {ndvi_r} (pixels: {cnt_r})\")\nprint(f\"Santa Clara NDVI: {ndvi_s} (pixels: {cnt_s})\")\n\n# 3. Decision\nif ndvi_r is None or ndvi_s is None:\n    print(\"<answer>C1</answer>\")\nelif cnt_r == 0 or cnt_s == 0:\n    print(\"<answer>C2</answer>\")\nelif ndvi_r > ndvi_s:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</answer>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nrobinson = ee.Geometry.Point([-78.85, -33.64])\nsanta_clara = ee.Geometry.Point([-78.87, -33.69])\nstart, end = '2018-11-01', '2018-11-30'\n\n# 2. Data Acquisition & QA mask\ndef ndvi_monthly(pt):\n    col = (ee.ImageCollection('COPERNICUS/S2_SR')\n             .filterBounds(pt)\n             .filterDate(start, end)\n             .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 50)))\n    if col.size().getInfo() == 0:\n        return None, 0\n    def add_ndvi(img):\n        nd = img.normalizedDifference(['B8','B4']).updateMask(img.select('QA60').eq(0))\n        return nd.updateMask(nd.gte(0).And(nd.lte(1)))\n    ndvi = col.map(add_ndvi).median()\n    count = ndvi.reduceRegion(reducer=ee.Reducer.count(), geometry=pt.buffer(1000), scale=1000, maxPixels=1e9).get('nd').getInfo()\n    mean = ndvi.reduceRegion(reducer=ee.Reducer.mean(), geometry=pt.buffer(1000), scale=1000, maxPixels=1e9).get('nd').getInfo()\n    return mean, count\n\nndvi_r, cnt_r = ndvi_monthly(robinson)\nndvi_s, cnt_s = ndvi_monthly(santa_clara)\n\nprint(f\"Robinson NDVI: {ndvi_r} (pixels: {cnt_r})\")\nprint(f\"Santa Clara NDVI: {ndvi_s} (pixels: {cnt_s})\")\n\n# 3. Decision\nif ndvi_r is None or ndvi_s is None:\n    print(\"<answer>C1</answer>\")\nelif cnt_r == 0 or cnt_s == 0:\n    print(\"<answer>C2</answer>\")\nelif ndvi_r > ndvi_s:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Robinson NDVI: None (pixels: 0)\nSanta Clara NDVI: None (pixels: 0)\n<answer>C1</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for COPERNICUS/S2_SR! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by COPERNICUS/S2_SR_HARMONIZED\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

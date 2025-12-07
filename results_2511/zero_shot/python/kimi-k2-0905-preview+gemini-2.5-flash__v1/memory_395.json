@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the ice cover extent on Lake Erie decrease in January 14, 2014 compared to January 9, 2014?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-33-12",
+        "url": "https://www.earthobservatory.nasa.gov/images/82836/",
+        "unique_id": 395
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use MODIS daily snow/ice product (MOD/MYD10A1) which has a Lake Erie ice cover band.  \n   - Collection: `MODIS/006/MOD10A1` (Terra) and `MODIS/006/MYD10A1` (Aqua) combined for daily coverage.  \n   - Dates: 2014-01-09 vs 2014-01-14.  \n   - Location: Lake Erie surface polygon (simplified).  \n\n2. Masking strategy:  \n   - Use the \u2018NDSI_Snow_Cover\u2019 band; values 0\u2013100 % snow/ice cover.  \n   - Mask pixels flagged as cloud or no-data via the \u2018Snow_Albedo_Daily_Tile\u2019 QA band (bits 0\u20131 = 0 means good).  \n   - Threshold ice cover at \u2265 10 % to count as \u201cice\u201d.  \n\n3. Logic to distinguish Valid Zero from Null/Error:  \n   - After QA masking, count valid pixels inside the lake.  \n   - If either date has 0 valid pixels \u2192 C2.  \n   - If aggregate area (pixel count \u00d7 500 m pixel area) is null/NaN \u2192 C3.  \n   - Compare 14-Jan total ice area to 9-Jan: if lower \u2192 A, else \u2192 B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Lake Erie simplified polygon\nerie = ee.Geometry.Polygon([[-83.5,42.0],[-78.5,42.0],[-78.5,41.0],[-83.5,41.0]])\n\n# 2. Helper: get usable MODIS snow/ice collection for a single day\ndef get_modis_ice(day):\n    t = ee.Date(day)\n    c = (ee.ImageCollection('MODIS/006/MOD10A1')\n         .merge(ee.ImageCollection('MODIS/006/MYD10A1'))\n         .filterBounds(erie)\n         .filterDate(t, t.advance(1, 'day'))\n         .select(['NDSI_Snow_Cover', 'Snow_Albedo_Daily_Tile']))\n    return c\n\n# 3. Ice area for a date (km\u00b2)\ndef ice_area_km2(day):\n    col = get_modis_ice(day)\n    if col.size().getInfo() == 0:\n        return None\n    img = col.first()\n    qa = img.select('Snow_Albedo_Daily_Tile')\n    mask = qa.bitwiseAnd(3).eq(0)  # clear\n    ice = img.select('NDSI_Snow_Cover').gte(10).updateMask(mask)\n    pix_area = ee.Image.pixelArea().updateMask(ice)\n    area_m2 = pix_area.reduceRegion(reducer=ee.Reducer.sum(),\n                                    geometry=erie, scale=500,\n                                    maxPixels=1e9).get('area')\n    val = area_m2.getInfo()\n    return val / 1e6 if val is not None else None  # km\u00b2\n\n# 4. Compute for both dates\nd1, d2 = '2014-01-09', '2014-01-14'\na1 = ice_area_km2(d1)\na2 = ice_area_km2(d2)\nprint(f\"09 Jan ice: {a1:.1f} km\u00b2\")\nprint(f\"14 Jan ice: {a2:.1f} km\u00b2\")\n\n# 5. Decide\nif a1 is None or a2 is None:\n    print(\"<answer>C3</answer>\")\nelif a2 < a1:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Lake Erie simplified polygon\nerie = ee.Geometry.Polygon([[-83.5,42.0],[-78.5,42.0],[-78.5,41.0],[-83.5,41.0]])\n\n# 2. Helper: get usable MODIS snow/ice collection for a single day\ndef get_modis_ice(day):\n    t = ee.Date(day)\n    c = (ee.ImageCollection('MODIS/006/MOD10A1')\n         .merge(ee.ImageCollection('MODIS/006/MYD10A1'))\n         .filterBounds(erie)\n         .filterDate(t, t.advance(1, 'day'))\n         .select(['NDSI_Snow_Cover', 'Snow_Albedo_Daily_Tile']))\n    return c\n\n# 3. Ice area for a date (km\u00b2)\ndef ice_area_km2(day):\n    col = get_modis_ice(day)\n    if col.size().getInfo() == 0:\n        return None\n    img = col.first()\n    qa = img.select('Snow_Albedo_Daily_Tile')\n    mask = qa.bitwiseAnd(3).eq(0)  # clear\n    ice = img.select('NDSI_Snow_Cover').gte(10).updateMask(mask)\n    pix_area = ee.Image.pixelArea().updateMask(ice)\n    area_m2 = pix_area.reduceRegion(reducer=ee.Reducer.sum(),\n                                    geometry=erie, scale=500,\n                                    maxPixels=1e9).get('area')\n    val = area_m2.getInfo()\n    return val / 1e6 if val is not None else None  # km\u00b2\n\n# 4. Compute for both dates\nd1, d2 = '2014-01-09', '2014-01-14'\na1 = ice_area_km2(d1)\na2 = ice_area_km2(d2)\nprint(f\"09 Jan ice: {a1:.1f} km\u00b2\")\nprint(f\"14 Jan ice: {a2:.1f} km\u00b2\")\n\n# 5. Decide\nif a1 is None or a2 is None:\n    print(\"<answer>C3</answer>\")\nelif a2 < a1:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "09 Jan ice: 5999.5 km\u00b2\n14 Jan ice: 577.8 km\u00b2\n<answer>A</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for MODIS/006/MOD10A1! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by MODIS/061/MOD10A1\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MOD10A1\n\n  warnings.warn(warning, category=DeprecationWarning)\n/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for MODIS/006/MYD10A1! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by MODIS/061/MYD10A1\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MYD10A1\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

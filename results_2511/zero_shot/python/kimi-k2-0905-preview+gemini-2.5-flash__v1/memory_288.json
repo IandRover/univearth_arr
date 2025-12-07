@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the surface reflectance of Lake Elton increase from 2004 to 2009?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-47-07",
+        "url": "https://earthobservatory.nasa.gov/images/84781",
+        "unique_id": 288
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Target: Lake Elton (Russia, 51.06\u00b0N, 46.62\u00b0E).  \n   - Product: MODIS Terra 8-Day Surface Reflectance (MCD43A4) \u2013 continuous 2000-present, no cloud flag needed for a salt-lake.  \n   - Bands: use the 500 m red band \u201cNadir_Reflectance_Band1\u201d (620-670 nm).  \n   - Periods: 2004-01-01 \u2192 2004-12-31 and 2009-01-01 \u2192 2009-12-31.  \n\n2. Masking strategy:  \n   - MCD43A4 is already gap-filled BRDF-corrected; no extra cloud/snow mask required over a dry lake bed.  \n\n3. Logic to distinguish Valid Zero vs Null/Error:  \n   - After date/roi filters check `.size().getInfo()`.  \n   - Compute mean reflectance for each year; if no images \u2192 C1.  \n   - ReduceRegion with count \u2013 if 0 valid pixels \u2192 C2.  \n   - If either mean is None/NaN \u2192 C3.  \n   - Otherwise compare 2009 vs 2004: if 2009 > 2004 \u2192 A (Yes), else B (No).\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nlake = ee.Geometry.Point(46.62, 51.06)\nroi = lake.buffer(3000)\nstart04, end04 = '2004-01-01', '2004-12-31'\nstart09, end09 = '2009-01-01', '2009-12-31'\n\n# 2. Data acquisition\ncol04 = (ee.ImageCollection('MODIS/006/MCD43A4')\n           .filterDate(start04, end04)\n           .select(['Nadir_Reflectance_Band1'])\n           .filterBounds(roi))\ncol09 = (ee.ImageCollection('MODIS/006/MCD43A4')\n           .filterDate(start09, end09)\n           .select(['Nadir_Reflectance_Band1'])\n           .filterBounds(roi))\n\nn04, n09 = col04.size().getInfo(), col09.size().getInfo()\nprint(f\"2004 images: {n04}, 2009 images: {n09}\")\nif n04 == 0 or n09 == 0:\n    print(\"Empty collection.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Mean composites\nmean04 = col04.mean()\nmean09 = col09.mean()\n\n# 4. Stats\nred_kws = dict(reducer=ee.Reducer.mean(), geometry=roi, scale=500, maxPixels=1e9)\ncount_kws = dict(reducer=ee.Reducer.count(), geometry=roi, scale=500, maxPixels=1e9)\n\nval04 = mean04.reduceRegion(**red_kws).get('Nadir_Reflectance_Band1').getInfo()\nval09 = mean09.reduceRegion(**red_kws).get('Nadir_Reflectance_Band1').getInfo()\ncnt04 = mean04.reduceRegion(**count_kws).get('Nadir_Reflectance_Band1').getInfo()\ncnt09 = mean09.reduceRegion(**count_kws).get('Nadir_Reflectance_Band1').getInfo()\n\nprint(f\"2004 SR: {val04:.3f}, pixels: {int(cnt04)}\")\nprint(f\"2009 SR: {val09:.3f}, pixels: {int(cnt09)}\")\n\nif cnt04 == 0 or cnt09 == 0 or val04 is None or val09 is None:\n    print(\"No valid pixels or calculation failed.\")\n    print(\"<answer>C2</answer>\" if (cnt04 == 0 or cnt09 == 0) else \"<answer>C3</answer>\")\n\nprint(\"<answer>A</answer>\" if val09 > val04 else \"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nlake = ee.Geometry.Point(46.62, 51.06)\nroi = lake.buffer(3000)\nstart04, end04 = '2004-01-01', '2004-12-31'\nstart09, end09 = '2009-01-01', '2009-12-31'\n\n# 2. Data acquisition\ncol04 = (ee.ImageCollection('MODIS/006/MCD43A4')\n           .filterDate(start04, end04)\n           .select(['Nadir_Reflectance_Band1'])\n           .filterBounds(roi))\ncol09 = (ee.ImageCollection('MODIS/006/MCD43A4')\n           .filterDate(start09, end09)\n           .select(['Nadir_Reflectance_Band1'])\n           .filterBounds(roi))\n\nn04, n09 = col04.size().getInfo(), col09.size().getInfo()\nprint(f\"2004 images: {n04}, 2009 images: {n09}\")\nif n04 == 0 or n09 == 0:\n    print(\"Empty collection.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Mean composites\nmean04 = col04.mean()\nmean09 = col09.mean()\n\n# 4. Stats\nred_kws = dict(reducer=ee.Reducer.mean(), geometry=roi, scale=500, maxPixels=1e9)\ncount_kws = dict(reducer=ee.Reducer.count(), geometry=roi, scale=500, maxPixels=1e9)\n\nval04 = mean04.reduceRegion(**red_kws).get('Nadir_Reflectance_Band1').getInfo()\nval09 = mean09.reduceRegion(**red_kws).get('Nadir_Reflectance_Band1').getInfo()\ncnt04 = mean04.reduceRegion(**count_kws).get('Nadir_Reflectance_Band1').getInfo()\ncnt09 = mean09.reduceRegion(**count_kws).get('Nadir_Reflectance_Band1').getInfo()\n\nprint(f\"2004 SR: {val04:.3f}, pixels: {int(cnt04)}\")\nprint(f\"2009 SR: {val09:.3f}, pixels: {int(cnt09)}\")\n\nif cnt04 == 0 or cnt09 == 0 or val04 is None or val09 is None:\n    print(\"No valid pixels or calculation failed.\")\n    print(\"<answer>C2</answer>\" if (cnt04 == 0 or cnt09 == 0) else \"<answer>C3</answer>\")\n\nprint(\"<answer>A</answer>\" if val09 > val04 else \"<answer>B</answer>\")",
+            "exec_msg": "2004 images: 365, 2009 images: 364\n2004 SR: 2227.098, pixels: 180\n2009 SR: 2537.978, pixels: 180\n<answer>A</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for MODIS/006/MCD43A4! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by MODIS/061/MCD43A4\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MCD43A4\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

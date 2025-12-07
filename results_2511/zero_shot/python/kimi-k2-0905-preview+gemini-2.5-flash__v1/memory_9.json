@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Between January 29 and February 5, 2019, was there at least a 30 degree Celcius difference in the highest daily air temperature at 2 meters in Boston, MA?",
+        "answer": "no",
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-06-51",
+        "url": "https://earthobservatory.nasa.gov/images/144516/wild-winter-temperature-swings",
+        "unique_id": 9
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use ERA5-Land or ERA5 hourly re-analysis for daily 2-m air temperature over Boston. Filter exactly 2019-01-29 \u2192 2019-02-05 (inclusive) and extract daily maxima to stay consistent with \u201chighest daily air temperature\u201d.\n2. Masking: None needed \u2013 re-analysis data are cloud-free.\n3. Logic: Compute daily tmax series, find min and max among those 8 days, and check if (max \u2013 min) \u2265 30 \u00b0C.  \n   \u2013 If collection empty (C1).  \n   \u2013 Ensure at least one valid pixel per day to avoid C2.  \n   \u2013 If result is None/NaN \u21d2 C3.  \n   \u2013 If \u226530 \u00b0C \u21d2 A, else B.\n</thinking>\n\n```python\nimport ee, datetime\nee.Initialize(project='earthsense-436113')\n\n# 1. Boston point\nboston = ee.Geometry.Point([-71.0589, 42.3601])\n\n# 2. ERA5-Land daily aggregates (already daily max 2-m temp, in K)\ncol = (ee.ImageCollection('ECMWF/ERA5_LAND/DAILY_AGGR')\n         .select('temperature_2m')\n         .filterDate('2019-01-29', '2019-02-06'))  # inclusive stop\n\nif col.size().getInfo() == 0:\n    print(\"No ERA5-Land images found.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. extract daily max series (already daily max)\ndef extract(img):\n    val = img.reduceRegion(reducer=ee.Reducer.first(),\n                          geometry=boston, scale=1000, maxPixels=1e9).get('temperature_2m')\n    return ee.Feature(None, {'tmax_K': val, 'date': img.date().format('Y-M-d')})\n\ntemps = col.map(extract)\nprops = [f['properties'] for f in temps.getInfo()['features']]\n\nif not props:\n    print(\"No valid pixels.\")\n    print(\"<answer>C2</answer>\")\n\n# 4. compute range\ntmax_K = [p['tmax_K'] for p in props if p['tmax_K'] is not None]\nif not tmax_K or any(v is None for v in tmax_K):\n    print(\"<answer>C3</answer>\")\n\ntmax_C = [v - 273.15 for v in tmax_K]\ndiff = max(tmax_C) - min(tmax_C)\nprint(f\"Temp range: {diff:.1f} \u00b0C, Pixels: {len(tmax_C)}\")\n\nif diff >= 30:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```",
+            "code": "import ee, datetime\nee.Initialize(project='earthsense-436113')\n\n# 1. Boston point\nboston = ee.Geometry.Point([-71.0589, 42.3601])\n\n# 2. ERA5-Land daily aggregates (already daily max 2-m temp, in K)\ncol = (ee.ImageCollection('ECMWF/ERA5_LAND/DAILY_AGGR')\n         .select('temperature_2m')\n         .filterDate('2019-01-29', '2019-02-06'))  # inclusive stop\n\nif col.size().getInfo() == 0:\n    print(\"No ERA5-Land images found.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. extract daily max series (already daily max)\ndef extract(img):\n    val = img.reduceRegion(reducer=ee.Reducer.first(),\n                          geometry=boston, scale=1000, maxPixels=1e9).get('temperature_2m')\n    return ee.Feature(None, {'tmax_K': val, 'date': img.date().format('Y-M-d')})\n\ntemps = col.map(extract)\nprops = [f['properties'] for f in temps.getInfo()['features']]\n\nif not props:\n    print(\"No valid pixels.\")\n    print(\"<answer>C2</answer>\")\n\n# 4. compute range\ntmax_K = [p['tmax_K'] for p in props if p['tmax_K'] is not None]\nif not tmax_K or any(v is None for v in tmax_K):\n    print(\"<answer>C3</answer>\")\n\ntmax_C = [v - 273.15 for v in tmax_K]\ndiff = max(tmax_C) - min(tmax_C)\nprint(f\"Temp range: {diff:.1f} \u00b0C, Pixels: {len(tmax_C)}\")\n\nif diff >= 30:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Temp range: 19.2 \u00b0C, Pixels: 8\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

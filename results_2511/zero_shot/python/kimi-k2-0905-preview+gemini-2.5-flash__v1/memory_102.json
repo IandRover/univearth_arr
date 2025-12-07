@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Is the chlorophyll-a concentration higher in the southern coastal waters of Java (-8.879787, 110.2273416) compared to the northern Java Sea waters (-5.741852, 109.953683) on August 4, 2019?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-01-59",
+        "url": "https://earthobservatory.nasa.gov/images/149017/hunting-milky-seas-by-satellite",
+        "unique_id": 102
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use Sentinel-2 MultiSpectral Instrument (MSI) Level-2A for turbidity index as proxy for chlorophyll-a. Date: 2019-08-04, window \u00b11 week. Location: two off-shore, deep-water pixels near Java (one south of Java island, one in Java Sea).\n2. Masking: Use the built-in SCL layer to pick open-water (class = 6) and discard clouds/shadows (classes 3,8,9,10) for the turbidity index (NIR/Red ratio).\n3. Logic: Compute mean turbidity index (NIR/Red ratio, inverted). If any site has 0 valid water pixels, output C2. If image collection sizes are zero, output C1. If computed result is None/NaN, output C3. Compare mean values and output A (south higher) or B otherwise.\n</thinking>\n\n<code>\nimport ee\nee.Initialize(project='earthsense-436113')\n\np_s = ee.Geometry.Point([110.2273416, -8.879787])  # south Java coastal\np_n = ee.Geometry.Point([109.9536830, -5.741852])  # Java Sea\n\ndef get_water_ratio(pt, d0):\n    c = (ee.ImageCollection('COPERNICUS/S2_SR')\n           .filterDate(ee.Date(d0).advance(-3,'day'), ee.Date(d0).advance(3,'day'))\n           .filterBounds(pt).filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE',50)))\n    if c.size().getInfo()==0: return None,0\n    s = c.first().clip(pt.buffer(150))\n    water = s.select('SCL').eq(6)\n    valid = s.updateMask(water)\n    ratio = valid.select('B8').divide(valid.select('B4'))\n    cnt = ratio.reduceRegion(reducer=ee.Reducer.count(),\n                             geometry=pt,scale=100,maxPixels=1e9).get('B8').getInfo()\n    val = ratio.reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=pt,scale=100,maxPixels=1e9).get('B8').getInfo()\n    return val,cnt\n\nvalS,cntS = get_water_ratio(p_s,'2019-08-04')\nvalN,cntN = get_water_ratio(p_n,'2019-08-04')\n\nprint(f\"South Java ratio: {valS}, Pixels: {cntS}\")\nprint(f\"North Java ratio: {valN}, Pixels: {cntN}\")\n\nif any(v is None for v in (valS,valN)):\n    print(\"<answer>C1</answer>\")\nelif cntS==0 or cntN==0:\n    print(\"<answer>C2</answer>\")\nelif any(v<0 or v>5 for v in (valS,valN)):\n    print(\"<answer>C3</answer>\")\nelse:\n    print(\"<answer>A</answer>\" if valS>valN else \"<answer>B</answer>\")\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\np_s = ee.Geometry.Point([110.2273416, -8.879787])  # south Java coastal\np_n = ee.Geometry.Point([109.9536830, -5.741852])  # Java Sea\n\ndef get_water_ratio(pt, d0):\n    c = (ee.ImageCollection('COPERNICUS/S2_SR')\n           .filterDate(ee.Date(d0).advance(-3,'day'), ee.Date(d0).advance(3,'day'))\n           .filterBounds(pt).filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE',50)))\n    if c.size().getInfo()==0: return None,0\n    s = c.first().clip(pt.buffer(150))\n    water = s.select('SCL').eq(6)\n    valid = s.updateMask(water)\n    ratio = valid.select('B8').divide(valid.select('B4'))\n    cnt = ratio.reduceRegion(reducer=ee.Reducer.count(),\n                             geometry=pt,scale=100,maxPixels=1e9).get('B8').getInfo()\n    val = ratio.reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=pt,scale=100,maxPixels=1e9).get('B8').getInfo()\n    return val,cnt\n\nvalS,cntS = get_water_ratio(p_s,'2019-08-04')\nvalN,cntN = get_water_ratio(p_n,'2019-08-04')\n\nprint(f\"South Java ratio: {valS}, Pixels: {cntS}\")\nprint(f\"North Java ratio: {valN}, Pixels: {cntN}\")\n\nif any(v is None for v in (valS,valN)):\n    print(\"<answer>C1</answer>\")\nelif cntS==0 or cntN==0:\n    print(\"<answer>C2</answer>\")\nelif any(v<0 or v>5 for v in (valS,valN)):\n    print(\"<answer>C3</answer>\")\nelse:\n    print(\"<answer>A</answer>\" if valS>valN else \"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Execution timed out after 120 seconds",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Is the nighttime light intensity higher in Grindav\u00edk compared to Reykjav\u00edk on November 21, 2024?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-39-32",
+        "url": "https://earthobservatory.nasa.gov/images/153630/lava-nears-icelands-blue-lagoon",
+        "unique_id": 213
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use VIIRS Nighttime Day/Night Band (DNB) for date 2024-11-21 (or closest before) over two towns in Iceland. Passive fire (FIRMS) and Earth at night layers are unsuitable; we need composite VIIRS DNB.  \n2. Masking: VIIRS nightly are already cloud-masked at source; we just filter and reduce to mean inside 3 km buffers.  \n3. Logic: fetch images for that exact date (or the latest available \u2264 2024-11-21). If no nightly tile, try monthly composite.  \n   - If no images \u2192 C1  \n   - Get pixel count inside buffers; if 0 \u2192 C2  \n   - Compute mean radiance for each town; if None/NaN \u2192 C3  \n   - Compare Grindav\u00edk vs Reykjav\u00edk; print tag A if Gridav\u00edk\u2019s is strictly larger, else B.  \n4. Use small scale (1000 m) to keep fast.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & date\ngrindavik = ee.Geometry.Point([-22.446, 63.843]).buffer(3000)\nreykjavik = ee.Geometry.Point([-21.942, 64.147]).buffer(3000)\ndate = '2024-11-21'\n\n# 2. Data: VIIRS DNB nightly or closest composite\ncol = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')\\\n        .filterDate('2024-11-01', '2024-11-30')  # monthly closest\nif col.size().getInfo() == 0:\n    col = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')\\\n          .filterDate('2024-10-01', '2024-10-31')\nsize = col.size().getInfo()\nif size == 0:\n    print(\"No VIIRS data found.\")\n    print(\"<answer>C1</answer>\")\n\nimg = ee.Image(col.first()).select('avg_rad')\nmeanG = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=grindavik,\n                         scale=1000, maxPixels=1e9).get('avg_rad')\nmeanR = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=reykjavik,\n                         scale=1000, maxPixels=1e9).get('avg_rad')\nvalG = ee.Algorithms.If(ee.Algorithms.IsEqual(meanG, None), None, meanG).getInfo()\nvalR = ee.Algorithms.If(ee.Algorithms.IsEqual(meanR, None), None, meanR).getInfo()\nif valG is None or valR is None:\n    print(\"<answer>C3</answer>\")\ncountG = img.reduceRegion(reducer=ee.Reducer.count(), geometry=grindavik,\n                          scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\ncountR = img.reduceRegion(reducer=ee.Reducer.count(), geometry=reykjavik,\n                          scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\nif countG == 0 or countR == 0:\n    print(\"No valid pixels.\")\n    print(\"<answer>C2</answer>\")\nprint(f\"Grindav\u00edk: {valG:.2f} nW cm-2 sr-1; Reykjav\u00edk: {valR:.2f} nW cm-2 sr-1\")\nif valG > valR:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & date\ngrindavik = ee.Geometry.Point([-22.446, 63.843]).buffer(3000)\nreykjavik = ee.Geometry.Point([-21.942, 64.147]).buffer(3000)\ndate = '2024-11-21'\n\n# 2. Data: VIIRS DNB nightly or closest composite\ncol = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')\\\n        .filterDate('2024-11-01', '2024-11-30')  # monthly closest\nif col.size().getInfo() == 0:\n    col = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')\\\n          .filterDate('2024-10-01', '2024-10-31')\nsize = col.size().getInfo()\nif size == 0:\n    print(\"No VIIRS data found.\")\n    print(\"<answer>C1</answer>\")\n\nimg = ee.Image(col.first()).select('avg_rad')\nmeanG = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=grindavik,\n                         scale=1000, maxPixels=1e9).get('avg_rad')\nmeanR = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=reykjavik,\n                         scale=1000, maxPixels=1e9).get('avg_rad')\nvalG = ee.Algorithms.If(ee.Algorithms.IsEqual(meanG, None), None, meanG).getInfo()\nvalR = ee.Algorithms.If(ee.Algorithms.IsEqual(meanR, None), None, meanR).getInfo()\nif valG is None or valR is None:\n    print(\"<answer>C3</answer>\")\ncountG = img.reduceRegion(reducer=ee.Reducer.count(), geometry=grindavik,\n                          scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\ncountR = img.reduceRegion(reducer=ee.Reducer.count(), geometry=reykjavik,\n                          scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\nif countG == 0 or countR == 0:\n    print(\"No valid pixels.\")\n    print(\"<answer>C2</answer>\")\nprint(f\"Grindav\u00edk: {valG:.2f} nW cm-2 sr-1; Reykjav\u00edk: {valR:.2f} nW cm-2 sr-1\")\nif valG > valR:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Grindav\u00edk: 4.51 nW cm-2 sr-1; Reykjav\u00edk: 17.93 nW cm-2 sr-1\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

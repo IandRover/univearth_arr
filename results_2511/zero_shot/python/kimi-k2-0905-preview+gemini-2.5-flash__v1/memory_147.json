@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "On July 7, was the year-to-date rainfall in the coastal city of La Serena lower than the 1990-2020 average for the same period?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-26-03",
+        "url": "https://earthobservatory.nasa.gov/images/150100/snow-blanket-for-the-andes",
+        "unique_id": 147
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy  \n   - Collection: CHIRPS Daily (= `UCSB-CHG/CHIRPS/DAILY`), precipitation in mm.  \n   - Location: La Serena, Chile (-29.9, -71.25) \u2013 coastal city.  \n   - Date windows  \n     \u2022 2023: 1 Jan \u2013 7 Jul (the July-7 date of interest)  \n     \u2022 Climate normal: 1 Jan \u2013 7 Jul for every year 1990-2020 (31 years).  \n2. Masking strategy  \n   \u2013 None needed, CHIRPS is gap-filled; just sum valid pixels.  \n3. Distinguish Valid-Zero from Null/Error  \n   \u2013 If either collection is size=0 \u2192 C1.  \n   \u2013 After summing, check pixel count: if 0 valid pixels \u2192 C2.  \n   \u2013 If sum result is None/NaN \u2192 C3.  \n   \u2013 Otherwise compare 2023 sum vs 1990-2020 mean sum \u2192 A (lower) / B (not lower).\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point([-71.25, -29.9])          # La Serena\nscale = 5000                                     # CHIRPS native ~5 km\n\n# --- 2023 YTD rainfall (1 Jan \u2013 7 Jul) ------------------------------------\ncol23 = (ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n           .filterDate('2023-01-01', '2023-07-08'))\nif col23.size().getInfo() == 0:\n    print(\"2023: C1\"); print(\"<answer>C1</answer>\")\n\nsum23 = (col23.sum()\n            .multiply(0.1)                       # CHIRPS units 0.1 mm \u2192 mm\n            .reduceRegion(reducer=ee.Reducer.sum(),\n                         geometry=pt,\n                         scale=scale,\n                         maxPixels=1e9)\n            .get('precipitation').getInfo())\n\n# --- 1990-2020 climate normal (same period) -------------------------------\ncolClim = (ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n             .filter(ee.Filter.calendarRange(1990,2020,'year'))\n             .filter(ee.Filter.calendarRange(1,188,'day_of_year')))  # 1 Jan\u20137 Jul\nif colClim.size().getInfo() == 0:\n    print(\"Climate: C1\"); print(\"<answer>C1</answer>\")\n\nmeanClim = (colClim.sum()\n               .multiply(0.1)\n               .reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=pt,\n                             scale=scale,\n                             maxPixels=1e9)\n               .get('precipitation').getInfo())\n\n# validation\nif sum23 is None or meanClim is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"2023 YTD: {sum23:.1f} mm | 1990-2020 mean YTD: {meanClim:.1f} mm\")\n    print(\"<answer>A</answer>\" if sum23 < meanClim else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point([-71.25, -29.9])          # La Serena\nscale = 5000                                     # CHIRPS native ~5 km\n\n# --- 2023 YTD rainfall (1 Jan \u2013 7 Jul) ------------------------------------\ncol23 = (ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n           .filterDate('2023-01-01', '2023-07-08'))\nif col23.size().getInfo() == 0:\n    print(\"2023: C1\"); print(\"<answer>C1</answer>\")\n\nsum23 = (col23.sum()\n            .multiply(0.1)                       # CHIRPS units 0.1 mm \u2192 mm\n            .reduceRegion(reducer=ee.Reducer.sum(),\n                         geometry=pt,\n                         scale=scale,\n                         maxPixels=1e9)\n            .get('precipitation').getInfo())\n\n# --- 1990-2020 climate normal (same period) -------------------------------\ncolClim = (ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n             .filter(ee.Filter.calendarRange(1990,2020,'year'))\n             .filter(ee.Filter.calendarRange(1,188,'day_of_year')))  # 1 Jan\u20137 Jul\nif colClim.size().getInfo() == 0:\n    print(\"Climate: C1\"); print(\"<answer>C1</answer>\")\n\nmeanClim = (colClim.sum()\n               .multiply(0.1)\n               .reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=pt,\n                             scale=scale,\n                             maxPixels=1e9)\n               .get('precipitation').getInfo())\n\n# validation\nif sum23 is None or meanClim is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"2023 YTD: {sum23:.1f} mm | 1990-2020 mean YTD: {meanClim:.1f} mm\")\n    print(\"<answer>A</answer>\" if sum23 < meanClim else \"<answer>B</answer>\")",
+            "exec_msg": "2023 YTD: 1.1 mm | 1990-2020 mean YTD: 70.1 mm\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the nighttime light intensity in Aleppo, Syria decrease in 2016 compared to 2012?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-48-59",
+        "url": "https://earthobservatory.nasa.gov/images/90100",
+        "unique_id": 308
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use the VIIRS DNB monthly composites (v1) for nighttime lights.  \n   - Collection: \"NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG\"  \n   - Time: 2012 (any month) vs. 2016 (same month) \u2013 pick June for stability (no Ramadan effect).  \n   - Location: Aleppo, Syria \u2013 roughly 37.18\u00b0E, 36.2\u00b0N (urban core).\n\n2. Masking strategy: No cloud mask for night-lights; the product is already cloud-screened and background-zeroed.  \n   We keep only positive radiance values (the layer is \u201cavg_rad\u201d).\n\n3. Logic to distinguish Valid Zero from Null/Error:  \n   - If either collection has 0 images \u2192 C1  \n   - After masking (avg_rad > 0), if total valid pixels = 0 \u2192 C2  \n   - If mean reducer returns None/NaN \u2192 C3  \n   - Compare 2016 mean to 2012 mean: if 2016 < 2012 \u2192 A (Yes), else B (No)\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\naleppo = ee.Geometry.Point(37.18, 36.2).buffer(5000)  # 5 km radius\nyr1, yr2 = 2012, 2016\nmonth = 6  # June\n\ndef get_month_rad(year):\n    col = (ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG\")\n             .filter(ee.Filter.calendarRange(year, year, 'year'))\n             .filter(ee.Filter.calendarRange(month, month, 'month'))\n             .select('avg_rad'))\n    if col.size().getInfo() == 0:\n        return None, 0\n    img = col.first().updateMask(col.first().gt(0))\n    cnt = img.reduceRegion(reducer=ee.Reducer.count(), geometry=aleppo, scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\n    if cnt == 0:\n        return 0, 0\n    mean = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=aleppo, scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\n    return mean, cnt\n\nrad12, pix12 = get_month_rad(yr1)\nrad16, pix16 = get_month_rad(yr2)\n\nif rad12 is None or rad16 is None:\n    print(\"Images missing for one of the years.\")\n    print(\"<answer>C1</answer>\")\nelif pix12 == 0 or pix16 == 0:\n    print(\"No valid positive pixels.\")\n    print(\"<answer>C2</answer>\")\nelif rad12 is None or rad16 is None or any(str(r)=='NaN' for r in [rad12, rad16]):\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"2012 mean: {rad12:.2f}, pixels: {pix12}; 2016 mean: {rad16:.2f}, pixels: {pix16}\")\n    print(\"<answer>A</answer>\" if rad16 < rad12 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\naleppo = ee.Geometry.Point(37.18, 36.2).buffer(5000)  # 5 km radius\nyr1, yr2 = 2012, 2016\nmonth = 6  # June\n\ndef get_month_rad(year):\n    col = (ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG\")\n             .filter(ee.Filter.calendarRange(year, year, 'year'))\n             .filter(ee.Filter.calendarRange(month, month, 'month'))\n             .select('avg_rad'))\n    if col.size().getInfo() == 0:\n        return None, 0\n    img = col.first().updateMask(col.first().gt(0))\n    cnt = img.reduceRegion(reducer=ee.Reducer.count(), geometry=aleppo, scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\n    if cnt == 0:\n        return 0, 0\n    mean = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=aleppo, scale=1000, maxPixels=1e9).get('avg_rad').getInfo()\n    return mean, cnt\n\nrad12, pix12 = get_month_rad(yr1)\nrad16, pix16 = get_month_rad(yr2)\n\nif rad12 is None or rad16 is None:\n    print(\"Images missing for one of the years.\")\n    print(\"<answer>C1</answer>\")\nelif pix12 == 0 or pix16 == 0:\n    print(\"No valid positive pixels.\")\n    print(\"<answer>C2</answer>\")\nelif rad12 is None or rad16 is None or any(str(r)=='NaN' for r in [rad12, rad16]):\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"2012 mean: {rad12:.2f}, pixels: {pix12}; 2016 mean: {rad16:.2f}, pixels: {pix16}\")\n    print(\"<answer>A</answer>\" if rad16 < rad12 else \"<answer>B</answer>\")",
+            "exec_msg": "Images missing for one of the years.\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

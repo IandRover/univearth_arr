@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did temperatures exceed 100 degrees fahrenheit in Prescott, Arizona during the month of June in 2017?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-56-23",
+        "url": "https://earthobservatory.nasa.gov/images/90501/fires-in-the-southwest",
+        "unique_id": 319
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Need daily land-surface temperature (LST) for June 2017 around Prescott, AZ.  MODIS Terra Daily LST (MOD11A1) has 1000-m resolution; even simpler, MOD11A1\u2019s near-noon band \u2018LST_Day_1km\u2019 is adequate and covers the whole period.  If the collection is empty we\u2019ll output C1.\n\n2. Masking strategy: Use the QC (band 0\u2019s bits 0-1) to keep only the \u201cgood data\u201d pixels (QC bits 0-1 = 0).  After masking we must verify at least one pixel remains (C2 if none).\n\n3. Logic: Convert Kelvin to \u00b0F.  For each of the 30 daily images, test max(LST) > 310.928 K (\u2248 100 \u00b0F).  If any day passes, answer is A (Yes).  If no day passes (but all days process) answer B (No).  If any daily retrieval is NaN/None, mark C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & time\npnt = ee.Geometry.Point(-112.475, 34.540)  # downtown Prescott, AZ\nera = ('2017-06-01', '2017-07-01')\n\n# 2. Acquire MODIS daily LST (Kelvin) + QC\ncol = (ee.ImageCollection('MODIS/061/MOD11A1')\n         .filterBounds(pnt)\n         .filterDate(*era)\n         .select(['LST_Day_1km', 'QC_Day']))\n\nif col.size().getInfo() == 0:\n    print(\"C1: Empty Collection\")\n    print(\"<answer>C1</answer>\")\n\n# 3. QC mask: keep bits 0-1 == 0 (good data)\ndef lst_masked(img):\n    qc = img.select('QC_Day')\n    mask = qc.bitwiseAnd(3).eq(0)\n    return (img.select('LST_Day_1km')\n               .updateMask(mask)\n               .multiply(0.02))   # scale \u21d2 Kelvin\n\ncol = col.map(lst_masked)\n\ncount = col.size().getInfo()\nprint(f'June 2017 images: {count}')\n\n# 4. daily check for T > 100 \u00b0F (310.928 K)\ncels100 = 310.928\nhotflag = False\nbadflag = False\n\nfor tstep in range(count):\n    im = ee.Image(col.toList(count).get(tstep))\n    pix = im.reduceRegion(ee.Reducer.count(), pnt, 1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\n    if pix == 0:\n        continue  # skip invalid pixel days\n    v = im.reduceRegion(ee.Reducer.max(), pnt, 1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\n    if v is None:\n        badflag = True\n    if v and v > cels100:\n        hotflag = True\n        break\n\nif badflag:\n    print(\"Value returned None; calculation failure\")\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Max above 100 \u00b0F in June 2017: {hotflag}\")\n    print(\"<answer>A</answer>\" if hotflag else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & time\npnt = ee.Geometry.Point(-112.475, 34.540)  # downtown Prescott, AZ\nera = ('2017-06-01', '2017-07-01')\n\n# 2. Acquire MODIS daily LST (Kelvin) + QC\ncol = (ee.ImageCollection('MODIS/061/MOD11A1')\n         .filterBounds(pnt)\n         .filterDate(*era)\n         .select(['LST_Day_1km', 'QC_Day']))\n\nif col.size().getInfo() == 0:\n    print(\"C1: Empty Collection\")\n    print(\"<answer>C1</answer>\")\n\n# 3. QC mask: keep bits 0-1 == 0 (good data)\ndef lst_masked(img):\n    qc = img.select('QC_Day')\n    mask = qc.bitwiseAnd(3).eq(0)\n    return (img.select('LST_Day_1km')\n               .updateMask(mask)\n               .multiply(0.02))   # scale \u21d2 Kelvin\n\ncol = col.map(lst_masked)\n\ncount = col.size().getInfo()\nprint(f'June 2017 images: {count}')\n\n# 4. daily check for T > 100 \u00b0F (310.928 K)\ncels100 = 310.928\nhotflag = False\nbadflag = False\n\nfor tstep in range(count):\n    im = ee.Image(col.toList(count).get(tstep))\n    pix = im.reduceRegion(ee.Reducer.count(), pnt, 1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\n    if pix == 0:\n        continue  # skip invalid pixel days\n    v = im.reduceRegion(ee.Reducer.max(), pnt, 1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\n    if v is None:\n        badflag = True\n    if v and v > cels100:\n        hotflag = True\n        break\n\nif badflag:\n    print(\"Value returned None; calculation failure\")\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Max above 100 \u00b0F in June 2017: {hotflag}\")\n    print(\"<answer>A</answer>\" if hotflag else \"<answer>B</answer>\")",
+            "exec_msg": "June 2017 images: 30\nMax above 100 \u00b0F in June 2017: False\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

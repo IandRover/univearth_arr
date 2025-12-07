@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does vegetation cover increase in the Taklamakan Desert near Hotan from February 23, 2020 to April 29, 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-11-21",
+        "url": "https://earthobservatory.nasa.gov/images/146660/spring-greening-in-the-taklamakan-desert",
+        "unique_id": 56
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: We'll use Sentinel-2 NDVI (10 m) for early-season greenness.  \n   - Date window: 2020-02-23 \u00b115 d for \u201cFeb 23\u201d and 2020-04-29 \u00b115 d for \u201cApr 29\u201d.  \n   - AOI: a 20 km box around Hotan (37.11 \u00b0N, 79.93 \u00b0E) inside the Taklamakan.\n\n2. Masking: Use S2_CLOUD_PROBABILITY (>60 %) and the QA60 snow/cloud bit to keep only clear pixels.\n\n3. Logic:  \n   - Compute median NDVI for each period.  \n   - Require \u22651 image and \u2265100 valid pixels per period.  \n   - Increase = (Apr NDVI) > (Feb NDVI).  \n   - If any collection is empty \u2192 C1; if valid-pixel count = 0 \u2192 C2; if NDVI is None/NaN \u2192 C3; otherwise A/B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. AOI around Hotan\nhotan = ee.Geometry.Point([79.93, 37.11])\naoi   = hotan.buffer(20000).bounds()          # ~20 km radius box\n\n# 2. Sentinel-2 NDVI collections\ndef get_ndvi(start, end, name):\n    s2 = (ee.ImageCollection('COPERNICUS/S2_SR')\n            .filterBounds(aoi)\n            .filterDate(start, end)\n            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 60)))\n    s2cloud = ee.ImageCollection('COPERNICUS/S2_CLOUD_PROBABILITY')\n    def mask(img):\n        cloud = ee.Image(img.get('cloud_mask'))\n        return img.updateMask(cloud.lt(60).And(img.select('QA60').eq(0))).normalizedDifference(['B8','B4'])\n    joined = ee.Join.saveBest('cloud_mask').apply(s2, s2cloud, ee.Filter.equals({'leftField':'system:index','rightField':'system:index'}))\n    col = ee.ImageCollection(joined).map(mask)\n    n = col.size().getInfo()\n    print(f\"{name} images: {n}\")\n    if n == 0:\n        print(\"<answer>C1</answer>\")\n        exit()\n    med = col.median().clip(aoi)\n    cnt = med.reduceRegion(reducer=ee.Reducer.count(), geometry=aoi, scale=1000, maxPixels=1e9).get('nd').getInfo()\n    val = med.reduceRegion(reducer=ee.Reducer.mean(),  geometry=aoi, scale=1000, maxPixels=1e9).get('nd').getInfo()\n    print(f\"{name} valid pixels: {int(cnt)}  NDVI: {val:.3f}\")\n    if cnt == 0:\n        print(\"<answer>C2</answer>\")\n        exit()\n    return val\n\nfeb = get_ndvi('2020-02-08', '2020-03-10', 'Feb')\napr = get_ndvi('2020-04-14', '2020-05-14', 'Apr')\n\nif feb is None or apr is None:\n    print(\"<answer>C3</answer>\")\nelif apr > feb:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. AOI around Hotan\nhotan = ee.Geometry.Point([79.93, 37.11])\naoi   = hotan.buffer(20000).bounds()          # ~20 km radius box\n\n# 2. Sentinel-2 NDVI collections\ndef get_ndvi(start, end, name):\n    s2 = (ee.ImageCollection('COPERNICUS/S2_SR')\n            .filterBounds(aoi)\n            .filterDate(start, end)\n            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 60)))\n    s2cloud = ee.ImageCollection('COPERNICUS/S2_CLOUD_PROBABILITY')\n    def mask(img):\n        cloud = ee.Image(img.get('cloud_mask'))\n        return img.updateMask(cloud.lt(60).And(img.select('QA60').eq(0))).normalizedDifference(['B8','B4'])\n    joined = ee.Join.saveBest('cloud_mask').apply(s2, s2cloud, ee.Filter.equals({'leftField':'system:index','rightField':'system:index'}))\n    col = ee.ImageCollection(joined).map(mask)\n    n = col.size().getInfo()\n    print(f\"{name} images: {n}\")\n    if n == 0:\n        print(\"<answer>C1</answer>\")\n        exit()\n    med = col.median().clip(aoi)\n    cnt = med.reduceRegion(reducer=ee.Reducer.count(), geometry=aoi, scale=1000, maxPixels=1e9).get('nd').getInfo()\n    val = med.reduceRegion(reducer=ee.Reducer.mean(),  geometry=aoi, scale=1000, maxPixels=1e9).get('nd').getInfo()\n    print(f\"{name} valid pixels: {int(cnt)}  NDVI: {val:.3f}\")\n    if cnt == 0:\n        print(\"<answer>C2</answer>\")\n        exit()\n    return val\n\nfeb = get_ndvi('2020-02-08', '2020-03-10', 'Feb')\napr = get_ndvi('2020-04-14', '2020-05-14', 'Apr')\n\nif feb is None or apr is None:\n    print(\"<answer>C3</answer>\")\nelif apr > feb:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for COPERNICUS/S2_SR! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by COPERNICUS/S2_SR_HARMONIZED\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR\n\n  warnings.warn(warning, category=DeprecationWarning)\nTraceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765069919745488.py\", line 34, in <module>\n    feb = get_ndvi('2020-02-08', '2020-03-10', 'Feb')\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765069919745488.py\", line 18, in get_ndvi\n    joined = ee.Join.saveBest('cloud_mask').apply(s2, s2cloud, ee.Filter.equals({'leftField':'system:index','rightField':'system:index'}))\n             ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^\nTypeError: Join.saveBest() missing 1 required positional argument: 'measureKey'\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

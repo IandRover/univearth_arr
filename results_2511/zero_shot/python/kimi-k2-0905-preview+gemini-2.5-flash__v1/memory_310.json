@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the nighttime light intensity in Reykjav\u00edk show higher values compared to the Sn\u00e6fellsnes peninsula in 2016?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-38-18",
+        "url": "https://earthobservatory.nasa.gov/images/90210",
+        "unique_id": 310
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy (Collection, Date, Location):  \n   - Collection: VIIRS Nighttime Day/Night Band (DMSP is retired, and VIIRS provides 2016).  \n   - Date: Filter to 2016.  \n   - Location: Reykjav\u00edk (point near the city center) vs. Sn\u00e6fellsnes peninsula (western Iceland).  \n\n2. Masking strategy (Should I mask clouds? Or is the question about clouds?):  \n   - VIIRS DNB annual composites are cloud-free; no cloud masking needed.\n\n3. Logic to distinguish Valid Zero (A/B) from Null/Error (C3):  \n   - Load the 2016 VIIRS annual composite.  \n   - Extract mean radiance for Reykjav\u00edk and Sn\u00e6fellsnes polygons.  \n   - If either region yields None/NaN, output C3.  \n   - If images are missing (collection size 0), output C1.  \n   - If valid pixel counts are 0 after check, output C2.  \n   - Compare means: if Reykjav\u00edk > Sn\u00e6fellsnes, A; otherwise, B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nreykjavik = ee.Geometry.Point([-21.9426, 64.1466]).buffer(5000)\nsnaefellsnes = ee.Geometry.Rectangle([-23.5, 64.5, -22.0, 65.1])\n\n# 2. Data Acquisition & Check\ncol = ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG\")\\\n        .filterDate('2016-01-01', '2016-12-31')\nif col.size().getInfo() == 0:\n    print(\"No VIIRS data for 2016.\")\n    print(\"<answer>C1</answer>\")\n\nimg = col.select('avg_rad').mean()\n\n# 3. Processing\ndef get_mean(geom):\n    count = img.reduceRegion(reducer=ee.Reducer.count(),\n                             geometry=geom, scale=1000,\n                             maxPixels=1e9).get('avg_rad').getInfo()\n    if count == 0:\n        print(\"No valid pixels.\")\n        print(\"<answer>C2</answer>\")\n    val = img.reduceRegion(reducer=ee.Reducer.mean(),\n                           geometry=geom, scale=1000,\n                           maxPixels=1e9).get('avg_rad').getInfo()\n    return val, count\n\nrey_val, rey_cnt = get_mean(reykjavik)\nsnaefellsnes_val, snaefellsnes_cnt = get_mean(snaefellsnes)\n\n# 4. Validation & Final Answer\nif rey_val is None or snaefellsnes_val is None:\n    print(\"<answer>C3</answer>\")\nprint(f\"Reykjav\u00edk: {rey_val:.2f} (pixels: {rey_cnt}), Sn\u00e6fellsnes: {snaefellsnes_val:.2f} (pixels: {snaefellsnes_cnt})\")\nprint(\"<answer>A</answer>\" if rey_val > snaefellsnes_val else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nreykjavik = ee.Geometry.Point([-21.9426, 64.1466]).buffer(5000)\nsnaefellsnes = ee.Geometry.Rectangle([-23.5, 64.5, -22.0, 65.1])\n\n# 2. Data Acquisition & Check\ncol = ee.ImageCollection(\"NOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG\")\\\n        .filterDate('2016-01-01', '2016-12-31')\nif col.size().getInfo() == 0:\n    print(\"No VIIRS data for 2016.\")\n    print(\"<answer>C1</answer>\")\n\nimg = col.select('avg_rad').mean()\n\n# 3. Processing\ndef get_mean(geom):\n    count = img.reduceRegion(reducer=ee.Reducer.count(),\n                             geometry=geom, scale=1000,\n                             maxPixels=1e9).get('avg_rad').getInfo()\n    if count == 0:\n        print(\"No valid pixels.\")\n        print(\"<answer>C2</answer>\")\n    val = img.reduceRegion(reducer=ee.Reducer.mean(),\n                           geometry=geom, scale=1000,\n                           maxPixels=1e9).get('avg_rad').getInfo()\n    return val, count\n\nrey_val, rey_cnt = get_mean(reykjavik)\nsnaefellsnes_val, snaefellsnes_cnt = get_mean(snaefellsnes)\n\n# 4. Validation & Final Answer\nif rey_val is None or snaefellsnes_val is None:\n    print(\"<answer>C3</answer>\")\nprint(f\"Reykjav\u00edk: {rey_val:.2f} (pixels: {rey_cnt}), Sn\u00e6fellsnes: {snaefellsnes_val:.2f} (pixels: {snaefellsnes_cnt})\")\nprint(\"<answer>A</answer>\" if rey_val > snaefellsnes_val else \"<answer>B</answer>\")",
+            "exec_msg": "Reykjav\u00edk: 14.51 (pixels: 180), Sn\u00e6fellsnes: 0.39 (pixels: 11189)\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

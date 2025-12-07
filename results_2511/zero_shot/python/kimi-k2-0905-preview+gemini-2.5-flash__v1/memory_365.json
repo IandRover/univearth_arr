@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the GERD reservoir (Ethiopia) water level decrease in February 2022 compared to September 2021?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_19-47-26",
+        "url": "https://www.earthobservatory.nasa.gov/images/149691/",
+        "unique_id": 365
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Collection: Sentinel-2 SR (10 m, 2021-2022) with GSW water occurrence band for stable water mask.  \n   Date windows: 1\u201330 Sep 2021 vs 1\u201328 Feb 2022.  \n2. Masking: Keep only pixels that ever had >70 % historical water (GSW) so we measure water, not cloud/land.  \n   Cloud mask S2 QA60.  \n3. Logic: Compute median SWIR1 (B11) inside the GERD polygon; lower SWIR1 \u2248 deeper water (clear look into column).  \n   Compare Sep-2021 vs Feb-2022 medians; if Feb-2022 median is higher (closer to land value) \u21d2 level lower \u21d2 \u201cA\u201d; else \u201cB\u201d.  \n   If any collection is empty \u2192 C1; masked pixel count ==0 \u2192 C2; result None \u2192 C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\ngerd = ee.Geometry.Polygon(\n        [[[35.08, 11.2], [35.08, 11.4], [35.24, 11.4], [35.24, 11.2]]])\n\ndef get_col(y1, y2, m1, m2):\n    return (ee.ImageCollection(\"COPERNICUS/S2_SR\")\n            .filterBounds(gerd)\n            .filter(ee.Filter.calendarRange(y1, y2, 'year'))\n            .filter(ee.Filter.calendarRange(m1, m2, 'month'))\n            .map(lambda img: img.updateMask(img.select('QA60').eq(0))))\n\ngsw = ee.Image(\"JRC/GSW1_4/GlobalSurfaceWater\").select('occurrence').gt(70)\nmsk = lambda img: img.updateMask(gsw)\n\ncol21 = get_col(2021, 2021, 9, 9).map(msk)\ncol22 = get_col(2022, 2022, 2, 2).map(msk)\n\ns21 = col21.size().getInfo()\ns22 = col22.size().getInfo()\nif s21 == 0 or s22 == 0:\n    print(f\"Sep21 imgs: {s21}, Feb22 imgs: {s22}\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\ndef med_swir(col):\n    img = col.median().select('B11')\n    cnt = img.reduceRegion(ee.Reducer.count(), gerd, 30, maxPixels=1e9).get('B11').getInfo()\n    val = img.reduceRegion(ee.Reducer.median(), gerd, 30, maxPixels=1e9).get('B11').getInfo()\n    return val, cnt\n\nv21, c21 = med_swir(col21)\nv22, c22 = med_swir(col22)\n\nif c21 == 0 or c22 == 0:\n    print(\"Valid pix zero after mask\")\n    print(\"<answer>C2</answer>\")\n    exit()\nif v21 is None or v22 is None:\n    print(\"Median calc failed\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(f\"Sep21 B11: {v21:.2f} ({c21}), Feb22 B11: {v22:.2f} ({c22})\")\nprint(\"<answer>A</answer>\" if v22 > v21 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\ngerd = ee.Geometry.Polygon(\n        [[[35.08, 11.2], [35.08, 11.4], [35.24, 11.4], [35.24, 11.2]]])\n\ndef get_col(y1, y2, m1, m2):\n    return (ee.ImageCollection(\"COPERNICUS/S2_SR\")\n            .filterBounds(gerd)\n            .filter(ee.Filter.calendarRange(y1, y2, 'year'))\n            .filter(ee.Filter.calendarRange(m1, m2, 'month'))\n            .map(lambda img: img.updateMask(img.select('QA60').eq(0))))\n\ngsw = ee.Image(\"JRC/GSW1_4/GlobalSurfaceWater\").select('occurrence').gt(70)\nmsk = lambda img: img.updateMask(gsw)\n\ncol21 = get_col(2021, 2021, 9, 9).map(msk)\ncol22 = get_col(2022, 2022, 2, 2).map(msk)\n\ns21 = col21.size().getInfo()\ns22 = col22.size().getInfo()\nif s21 == 0 or s22 == 0:\n    print(f\"Sep21 imgs: {s21}, Feb22 imgs: {s22}\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\ndef med_swir(col):\n    img = col.median().select('B11')\n    cnt = img.reduceRegion(ee.Reducer.count(), gerd, 30, maxPixels=1e9).get('B11').getInfo()\n    val = img.reduceRegion(ee.Reducer.median(), gerd, 30, maxPixels=1e9).get('B11').getInfo()\n    return val, cnt\n\nv21, c21 = med_swir(col21)\nv22, c22 = med_swir(col22)\n\nif c21 == 0 or c22 == 0:\n    print(\"Valid pix zero after mask\")\n    print(\"<answer>C2</answer>\")\n    exit()\nif v21 is None or v22 is None:\n    print(\"Median calc failed\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(f\"Sep21 B11: {v21:.2f} ({c21}), Feb22 B11: {v22:.2f} ({c22})\")\nprint(\"<answer>A</answer>\" if v22 > v21 else \"<answer>B</answer>\")",
+            "exec_msg": "Sep21 B11: 557.00 (18), Feb22 B11: 1782.50 (18)\n<answer>A</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for COPERNICUS/S2_SR! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by COPERNICUS/S2_SR_HARMONIZED\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

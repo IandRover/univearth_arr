@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was there a decrease in rainfall in Zimbabwe in February 2024 compared to February 2023?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-16-08",
+        "url": "https://earthobservatory.nasa.gov/images/152711/severe-drought-in-southern-africa",
+        "unique_id": 206
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>1. Search strategy:\n   - Collection: CHIRPS Daily for rainfall ( gauge + satellite, 0.05\u00b0, global).  \n   - Date: 2023-02-01 \u2192 2023-02-28 and 2024-02-01 \u2192 2024-02-29 (leap year).  \n   - Location: Zimbabwe administrative boundary via the simplified FAO GAUL 0 feature collection (code \u00e2\u0080\u0098ZWE\u00e2\u0080\u0099).  \n2. Masking: No cloud masking needed; precipitation band is continuous.  \n3. Logic: sum daily precipitation per year \u2192 compare.  \n   - If either collection empty \u2192 C1.  \n   - If sum returns None/NaN \u2192 C3.  \n   - Otherwise: 2024 sum < 2023 sum \u2192 A (Yes), else B (No).\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nzim = ee.FeatureCollection(\"USDOS/LSIB_SIMPLE/2017\").filter(ee.Filter.eq('country_na', 'Zimbabwe')).geometry()\nfeb23 = ee.DateRange('2023-02-01', '2023-02-28')\nfeb24 = ee.DateRange('2024-02-01', '2024-02-29')\n\n# 2. Acquire collections\ncol23 = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterBounds(zim).filterDate(feb23)\ncol24 = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterBounds(zim).filterDate(feb24)\n\nif col23.size().getInfo() == 0 or col24.size().getInfo() == 0:\n    print(\"C1\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Sum rainfall\n    sum23 = col23.sum().multiply(86400)  # convert mm/day \u2192 total mm\n    sum24 = col24.sum().multiply(86400)\n    tot23 = sum23.reduceRegion(reducer=ee.Reducer.sum(), geometry=zim, scale=5000, maxPixels=1e9).get('precipitation').getInfo()\n    tot24 = sum24.reduceRegion(reducer=ee.Reducer.sum(), geometry=zim, scale=5000, maxPixels=1e9).get('precipitation').getInfo()\n    if tot23 is None or tot24 is None:\n        print(\"<answer>C3</answer>\")\n    else:\n        print(f\"Feb2023: {tot23:.1f} mm, Feb2024: {tot24:.1f} mm\")\n        print(\"<answer>A</answer>\" if tot24 < tot23 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nzim = ee.FeatureCollection(\"USDOS/LSIB_SIMPLE/2017\").filter(ee.Filter.eq('country_na', 'Zimbabwe')).geometry()\nfeb23 = ee.DateRange('2023-02-01', '2023-02-28')\nfeb24 = ee.DateRange('2024-02-01', '2024-02-29')\n\n# 2. Acquire collections\ncol23 = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterBounds(zim).filterDate(feb23)\ncol24 = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterBounds(zim).filterDate(feb24)\n\nif col23.size().getInfo() == 0 or col24.size().getInfo() == 0:\n    print(\"C1\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Sum rainfall\n    sum23 = col23.sum().multiply(86400)  # convert mm/day \u2192 total mm\n    sum24 = col24.sum().multiply(86400)\n    tot23 = sum23.reduceRegion(reducer=ee.Reducer.sum(), geometry=zim, scale=5000, maxPixels=1e9).get('precipitation').getInfo()\n    tot24 = sum24.reduceRegion(reducer=ee.Reducer.sum(), geometry=zim, scale=5000, maxPixels=1e9).get('precipitation').getInfo()\n    if tot23 is None or tot24 is None:\n        print(\"<answer>C3</answer>\")\n    else:\n        print(f\"Feb2023: {tot23:.1f} mm, Feb2024: {tot24:.1f} mm\")\n        print(\"<answer>A</answer>\" if tot24 < tot23 else \"<answer>B</answer>\")",
+            "exec_msg": "Feb2023: 192157759636.1 mm, Feb2024: 33443401902.5 mm\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

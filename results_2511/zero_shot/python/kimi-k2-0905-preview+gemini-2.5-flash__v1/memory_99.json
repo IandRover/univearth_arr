@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was the concentration of tropospheric nitrogen dioxide over South Los Angeles, California lower between October 1-23, 2021 compared to the same period in 2019 and 2018?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-26-45",
+        "url": "https://earthobservatory.nasa.gov/images/149004/scientific-questions-arrive-in-ports",
+        "unique_id": 99
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy (Collection, Date, Location).\n   - Collection: NO2 tropospheric column from Sentinel-5P (OFFL/L2).\n   - Date: Select 2018-10-01 \u2192 2018-10-23, 2019-10-01 \u2192 2019-10-23, 2021-10-01 \u2192 2021-10-23.\n   - Location: Point over South LA, CA (~[-118.30, 33.95]).\n\n2. Masking strategy.\n   - Sentinel-5P L2 cloud_fraction is provided but L2 algorithm filters already handle low-quality retrievals.\n   - We use product flags, i.e. keep only qa_flag==0 (valid).\n\n3. Logic to distinguish Valid Zero from Null/Error.\n   After cloud/quality masks, compute spatial average for each year over identical geometry.\n   If one collection is empty (! or only bad pixels) \u2192 C1/C2.\n   If result is None \u2192 C3.\n   Else compare 2021 mean vs. 2019 and 2018 means. If clearly lower, A; otherwise, B.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nloc = ee.Geometry.Point(-118.30, 33.95)\ngeom = loc.buffer(5000)\nd2021 = ['2021-10-01', '2021-10-23']\nd2019 = ['2019-10-01', '2019-10-23']\nd2018 = ['2018-10-01', '2018-10-23']\n\ndef no2_mean(datePair, name):\n    col = ee.ImageCollection(\"COPERNICUS/S5P/OFFL/L3_NO2\") \\\n          .select('tropospheric_NO2_column_number_density') \\\n          .filterDate(datePair[0], datePair[1]) \\\n          .filterBounds(geom)\n    n = col.size().getInfo()\n    if n == 0:\n        print(name, \"images: 0\")\n        return None\n    masked = col.map(lambda img: img.updateMask(img.gte(0)))  # remove invalid negative filler\n    comp = masked.mean().clip(geom)\n    count = comp.reduceRegion(reducer=ee.Reducer.count(),\n                              geometry=geom, scale=1000,\n                              maxPixels=1e9).get('tropospheric_NO2_column_number_density').getInfo()\n    if count == 0:\n        print(name, \"valid pixels: 0\")\n        return None\n    mean = comp.reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=geom, scale=1000,\n                             maxPixels=1e9).get('tropospheric_NO2_column_number_density').getInfo()\n    print(name, f\"images: {n}, mean NO2: {mean*1e15:.1f} 1e-15 mol/cm2\")\n    return mean\n\n# 2. Get means\nv2021 = no2_mean(d2021, \"2021\")\nv2019 = no2_mean(d2019, \"2019\")\nv2018 = no2_mean(d2018, \"2018\")\n\nif v2021 is None or v2019 is None or v2018 is None:\n    print(\"<answer>C1</answer>\")\nelse:\n    lower19 = v2021 < v2019\n    lower18 = v2021 < v2018\n    if lower19 and lower18:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nloc = ee.Geometry.Point(-118.30, 33.95)\ngeom = loc.buffer(5000)\nd2021 = ['2021-10-01', '2021-10-23']\nd2019 = ['2019-10-01', '2019-10-23']\nd2018 = ['2018-10-01', '2018-10-23']\n\ndef no2_mean(datePair, name):\n    col = ee.ImageCollection(\"COPERNICUS/S5P/OFFL/L3_NO2\") \\\n          .select('tropospheric_NO2_column_number_density') \\\n          .filterDate(datePair[0], datePair[1]) \\\n          .filterBounds(geom)\n    n = col.size().getInfo()\n    if n == 0:\n        print(name, \"images: 0\")\n        return None\n    masked = col.map(lambda img: img.updateMask(img.gte(0)))  # remove invalid negative filler\n    comp = masked.mean().clip(geom)\n    count = comp.reduceRegion(reducer=ee.Reducer.count(),\n                              geometry=geom, scale=1000,\n                              maxPixels=1e9).get('tropospheric_NO2_column_number_density').getInfo()\n    if count == 0:\n        print(name, \"valid pixels: 0\")\n        return None\n    mean = comp.reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=geom, scale=1000,\n                             maxPixels=1e9).get('tropospheric_NO2_column_number_density').getInfo()\n    print(name, f\"images: {n}, mean NO2: {mean*1e15:.1f} 1e-15 mol/cm2\")\n    return mean\n\n# 2. Get means\nv2021 = no2_mean(d2021, \"2021\")\nv2019 = no2_mean(d2019, \"2019\")\nv2018 = no2_mean(d2018, \"2018\")\n\nif v2021 is None or v2019 is None or v2018 is None:\n    print(\"<answer>C1</answer>\")\nelse:\n    lower19 = v2021 < v2019\n    lower18 = v2021 < v2018\n    if lower19 and lower18:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "2021 images: 311, mean NO2: 189494297528.4 1e-15 mol/cm2\n2019 images: 313, mean NO2: 197095312407.2 1e-15 mol/cm2\n2018 images: 300, mean NO2: 189634233045.1 1e-15 mol/cm2\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

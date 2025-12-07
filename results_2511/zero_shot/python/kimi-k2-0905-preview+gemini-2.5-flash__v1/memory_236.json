@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did Lac Rouge shrink by more than 90% between June 21, 2024 and June 15, 2025?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-53-01",
+        "url": "https://earthobservatory.nasa.gov/images/154526/the-disappearance-of-lac-rouge",
+        "unique_id": 236
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. **Search Strategy**  \n   - Collection: Sentinel-2 MSI (10 m) is best for small lakes.  \n   - Bands: Use the QA60 cloud-mask bit plus a simple water index (NDWI or mNDWI) to threshold open-water vs. land.  \n   - Date window: start = 21 Jun 2024, end = 15 Jun 2025 (user specified the exact day pair in the question: 21 Jun 2024 is summer solstice the previous year, 15 Jun 2025 is just under 1 year later).  \n   - Location: Lac Rouge is a small lake near 46.0\u00b0N, \u201376.5\u00b0W (Quebec, Canada). Place a 1 km-radius polygon around the visible lake to capture the shoreline and include possible draw-down zone.  \n\n2. **Masking Strategy**  \n   - Cloud-mask S-2 with QA60 \u201ccloud\u201d and \u201ccirrus\u201d bits.  \n   - Build a 1-image-per-period median composite (June window) to avoid daily gaps; keep the same compositing method for both years.  \n   - Compute mNDWI = (Green \u2013 SWIR) / (Green + SWIR) (with B3 and B11).  \n     \u00b7 mNDWI > 0 is a robust open-water threshold for boreal lakes.  \n     \u00b7 Avoid NDVI-based thresholds because terrestrial vegetation can be wet.  \n   - Count \u201cwater\u201d pixels inside the AOI for each composite, then compare.  \n\n3. **Distinguishing Valid Zero from Null**  \n   - After compositing, immediately check if any images exist (col.size().getInfo() == 0 \u2192 C1).  \n   - Apply reducer using ee.Reducer.count() on the water mask to ensure at least one valid pixel in BOTH images. If count == 0 \u2192 C2.  \n   - Compute percent change = [(A \u2013 B) / A ] * 100, where A = 2024 area; B = 2025 area.  \n   - If the result is None or math domain error \u2192 C3.  \n   - Otherwise answer A (Yes, >90% shrink) or B (No, \u226490% shrink).  \n</thinking>\n\n<code>\n```python\nimport ee, math\nee.Initialize(project='earthsense-436113')\n\n# 1. Lake bounding box (Lac Rouge, QC)\naoi = ee.Geometry.Polygon([[-76.52,46.01],[-76.46,46.01],[-76.46,45.98],[-76.52,45.98]])\n\ndef s2_composite(year):\n    col = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \\\n           .filterBounds(aoi) \\\n           .filterDate(ee.Date.fromYMD(year,6,1), ee.Date.fromYMD(year,7,15)) \\\n           .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE',70))\n    if col.size().getInfo()==0:\n        return None\n    qa = col.first().select('QA60')\n    cloud = qa.bitwiseAnd(1<<10).Or(qa.bitwiseAnd(1<<11))\n    comp = col.map(lambda img: img.updateMask(cloud.Not())) \\\n              .median().clip(aoi)\n    mndwi = comp.normalizedDifference(['B3','B11']).rename('mndwi')\n    water = mndwi.gt(0)\n    return water.set('year',year)\n\nw24 = s2_composite(2024)\nw25 = s2_composite(2025)\nif (w24 is None) or (w25 is None):\n    print(\"C1\")\n    quit()\n\ndef water_area(wimg):\n    pix = wimg.reduceRegion(reducer=ee.Reducer.sum(), geometry=aoi, scale=100, maxPixels=1e9).get('mndwi').getInfo()\n    if pix is None: return None\n    return pix*(100*100)/1e6  # km\u00b2\n\na24 = water_area(w24)\na25 = water_area(w25)\nif (a24 is None) or (a25 is None):\n    print(\"<answer>C3</answer>\")\n    quit()\nshrink_pct = (a24 - a25)/a24*100\nprint(f\"Area 2024: {a24:.3f} km\u00b2, 2025: {a25:.3f} km\u00b2, Shrink: {shrink_pct:.1f}%\")\nprint(\"<answer>A</answer>\" if shrink_pct>90 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee, math\nee.Initialize(project='earthsense-436113')\n\n# 1. Lake bounding box (Lac Rouge, QC)\naoi = ee.Geometry.Polygon([[-76.52,46.01],[-76.46,46.01],[-76.46,45.98],[-76.52,45.98]])\n\ndef s2_composite(year):\n    col = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \\\n           .filterBounds(aoi) \\\n           .filterDate(ee.Date.fromYMD(year,6,1), ee.Date.fromYMD(year,7,15)) \\\n           .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE',70))\n    if col.size().getInfo()==0:\n        return None\n    qa = col.first().select('QA60')\n    cloud = qa.bitwiseAnd(1<<10).Or(qa.bitwiseAnd(1<<11))\n    comp = col.map(lambda img: img.updateMask(cloud.Not())) \\\n              .median().clip(aoi)\n    mndwi = comp.normalizedDifference(['B3','B11']).rename('mndwi')\n    water = mndwi.gt(0)\n    return water.set('year',year)\n\nw24 = s2_composite(2024)\nw25 = s2_composite(2025)\nif (w24 is None) or (w25 is None):\n    print(\"C1\")\n    quit()\n\ndef water_area(wimg):\n    pix = wimg.reduceRegion(reducer=ee.Reducer.sum(), geometry=aoi, scale=100, maxPixels=1e9).get('mndwi').getInfo()\n    if pix is None: return None\n    return pix*(100*100)/1e6  # km\u00b2\n\na24 = water_area(w24)\na25 = water_area(w25)\nif (a24 is None) or (a25 is None):\n    print(\"<answer>C3</answer>\")\n    quit()\nshrink_pct = (a24 - a25)/a24*100\nprint(f\"Area 2024: {a24:.3f} km\u00b2, 2025: {a25:.3f} km\u00b2, Shrink: {shrink_pct:.1f}%\")\nprint(\"<answer>A</answer>\" if shrink_pct>90 else \"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765072429972458.py\", line 38, in <module>\n    shrink_pct = (a24 - a25)/a24*100\n                 ~~~~~~~~~~~^~~~\nZeroDivisionError: float division by zero\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>C2</answer>",
+            "answer": "C2",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

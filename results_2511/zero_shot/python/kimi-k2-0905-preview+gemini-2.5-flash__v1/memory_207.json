@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does Jabal Qidr have a darker color than Jabal Bayda, as observed in April 2024?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-07-00",
+        "url": "https://earthobservatory.nasa.gov/images/152839/white-and-black-volcanoes-of-saudi-arabia",
+        "unique_id": 207
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: We will use the Sentinel-2 MSI collection (2024-04-01 \u2013 2024-04-30) over the two volcanic cones in Harrat Khaybar (Saudi Arabia).  \n   - Jabal Qidr ( darker lava cone ) \u2248 25.07 \u00b0N, 39.92 \u00b0E  \n   - Jabal Bayda ( white-colored cone ) \u2248 25.14 \u00b0N, 39.95 \u00b0E  \n\n2. Masking strategy: cloud + cirrus masks, then keep april scenes only.  \n   We want the surface reflectance, so we use COPERNICUS/S2_SR_HARMONIZED and apply the QA60 band mask.\n\n3. Logic:  \n   - Compute the median true-color composite (B4, B3, B2) for each cone during April 2024.  \n   - Use B4 (red, 10 m) as the proxy for \u201cdarkness\u201d (lower reflectance = darker).  \n   - Sample a 300-m radius around each summit.  \n   - If no images, C1; if after masking we have 0 valid pixels inside either ROI, C2; if mean is None/NaN, C3; otherwise compare means: if Qidr < Bayda \u2192 A (Yes), else B (No).\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & dates\nroi_q = ee.Geometry.Point(39.92, 25.07).buffer(300)   # Jabal Qidr\nroi_b = ee.Geometry.Point(39.95, 25.14).buffer(300)   # Jabal Bayda\napril24 = ee.DateRange('2024-04-01', '2024-04-30')\n\n# 2. Data acquisition\ns2 = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n        .filterBounds(roi_q).filterBounds(roi_b)\n        .filterDate(april24)\n        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 40))\n        .map(lambda img: img.updateMask(img.select('QA60').eq(0))))\n\nn = s2.size().getInfo()\nif n == 0:\n    print(\"No April 2024 images.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing\n    med = s2.median()\n    red_q = med.select('B4').reduceRegion(reducer=ee.Reducer.mean(),\n                                          geometry=roi_q, scale=10,\n                                          maxPixels=1e9).get('B4')\n    red_b = med.select('B4').reduceRegion(reducer=ee.Reducer.mean(),\n                                          geometry=roi_b, scale=10,\n                                          maxPixels=1e9).get('B4')\n    val_q = red_q.getInfo()\n    val_b = red_b.getInfo()\n    if val_q is None or val_b is None:\n        print(\"Calculation returned None.\")\n        print(\"<answer>C3</answer>\")\n    else:\n        print(f\"April 2024 images: {n}\")\n        print(f\"Jabal Qidr B4 mean: {val_q:.3f}\")\n        print(f\"Jabal Bayda B4 mean: {val_b:.3f}\")\n        print(\"<answer>A</answer>\" if val_q < val_b else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & dates\nroi_q = ee.Geometry.Point(39.92, 25.07).buffer(300)   # Jabal Qidr\nroi_b = ee.Geometry.Point(39.95, 25.14).buffer(300)   # Jabal Bayda\napril24 = ee.DateRange('2024-04-01', '2024-04-30')\n\n# 2. Data acquisition\ns2 = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n        .filterBounds(roi_q).filterBounds(roi_b)\n        .filterDate(april24)\n        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 40))\n        .map(lambda img: img.updateMask(img.select('QA60').eq(0))))\n\nn = s2.size().getInfo()\nif n == 0:\n    print(\"No April 2024 images.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing\n    med = s2.median()\n    red_q = med.select('B4').reduceRegion(reducer=ee.Reducer.mean(),\n                                          geometry=roi_q, scale=10,\n                                          maxPixels=1e9).get('B4')\n    red_b = med.select('B4').reduceRegion(reducer=ee.Reducer.mean(),\n                                          geometry=roi_b, scale=10,\n                                          maxPixels=1e9).get('B4')\n    val_q = red_q.getInfo()\n    val_b = red_b.getInfo()\n    if val_q is None or val_b is None:\n        print(\"Calculation returned None.\")\n        print(\"<answer>C3</answer>\")\n    else:\n        print(f\"April 2024 images: {n}\")\n        print(f\"Jabal Qidr B4 mean: {val_q:.3f}\")\n        print(f\"Jabal Bayda B4 mean: {val_b:.3f}\")\n        print(\"<answer>A</answer>\" if val_q < val_b else \"<answer>B</answer>\")",
+            "exec_msg": "April 2024 images: 5\nJabal Qidr B4 mean: 1518.610\nJabal Bayda B4 mean: 2471.786\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

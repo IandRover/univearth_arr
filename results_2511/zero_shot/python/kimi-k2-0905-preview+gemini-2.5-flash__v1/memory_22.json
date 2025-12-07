@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Through the months of December 2018 and January 2019, did sourthern African countries (Namibia, Botswana, Lesotho) recieve less rain than the long-term average for the same two-month period from 2000 to 2019?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_19-42-30",
+        "url": "https://earthobservatory.nasa.gov/images/144704/drought-harms-corn-crops-in-southern-africa",
+        "unique_id": 22
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: CHIRPS daily precipitation (UCSB-CHG/CHIRPS/DAILY) summed to the exact calendar window 1 Dec \u2013 31 Jan for every year 2000-2019.  \n   - 2018/19 window: 1 Dec 2018 \u2013 31 Jan 2019  \n   - Long-term window for same months: 1 Dec \u2013 31 Jan in each year 2000-2018 (19 samples)  \n   - Region: union of Namibia, Botswana, Lesotho (hand-drawn rough boundary)  \n\n2. Masking: None needed (rainfall product is cloud-free).\n\n3. Logic:  \n   - Compute total rainfall (mm) for each year\u2019s two-month window.  \n   - 2018/19 value vs 2000-2018 mean; if 2018/19 < mean \u2192 A (Yes, less rain), else B.  \n   - Check collection sizes; if 0 \u2192 C1.  \n   - After summing, check pixel count; if 0 \u2192 C2.  \n   - If result is None/NaN \u2192 C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Region \u2013 approximate union of Namibia, Botswana, Lesotho\nsa = ee.Geometry.Polygon([[\n    [11.6,-28.9],[11.6,-17.7],[20.0,-17.7],[29.5,-22.3],[29.5,-28.9],\n    [28.0,-30.3],[20.0,-30.3],[11.6,-28.9]\n]])\n\n# 2. Helper: sum rainfall for 1 Dec \u2013 31 Jan of given start year\ndef rainy_window(start_year):\n    begin = ee.Date.fromYMD(start_year, 12, 1)\n    end   = ee.Date.fromYMD(start_year+1, 2, 1)  # exclusive\n    col = (ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n             .filterDate(begin, end)\n             .select('precipitation'))\n    n = col.size().getInfo()\n    if n == 0:\n        return None\n    total = col.sum().rename('total')\n    val = (total.reduceRegion(reducer=ee.Reducer.mean(),\n                              geometry=sa, scale=5000, maxPixels=1e9)\n                 .get('total').getInfo())\n    px = (total.multiply(0).add(1)  # pixel indicator\n            .reduceRegion(reducer=ee.Reducer.sum(),\n                         geometry=sa, scale=5000, maxPixels=1e9)\n            .get('total').getInfo())\n    return val if px > 0 else None\n\n# 3. 2018/19 total\nr19 = rainy_window(2018)\nif r19 is None:\n    print(\"No 2018/19 data.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 4. 2000-2018 climatology\nclim = []\nfor y in range(2000, 2019):\n    v = rainy_window(y)\n    if v is None:\n        continue\n    clim.append(v)\nif not clim:\n    print(\"No climatology data.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\navg = sum(clim)/len(clim)\nprint(f\"2018/19 rainfall: {r19:.1f} mm\")\nprint(f\"2000-2018 mean: {avg:.1f} mm\")\nprint(f\"Pixels used: {int(px)}\")\n\n# 5. Answer\nif r19 < avg:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Region \u2013 approximate union of Namibia, Botswana, Lesotho\nsa = ee.Geometry.Polygon([[\n    [11.6,-28.9],[11.6,-17.7],[20.0,-17.7],[29.5,-22.3],[29.5,-28.9],\n    [28.0,-30.3],[20.0,-30.3],[11.6,-28.9]\n]])\n\n# 2. Helper: sum rainfall for 1 Dec \u2013 31 Jan of given start year\ndef rainy_window(start_year):\n    begin = ee.Date.fromYMD(start_year, 12, 1)\n    end   = ee.Date.fromYMD(start_year+1, 2, 1)  # exclusive\n    col = (ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n             .filterDate(begin, end)\n             .select('precipitation'))\n    n = col.size().getInfo()\n    if n == 0:\n        return None\n    total = col.sum().rename('total')\n    val = (total.reduceRegion(reducer=ee.Reducer.mean(),\n                              geometry=sa, scale=5000, maxPixels=1e9)\n                 .get('total').getInfo())\n    px = (total.multiply(0).add(1)  # pixel indicator\n            .reduceRegion(reducer=ee.Reducer.sum(),\n                         geometry=sa, scale=5000, maxPixels=1e9)\n            .get('total').getInfo())\n    return val if px > 0 else None\n\n# 3. 2018/19 total\nr19 = rainy_window(2018)\nif r19 is None:\n    print(\"No 2018/19 data.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 4. 2000-2018 climatology\nclim = []\nfor y in range(2000, 2019):\n    v = rainy_window(y)\n    if v is None:\n        continue\n    clim.append(v)\nif not clim:\n    print(\"No climatology data.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\navg = sum(clim)/len(clim)\nprint(f\"2018/19 rainfall: {r19:.1f} mm\")\nprint(f\"2000-2018 mean: {avg:.1f} mm\")\nprint(f\"Pixels used: {int(px)}\")\n\n# 5. Answer\nif r19 < avg:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "2018/19 rainfall: 71.6 mm\n2000-2018 mean: 114.7 mm\n",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/176506819362195.py\", line 52, in <module>\n    print(f\"Pixels used: {int(px)}\")\n                              ^^\nNameError: name 'px' is not defined\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

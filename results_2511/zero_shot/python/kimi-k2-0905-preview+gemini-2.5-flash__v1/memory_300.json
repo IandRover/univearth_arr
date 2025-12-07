@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the inundation region in Texas (specifically within a 4km radius around coordinates 29.956182, -96.111167) increase on May 28, 2016, compared to May 4, 2013?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_19-46-17",
+        "url": "https://earthobservatory.nasa.gov/images/88129/floodwaters-inundate-southeastern-texas",
+        "unique_id": 300
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Use Sentinel-1 SAR (VV) for surface-water detection (cloud-independent).  \n2. Define the same 4-km buffer around the point for both dates.  \n3. Compute total \u201cwater\u201d pixels (VV  < -15 dB) versus all valid pixels (VV  > -35 dB) to get % inundation.  \n4. Compare the two percentages.  \n5. Check Collection size (C1), pixel counts after masking (C2), null/NaN results (C3).  \n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point(-96.111167, 29.956182)\nroi = pt.buffer(4000)\n\ndef water_pct(date):\n    ic = (ee.ImageCollection('COPERNICUS/S1_GRD')\n          .filterBounds(roi)\n          .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))\n          .filter(ee.Filter.eq('instrumentMode', 'IW'))\n          .filterDate(date, ee.Date(date).advance(1, 'day')))\n    if ic.size().getInfo() == 0:\n        print('No S1 images for '+date)\n        return None,0\n    img = ic.first().select('VV').clip(roi)\n    total = img.reduceRegion(ee.Reducer.count(), roi, 30, maxPixels=1e9).get('VV').getInfo()\n    wat = (img.lt(-15)).reduceRegion(ee.Reducer.sum(), roi, 30, maxPixels=1e9).get('VV').getInfo()\n    if total == 0:\n        return None,0\n    return wat/total*100, int(total)\n\np13, c13 = water_pct('2013-05-04')\np16, c16 = water_pct('2016-05-28')\n\nprint(f'2013 Pixels: {c13}, Inundation: {p13:.1f}%')\nprint(f'2016 Pixels: {c16}, Inundation: {p16:.1f}%')\n\nif p13 is None or p16 is None:\n    print('<answer>C1</answer>')\nelif c13==0 or c16==0:\n    print('<answer>C2</answer>')\nelif p13<0 or p13>100 or p16<0 or p16>100:\n    print('<answer>C3</answer>')\nelse:\n    print('<answer>A</answer>' if p16>p13 else '<answer>B</answer>')\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point(-96.111167, 29.956182)\nroi = pt.buffer(4000)\n\ndef water_pct(date):\n    ic = (ee.ImageCollection('COPERNICUS/S1_GRD')\n          .filterBounds(roi)\n          .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))\n          .filter(ee.Filter.eq('instrumentMode', 'IW'))\n          .filterDate(date, ee.Date(date).advance(1, 'day')))\n    if ic.size().getInfo() == 0:\n        print('No S1 images for '+date)\n        return None,0\n    img = ic.first().select('VV').clip(roi)\n    total = img.reduceRegion(ee.Reducer.count(), roi, 30, maxPixels=1e9).get('VV').getInfo()\n    wat = (img.lt(-15)).reduceRegion(ee.Reducer.sum(), roi, 30, maxPixels=1e9).get('VV').getInfo()\n    if total == 0:\n        return None,0\n    return wat/total*100, int(total)\n\np13, c13 = water_pct('2013-05-04')\np16, c16 = water_pct('2016-05-28')\n\nprint(f'2013 Pixels: {c13}, Inundation: {p13:.1f}%')\nprint(f'2016 Pixels: {c16}, Inundation: {p16:.1f}%')\n\nif p13 is None or p16 is None:\n    print('<answer>C1</answer>')\nelif c13==0 or c16==0:\n    print('<answer>C2</answer>')\nelif p13<0 or p13>100 or p16<0 or p16>100:\n    print('<answer>C3</answer>')\nelse:\n    print('<answer>A</answer>' if p16>p13 else '<answer>B</answer>')",
+            "exec_msg": "No S1 images for 2013-05-04\nNo S1 images for 2016-05-28\n",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/17650684112456288.py\", line 26, in <module>\n    print(f'2013 Pixels: {c13}, Inundation: {p13:.1f}%')\n                                            ^^^^^^^^^\nTypeError: unsupported format string passed to NoneType.__format__\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

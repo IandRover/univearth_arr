@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the surface water extent in Lake Sambhar, India decrease in around April 10, 2019 compared to around September 30, 2018?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-06-20",
+        "url": "https://www.earthobservatory.nasa.gov/images/145180/",
+        "unique_id": 355
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>1. Collection: MODIS Daily Surface Water (MODIS/006/MOD44W), 250m, Global.  \n2. April 10 2019 vs Sept 30 2018 (\u00b115 days each).  \n3. Water mask already provided (band \u2018water_mask\u2019: 1 = water, 0/2 = land/cloud).  \n4. Compute sum of water pixels inside a ~30 km buffer around Lake Sambhar (26.9\u00b0N 75.2\u00b0E).  \n5. If either date has 0 images or 0 valid pixels after clipping, return C1/C2.  \n6. Compare total water pixels: if April 2019 < Sept 2018 \u2192 A (Yes), else B (No).  \n7. Scale 1000 m keeps request light.  \n</thinking>\n\n<code>\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nloc   = ee.Geometry.Point(75.2, 26.9)\nroi   = loc.buffer(30000)  # ~Lake area\nspring= ee.Date('2019-04-10').advance(-15,'day'), ee.Date('2019-04-10').advance(15,'day')\nautumn= ee.Date('2018-09-30').advance(-15,'day'), ee.Date('2018-09-30').advance(15,'day')\n\n# 2. Fetch collections\nsw = ee.ImageCollection('MODIS/006/MOD44W') \\\n        .select('water_mask') \\\n        .map(lambda img: img.clip(roi))\nc1 = sw.filterDate(*spring)\nc2 = sw.filterDate(*autumn)\nif c1.size().getInfo()==0 or c2.size().getInfo()==0:\n    print('C1: Empty Collection')\n    print('<answer>C1</answer>')\n    exit()\n# mosaic and water=1\nw1 = c1.mosaic().eq(1)\nw2 = c2.mosaic().eq(1)\n\n# 3. Valid pixels check\ncnt1 = w1.reduceRegion(reducer=ee.Reducer.count(),\n       geometry=roi, scale=1000, maxPixels=1e9).get('water_mask').getInfo()\ncnt2 = w2.reduceRegion(reducer=ee.Reducer.count(),\n       geometry=roi, scale=1000, maxPixels=1e9).get('water_mask').getInfo()\nif cnt1==0 or cnt2==0:\n    print('C2: No Valid Pixels')\n    print('<answer>C2</answer>')\n    exit()\n\n# 4. Water extent (sum of water pixels)\nsum1 = w1.reduceRegion(reducer=ee.Reducer.sum(),\n       geometry=roi, scale=1000, maxPixels=1e9).get('water_mask').getInfo()\nsum2 = w2.reduceRegion(reducer=ee.Reducer.sum(),\n       geometry=roi, scale=1000, maxPixels=1e9).get('water_mask').getInfo()\nprint(f'Sept 2018 water pixels: {int(sum2)}')\nprint(f'Apr 2019 water pixels:  {int(sum1)}')\n\n# 5. Decision\nif sum1 is None or sum2 is None:\n    print('<answer>C3</answer>')\nelif sum1 < sum2:\n    print('<answer>A</answer>')\nelse:\n    print('<answer>B</answer>')\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nloc   = ee.Geometry.Point(75.2, 26.9)\nroi   = loc.buffer(30000)  # ~Lake area\nspring= ee.Date('2019-04-10').advance(-15,'day'), ee.Date('2019-04-10').advance(15,'day')\nautumn= ee.Date('2018-09-30').advance(-15,'day'), ee.Date('2018-09-30').advance(15,'day')\n\n# 2. Fetch collections\nsw = ee.ImageCollection('MODIS/006/MOD44W') \\\n        .select('water_mask') \\\n        .map(lambda img: img.clip(roi))\nc1 = sw.filterDate(*spring)\nc2 = sw.filterDate(*autumn)\nif c1.size().getInfo()==0 or c2.size().getInfo()==0:\n    print('C1: Empty Collection')\n    print('<answer>C1</answer>')\n    exit()\n# mosaic and water=1\nw1 = c1.mosaic().eq(1)\nw2 = c2.mosaic().eq(1)\n\n# 3. Valid pixels check\ncnt1 = w1.reduceRegion(reducer=ee.Reducer.count(),\n       geometry=roi, scale=1000, maxPixels=1e9).get('water_mask').getInfo()\ncnt2 = w2.reduceRegion(reducer=ee.Reducer.count(),\n       geometry=roi, scale=1000, maxPixels=1e9).get('water_mask').getInfo()\nif cnt1==0 or cnt2==0:\n    print('C2: No Valid Pixels')\n    print('<answer>C2</answer>')\n    exit()\n\n# 4. Water extent (sum of water pixels)\nsum1 = w1.reduceRegion(reducer=ee.Reducer.sum(),\n       geometry=roi, scale=1000, maxPixels=1e9).get('water_mask').getInfo()\nsum2 = w2.reduceRegion(reducer=ee.Reducer.sum(),\n       geometry=roi, scale=1000, maxPixels=1e9).get('water_mask').getInfo()\nprint(f'Sept 2018 water pixels: {int(sum2)}')\nprint(f'Apr 2019 water pixels:  {int(sum1)}')\n\n# 5. Decision\nif sum1 is None or sum2 is None:\n    print('<answer>C3</answer>')\nelif sum1 < sum2:\n    print('<answer>A</answer>')\nelse:\n    print('<answer>B</answer>')",
+            "exec_msg": "C1: Empty Collection\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

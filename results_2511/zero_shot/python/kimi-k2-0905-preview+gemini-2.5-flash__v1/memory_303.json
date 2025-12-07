@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was the land surface temperature in New Mexico in July 2016 higher than in any other July over the past 30 years?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-12-00",
+        "url": "https://earthobservatory.nasa.gov/images/88547/extreme-heat-for-an-extreme-year",
+        "unique_id": 303
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:\n   - Collection: MODIS LST day (1 km) or Landsat 8/9 LST (30 m). MODIS is more stable and has 30-year coverage.\n   - Date: All Juli between 1992 and 2022 (2 extra for safety) with month = 7.\n   - Location: New Mexico state boundary does not need to be exact; we\u2019ll use a representative polygon of ~10,000 km\u00b2 to keep counts reasonable.\n\n2. Masking strategy:\n   - All-weather \u2013 none for LST since clouds already have 0 flag (QA 0/1) and we need full coverage.\n\n3. Logic to distinguish Valid Zero from Null/Error:\n   - For each July year extract mean LST. If collection for any July has 0 images \u2192 C1. If any pixel count after masking is zero after 100 km\u00b2 AOI test \u2192 C2. If any mean is NaN \u2192 C3.\n   - Then simply find max of 30 years and compare 2016 value.\n</thinking>\n\n<code>\n```python\nimport ee, datetime\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry\nnm = ee.Geometry.Rectangle([-109.05, 31.33, -103, 37])  # ~NM extent, ~1e4 km\u00b2\n\n# 2. Acquire MODIS LST Day 1 km (all July 1992-2022)\ncol = ee.ImageCollection('MODIS/061/MOD11A2').select('LST_Day_1km')   # 8-day, in K\ndef july_mean(y):\n    j = (ee.ImageCollection('MODIS/061/MOD11A2')\n            .filter(ee.Filter.calendarRange(y, y, 'year'))\n            .filter(ee.Filter.calendarRange(7, 7, 'month'))\n            .select('LST_Day_1km'))\n    c = j.size().getInfo()\n    if c == 0: return None\n    img = j.mean().multiply(0.02)  # scale to K\n    cnt = img.reduceRegion(reducer=ee.Reducer.count(), geometry=nm, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\n    if cnt == 0: return None\n    val = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=nm, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\n    return val - 273.15  # K to \u00b0C\n\n# 3. Build 30-year list\nyears = range(1992, 2023)\nlst = {}\nfor y in years:\n    v = july_mean(y)\n    if v is None:\n        print(f\"{y} Images: 0  -> C1 best avoided but continue\")\n        continue\n    lst[y] = v\n    print(f\"{y}: {v:.2f} \u00b0C\")\n\n# 4. Check data\nif 2016 not in lst: print(\"<answer>C1</answer>\")\nelse:\n    max_y = max(lst, key=lst.get)\n    print(f\"Max {max_y} {lst[max_y]:.2f} | 2016 {lst[2016]:.2f}\")\n    if lst[2016] >= lst[max_y]:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee, datetime\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry\nnm = ee.Geometry.Rectangle([-109.05, 31.33, -103, 37])  # ~NM extent, ~1e4 km\u00b2\n\n# 2. Acquire MODIS LST Day 1 km (all July 1992-2022)\ncol = ee.ImageCollection('MODIS/061/MOD11A2').select('LST_Day_1km')   # 8-day, in K\ndef july_mean(y):\n    j = (ee.ImageCollection('MODIS/061/MOD11A2')\n            .filter(ee.Filter.calendarRange(y, y, 'year'))\n            .filter(ee.Filter.calendarRange(7, 7, 'month'))\n            .select('LST_Day_1km'))\n    c = j.size().getInfo()\n    if c == 0: return None\n    img = j.mean().multiply(0.02)  # scale to K\n    cnt = img.reduceRegion(reducer=ee.Reducer.count(), geometry=nm, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\n    if cnt == 0: return None\n    val = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=nm, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\n    return val - 273.15  # K to \u00b0C\n\n# 3. Build 30-year list\nyears = range(1992, 2023)\nlst = {}\nfor y in years:\n    v = july_mean(y)\n    if v is None:\n        print(f\"{y} Images: 0  -> C1 best avoided but continue\")\n        continue\n    lst[y] = v\n    print(f\"{y}: {v:.2f} \u00b0C\")\n\n# 4. Check data\nif 2016 not in lst: print(\"<answer>C1</answer>\")\nelse:\n    max_y = max(lst, key=lst.get)\n    print(f\"Max {max_y} {lst[max_y]:.2f} | 2016 {lst[2016]:.2f}\")\n    if lst[2016] >= lst[max_y]:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "1992 Images: 0  -> C1 best avoided but continue\n1993 Images: 0  -> C1 best avoided but continue\n1994 Images: 0  -> C1 best avoided but continue\n1995 Images: 0  -> C1 best avoided but continue\n1996 Images: 0  -> C1 best avoided but continue\n1997 Images: 0  -> C1 best avoided but continue\n1998 Images: 0  -> C1 best avoided but continue\n1999 Images: 0  -> C1 best avoided but continue\n2000: 42.95 \u00b0C\n2001: 42.06 \u00b0C\n2002: 41.08 \u00b0C\n2003: 45.55 \u00b0C\n2004: 41.41 \u00b0C\n2005: 44.09 \u00b0C\n2006: 40.70 \u00b0C\n2007: 39.07 \u00b0C\n2008: 39.12 \u00b0C\n2009: 42.02 \u00b0C\n2010: 39.86 \u00b0C\n2011: 44.16 \u00b0C\n2012: 42.42 \u00b0C\n2013: 40.47 \u00b0C\n2014: 40.36 \u00b0C\n2015: 37.91 \u00b0C\n2016: 45.19 \u00b0C\n2017: 40.96 \u00b0C\n2018: 41.94 \u00b0C\n2019: 43.60 \u00b0C\n2020: 44.62 \u00b0C\n2021: 38.03 \u00b0C\n2022: 42.19 \u00b0C\nMax 2003 45.55 | 2016 45.19\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

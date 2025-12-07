@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does cloud cover increase in Western Australia (specifically (-20.59, 125.93)) between 11:00 and 14:00 local time on January 14, 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-28-19",
+        "url": "https://www.earthobservatory.nasa.gov/images/146158/",
+        "unique_id": 357
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: We'll use Sentinel-2 (10 m) Surface Reflectance (COPERNICUS/S2_SR) because the site is continental Australia and the date is 2020 (availability OK).  \n   Geometry: Point(-20.59, 125.93) in Western Australia.  \n   Date: 2020-01-14 strict.  \n   We must separate two local-time windows that fall in the same UTC calendar day over this longitude; location \u2248 UTC+8.4 h.  \n   11:00 local \u2192 \u2248 02:36 UTC; 14:00 local \u2192 \u2248 05:36 UTC.  \n   Sentinel-2 overpass \u2248 02:30 UTC (same calendar day), so the 11:00 image is the normal acquisition; the 14:00 scene would require a second satellite overpass the same day.  \n   Geometric cloud fraction is stored in the QA60 band (bits 10 & 11 for opaque clouds).  \n   We will compute cloud-% inside a 1 km box around the point.\n\n2. Masking strategy: We are measuring cloud cover itself, so we do NOT mask clouds; we compute their percentage.\n\n3. Logic:  \n   - If either window has no images \u2192 C1.  \n   - If either image has 0 valid QA pixels \u2192 C2.  \n   - Extract cloud % for the two time windows; if either is None/NaN \u2192 C3.  \n   - Compare: if cloud % at 14:00 > cloud % at 11:00 \u2192 A, else B.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point([125.93, -20.59])\nd = '2020-01-14'\n# Local time \u2248 UTC+8.4 h \u2192 11:00 local \u2248 02:36 UTC; 14:00 local \u2248 05:36 UTC\nt11 = ee.Date(d+'T02:30:00')  # centre of morning window\nt14 = ee.Date(d+'T05:30:00')  # centre of afternoon window\nw11 = t11.advance(-1.5, 'hour').merge(t11.advance(1.5, 'hour'))\nw14 = t14.advance(-1.5, 'hour').merge(t14.advance(1.5, 'hour'))\n\ncol11 = (ee.ImageCollection('COPERNICUS/S2_SR')\n           .filterBounds(pt)\n           .filterDate(w11.start(), w11.end()))\ncol14 = (ee.ImageCollection('COPERNICUS/S2_SR')\n           .filterBounds(pt)\n           .filterDate(w14.start(), w14.end()))\n\nn11 = col11.size().getInfo()\nn14 = col14.size().getInfo()\nprint(f'11:00 window images: {n11}')\nprint(f'14:00 window images: {n14}')\nif n11 == 0 or n14 == 0:\n    print('<answer>C1</answer>')\n\n# take first image in each window and compute cloud percent inside 1 km buffer\nregion = pt.buffer(500)\ndef cloud_pct(img):\n    qa = img.select('QA60')\n    mask = qa.bitwiseAnd(1 << 10).Or(qa.bitwiseAnd(1 << 11))  # opaque clouds\n    pct = (mask.reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=region,\n                             scale=60,\n                             maxPixels=1e9)\n              .get('QA60'))\n    return ee.Number(pct).multiply(100)\n\nimg11 = col11.first()\nimg14 = col14.first()\np11 = cloud_pct(img11).getInfo()\np14 = cloud_pct(img14).getInfo()\nprint(f'Cloud cover 11:00: {p11:.2f}%')\nprint(f'Cloud cover 14:00: {p14:.2f}%')\n\nif p11 is None or p14 is None:\n    print('<answer>C3</answer>')\nelif p14 > p11:\n    print('<answer>A</answer>')\nelse:\n    print('<answer>B</answer>')\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point([125.93, -20.59])\nd = '2020-01-14'\n# Local time \u2248 UTC+8.4 h \u2192 11:00 local \u2248 02:36 UTC; 14:00 local \u2248 05:36 UTC\nt11 = ee.Date(d+'T02:30:00')  # centre of morning window\nt14 = ee.Date(d+'T05:30:00')  # centre of afternoon window\nw11 = t11.advance(-1.5, 'hour').merge(t11.advance(1.5, 'hour'))\nw14 = t14.advance(-1.5, 'hour').merge(t14.advance(1.5, 'hour'))\n\ncol11 = (ee.ImageCollection('COPERNICUS/S2_SR')\n           .filterBounds(pt)\n           .filterDate(w11.start(), w11.end()))\ncol14 = (ee.ImageCollection('COPERNICUS/S2_SR')\n           .filterBounds(pt)\n           .filterDate(w14.start(), w14.end()))\n\nn11 = col11.size().getInfo()\nn14 = col14.size().getInfo()\nprint(f'11:00 window images: {n11}')\nprint(f'14:00 window images: {n14}')\nif n11 == 0 or n14 == 0:\n    print('<answer>C1</answer>')\n\n# take first image in each window and compute cloud percent inside 1 km buffer\nregion = pt.buffer(500)\ndef cloud_pct(img):\n    qa = img.select('QA60')\n    mask = qa.bitwiseAnd(1 << 10).Or(qa.bitwiseAnd(1 << 11))  # opaque clouds\n    pct = (mask.reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=region,\n                             scale=60,\n                             maxPixels=1e9)\n              .get('QA60'))\n    return ee.Number(pct).multiply(100)\n\nimg11 = col11.first()\nimg14 = col14.first()\np11 = cloud_pct(img11).getInfo()\np14 = cloud_pct(img14).getInfo()\nprint(f'Cloud cover 11:00: {p11:.2f}%')\nprint(f'Cloud cover 14:00: {p14:.2f}%')\n\nif p11 is None or p14 is None:\n    print('<answer>C3</answer>')\nelif p14 > p11:\n    print('<answer>A</answer>')\nelse:\n    print('<answer>B</answer>')",
+            "exec_msg": "",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/17650745453178082.py\", line 9, in <module>\n    w11 = t11.advance(-1.5, 'hour').merge(t11.advance(1.5, 'hour'))\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'Date' object has no attribute 'merge'\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

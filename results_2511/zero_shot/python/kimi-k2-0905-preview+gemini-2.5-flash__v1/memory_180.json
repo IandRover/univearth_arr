@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the Central Valley of California experience at least 15 inches of rainfall between October 2022 and March 2023?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_19-36-47",
+        "url": "https://earthobservatory.nasa.gov/images/151438/satellites-show-gains-in-california-water",
+        "unique_id": 180
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: I need rainfall data for California\u2019s Central Valley period Oct 2022\u2013Mar 2023.\n   - Best product: NASA IMERG V6 final (daily, gauge-corrected) \u2013 gives mm; convert to inches (25.4 mm = 1 in).\n   - Region: a coarse but representative polygon that completely covers the Central Valley (San Joaquin + Sacramento Valleys).\n   - Date filter: 2022-10-01 to 2023-03-31 (inclusive).\n\n2. Masking strategy: IMERG comes as precipitationEstimate; no clouds to mask; simply filter to the period.\n\n3. Preventing C1/C2/C3:\n   - Compute size() immediately; if 0 \u2192 C1.\n   - Reduce with ee.Reducer.sum() to accumulate total mm over the season; divide by 25.4 to get inches.\n   - Use reducer count() to verify that sufficient valid pixels exist (but IMERG is gap-filled, so count should be full).\n   - If sum is None or NaN \u2192 C3.\n   - Threshold: \u2265 15 inches \u2192 A, otherwise B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Central Valley polygon (approx bounds)\ngeom = ee.Geometry.Polygon(\n  [[-122.42,37.09],[-119.28,37.09],[-119.28,39.70],\n   [-121.50,39.70],[-122.42,38.20],[-122.42,37.09]])\n\n# 2. Data acquisition\ncol = (ee.ImageCollection('NASA/GPM_L3/IMERG_V06')\n         .select('precipitationCal')\n         .filterDate('2022-10-01', '2023-03-31'))\n\nn = col.size().getInfo()\nprint(f\"Images: {n}\")\nif n == 0:\n    print(\"No images for target period.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Sum rainfall over period\ntotal_mm = col.sum().multiply(86400)  # convert mm/hr \u2192 mm\ncount = total_mm.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=geom, scale=10000, maxPixels=1e9).get('precipitationCal').getInfo()\nif count == 0:\n    print(\"No valid pixels after masking.\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\n# 4. Total rainfall in inches\nsum_mm = total_mm.reduceRegion(\n    reducer=ee.Reducer.mean(),  # uniform field \u2192 mean equals total\n    geometry=geom, scale=10000, maxPixels=1e9).get('precipitationCal').getInfo()\nif sum_mm is None:\n    print(\"Calculation failed.\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\ninch = sum_mm / 25.4\nprint(f\"Total: {inch:.1f} in, Pixels: {int(count)}\")\n\n# 5. Decision\nif inch >= 15:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Central Valley polygon (approx bounds)\ngeom = ee.Geometry.Polygon(\n  [[-122.42,37.09],[-119.28,37.09],[-119.28,39.70],\n   [-121.50,39.70],[-122.42,38.20],[-122.42,37.09]])\n\n# 2. Data acquisition\ncol = (ee.ImageCollection('NASA/GPM_L3/IMERG_V06')\n         .select('precipitationCal')\n         .filterDate('2022-10-01', '2023-03-31'))\n\nn = col.size().getInfo()\nprint(f\"Images: {n}\")\nif n == 0:\n    print(\"No images for target period.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Sum rainfall over period\ntotal_mm = col.sum().multiply(86400)  # convert mm/hr \u2192 mm\ncount = total_mm.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=geom, scale=10000, maxPixels=1e9).get('precipitationCal').getInfo()\nif count == 0:\n    print(\"No valid pixels after masking.\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\n# 4. Total rainfall in inches\nsum_mm = total_mm.reduceRegion(\n    reducer=ee.Reducer.mean(),  # uniform field \u2192 mean equals total\n    geometry=geom, scale=10000, maxPixels=1e9).get('precipitationCal').getInfo()\nif sum_mm is None:\n    print(\"Calculation failed.\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\ninch = sum_mm / 25.4\nprint(f\"Total: {inch:.1f} in, Pixels: {int(count)}\")\n\n# 5. Decision\nif inch >= 15:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Images: 8686\nTotal: 2395658.5 in, Pixels: 925\n<answer>A</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for NASA/GPM_L3/IMERG_V06! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by NASA/GPM_L3/IMERG_V07\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/NASA_GPM_L3_IMERG_V06\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

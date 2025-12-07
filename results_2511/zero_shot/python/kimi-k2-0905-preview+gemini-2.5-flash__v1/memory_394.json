@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does central Oklahoma experience more rainfall compared to northen Texas during August 10-20, 2007?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-09-12",
+        "url": "https://www.earthobservatory.nasa.gov/images/7980/",
+        "unique_id": 394
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search Strategy: Use TRMM or GPM for rainfall. TRMM 3B42 has data back to 1998, so 2007 is fine.  \n2. Region: Central Oklahoma roughly around Oklahoma City; Northern Texas (Panhandle) around Amarillo.  \n3. Masking: Not applicable for rainfall; however, `.select('precipitation')` band from TRMM.\n4. Logic: Calculate mean total rainfall for Aug 10\u201320, 2007 in each area, compare.  \n5. Checks: Collection size, pixel counts to spot C1/C2; Null check for C3.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Regions\nokla = ee.Geometry.Point([-97.5, 35.4])           # central OK\nntx = ee.Geometry.Point([-101.8, 35.2])           # northern TX Panhandle\n\ndef rain_total(loc, label):\n    col = (ee.ImageCollection('TRMM/3B42')\n             .select('precipitation')\n             .filterDate('2007-08-10', '2007-08-21')\n             .filterBounds(loc))\n    size = col.size().getInfo()\n    if size == 0:\n        print(f\"No images around {label}.\")\n        return None, 0\n    total = col.sum()\n    count = (total.reduceRegion(reducer=ee.Reducer.count(),\n                                geometry=loc.buffer(50000),\n                                scale=25000, maxPixels=1e9)\n                   .get('precipitation').getInfo())\n    if count == 0:\n        print(f\"No valid pixels around {label}.\")\n        return None, 0\n    mean = (total.reduceRegion(reducer=ee.Reducer.mean(),\n                               geometry=loc.buffer(50000),\n                               scale=25000, maxPixels=1e9)\n                  .get('precipitation').getInfo())\n    return mean, count\n\nrOK, pOK = rain_total(okla, \"OK\")\nrTX, pTX = rain_total(ntx, \"TX\")\n\nif rOK is None or rTX is None:\n    print(\"<answer>C2</answer>\")\nelse:\n    print(\"Total rainfall Aug10\u201320 2007\")\n    print(f\"Central OK: {rOK:.2f} mm (px:{int(pOK)})\")\n    print(f\"N.Texas: {rTX:.2f} mm (px:{int(pTX)})\")\n    print(\"<answer>A</answer>\" if rOK > rTX else \"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Regions\nokla = ee.Geometry.Point([-97.5, 35.4])           # central OK\nntx = ee.Geometry.Point([-101.8, 35.2])           # northern TX Panhandle\n\ndef rain_total(loc, label):\n    col = (ee.ImageCollection('TRMM/3B42')\n             .select('precipitation')\n             .filterDate('2007-08-10', '2007-08-21')\n             .filterBounds(loc))\n    size = col.size().getInfo()\n    if size == 0:\n        print(f\"No images around {label}.\")\n        return None, 0\n    total = col.sum()\n    count = (total.reduceRegion(reducer=ee.Reducer.count(),\n                                geometry=loc.buffer(50000),\n                                scale=25000, maxPixels=1e9)\n                   .get('precipitation').getInfo())\n    if count == 0:\n        print(f\"No valid pixels around {label}.\")\n        return None, 0\n    mean = (total.reduceRegion(reducer=ee.Reducer.mean(),\n                               geometry=loc.buffer(50000),\n                               scale=25000, maxPixels=1e9)\n                  .get('precipitation').getInfo())\n    return mean, count\n\nrOK, pOK = rain_total(okla, \"OK\")\nrTX, pTX = rain_total(ntx, \"TX\")\n\nif rOK is None or rTX is None:\n    print(\"<answer>C2</answer>\")\nelse:\n    print(\"Total rainfall Aug10\u201320 2007\")\n    print(f\"Central OK: {rOK:.2f} mm (px:{int(pOK)})\")\n    print(f\"N.Texas: {rTX:.2f} mm (px:{int(pTX)})\")\n    print(\"<answer>A</answer>\" if rOK > rTX else \"<answer>B</answer>\")",
+            "exec_msg": "Total rainfall Aug10\u201320 2007\nCentral OK: 47.68 mm (px:15)\nN.Texas: 1.27 mm (px:16)\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

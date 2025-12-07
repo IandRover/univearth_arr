@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was there at least 35 millimeters of rain in areas of Wales and central and southern England on January 2, 2024?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-00-49",
+        "url": "https://earthobservatory.nasa.gov/images/152275/storm-batters-the-united-kingdom",
+        "unique_id": 197
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: We need rainfall estimates for 2nd January 2024. ERA5-Land daily has a 24-h accumulation band (total_precipitation_sum) that covers that exact calendar day, and is global \u2013 so always available. We\u2019ll clip to a simple union of a Wales polygon and a rectangle for central & southern England (we don\u2019t need every county, just \u201careas\u201d).  \n2. Masking: Question is about rainfall presence, so we do not need cloud masks; ERA5-Land is re-analysis, no clouds.  \n3. Logic:  \n   - Load ERA5-Land daily image for 2024-01-02.  \n   - If that single-image collection is empty \u2192 C1.  \n   - Extract the 24-h precipitation sum (m); multiply by 1000 \u2192 mm.  \n   - Count how many valid pixels and the mean rainfall.  \n   - If zero valid pixels \u2192 C2.  \n   - If result is None/NaN \u2192 C3.  \n   - If mean \u2265 35 mm \u2192 A, else B.  \n   (We report mean and pixel count as concise evidence.)\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# --- 1. Area definition (simplified Wales box + central/southern England box)\nwales = ee.Geometry.Rectangle([-5.5, 51.3, -2.6, 53.5])            # west, south, east, north\ncentS_eng = ee.Geometry.Rectangle([-5.0, 50.6, 1.8, 52.8])\nroi = wales.union(centS_eng)\n\n# --- 2. Data acquisition & check\nera5 = (ee.ImageCollection('ECMWF/ERA5_LAND/DAILY_AGGR')\n          .filterDate('2024-01-02', '2024-01-03')\n          .filterBounds(roi)\n          .select('total_precipitation_sum')  # 24 h accumulation, m\n          .first())                           # single day image\nif era5 is None or not era5.getInfo():\n    print(\"No ERA5-Land image for 2024-01-02\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# --- 3. Precip in mm\nera5_mm = era5.multiply(1000)  # m -> mm\n\n# --- 4. Stats\ncount = era5_mm.reduceRegion(reducer=ee.Reducer.count(),\n                             geometry=roi,\n                             scale=5000,\n                             maxPixels=1e9).get('total_precipitation_sum')\nmeanV = era5_mm.reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=roi,\n                             scale=5000,\n                             maxPixels=1e9).get('total_precipitation_sum')\n\ncount_v = ee.Number(count).getInfo()\nmean_v  = ee.Number(meanV).getInfo()\n\nif count_v is None or count_v == 0:\n    print(\"No valid pixels over study area\")\n    print(\"<answer>C2</answer>\")\n    exit()\nif mean_v is None:\n    print(\"Calculation failure\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(f\"Mean rainfall 2024-01-02: {mean_v:.1f} mm, Pixels: {int(count_v)}\")\n\nif mean_v >= 35:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# --- 1. Area definition (simplified Wales box + central/southern England box)\nwales = ee.Geometry.Rectangle([-5.5, 51.3, -2.6, 53.5])            # west, south, east, north\ncentS_eng = ee.Geometry.Rectangle([-5.0, 50.6, 1.8, 52.8])\nroi = wales.union(centS_eng)\n\n# --- 2. Data acquisition & check\nera5 = (ee.ImageCollection('ECMWF/ERA5_LAND/DAILY_AGGR')\n          .filterDate('2024-01-02', '2024-01-03')\n          .filterBounds(roi)\n          .select('total_precipitation_sum')  # 24 h accumulation, m\n          .first())                           # single day image\nif era5 is None or not era5.getInfo():\n    print(\"No ERA5-Land image for 2024-01-02\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# --- 3. Precip in mm\nera5_mm = era5.multiply(1000)  # m -> mm\n\n# --- 4. Stats\ncount = era5_mm.reduceRegion(reducer=ee.Reducer.count(),\n                             geometry=roi,\n                             scale=5000,\n                             maxPixels=1e9).get('total_precipitation_sum')\nmeanV = era5_mm.reduceRegion(reducer=ee.Reducer.mean(),\n                             geometry=roi,\n                             scale=5000,\n                             maxPixels=1e9).get('total_precipitation_sum')\n\ncount_v = ee.Number(count).getInfo()\nmean_v  = ee.Number(meanV).getInfo()\n\nif count_v is None or count_v == 0:\n    print(\"No valid pixels over study area\")\n    print(\"<answer>C2</answer>\")\n    exit()\nif mean_v is None:\n    print(\"Calculation failure\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(f\"Mean rainfall 2024-01-02: {mean_v:.1f} mm, Pixels: {int(count_v)}\")\n\nif mean_v >= 35:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Mean rainfall 2024-01-02: 14.1 mm, Pixels: 6287\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Is Lake Langano more brown than Lake Abijata in March 29, 2022?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-14-11",
+        "url": "https://earthobservatory.nasa.gov/images/150449/a-trio-of-ethiopian-lakes",
+        "unique_id": 159
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Use Sentinel-2 Surface Reflectance (COPERNICUS/S2_SR_HARMONIZED) because it has 20 m \u201cred-edge\u201d/SWIR bands and is available for 2022-03-29.  \n   - Define a \u00b11-day window around 2022-03-29 (i.e. 2022-03-28 \u2192 2022-03-30) to guarantee at least one scene.  \n   - Two separate Point geometries placed on Lake Langano and Lake Abijata (Ethiopian Rift Valley).  \n\n2. Masking strategy:  \n   - Apply the Sentinel-2 QA60 cloud mask (using the 10th bit).  \n   - Compute a \u201cbrownness\u201d proxy: Normalized Difference Turbidity Index (NDTI = (B4 \u2013 B6)/(B4 + B6)) which uses the green (B3) and SWIR (B6) bands and is strongly correlated with suspended sediments / brown colour.  \n   - Take the spatial mean NDTI inside a 1 km radius buffer around each lake point.  \n\n3. Logic to distinguish valid zero from null/error:  \n   - Check collection size; if zero \u2192 C1.  \n   - After masking, count valid pixels with ee.Reducer.count(); if zero \u2192 C2.  \n   - If computed mean NDTI is None/NaN \u2192 C3.  \n   - Otherwise compare means:  \n     \u2013 If Langano NDTI > Abijata NDTI \u2192 A (Yes, Langano is more brown)  \n     \u2013 Else \u2192 B (No)  \n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nptL = ee.Geometry.Point(38.75, 7.60)   # Lake Langano\nptA = ee.Geometry.Point(38.65, 7.65)   # Lake Abijata\nroiL = ptL.buffer(1000)\nroiA = ptA.buffer(1000)\ndate = '2022-03-29'\n\n# 2. Data acquisition\ndef get_ndti(roi):\n    col = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n             .filterBounds(roi)\n             .filterDate('2022-03-28','2022-03-30'))\n    n = col.size().getInfo()\n    if n == 0:\n        return None, 0\n    img = (col\n           .map(lambda i: i.updateMask(i.select('QA60').bitwiseAnd(1<<10).eq(0)))\n           .median())\n    ndti = img.normalizedDifference(['B4','B6']).rename('ndti')\n    cnt = ndti.reduceRegion(reducer=ee.Reducer.count(), geometry=roi, scale=100, maxPixels=1e9).get('ndti').getInfo()\n    if cnt == 0:\n        return None, 0\n    val = ndti.reduceRegion(reducer=ee.Reducer.mean(), geometry=roi, scale=100, maxPixels=1e9).get('ndti').getInfo()\n    return val, cnt\n\nndtiL, cntL = get_ndti(roiL)\nndtiA, cntA = get_ndti(roiA)\n\n# 3. Validation & Answer\nprint(f\"Langano NDTI: {ndtiL:.3f} Pixels: {cntL}\")\nprint(f\"Abijata NDTI: {ndtiA:.3f} Pixels: {cntA}\")\n\nif ndtiL is None or ndtiA is None:\n    print(\"<answer>C2</answer>\")\nelse:\n    print(\"<answer>A</answer>\" if ndtiL > ndtiA else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nptL = ee.Geometry.Point(38.75, 7.60)   # Lake Langano\nptA = ee.Geometry.Point(38.65, 7.65)   # Lake Abijata\nroiL = ptL.buffer(1000)\nroiA = ptA.buffer(1000)\ndate = '2022-03-29'\n\n# 2. Data acquisition\ndef get_ndti(roi):\n    col = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n             .filterBounds(roi)\n             .filterDate('2022-03-28','2022-03-30'))\n    n = col.size().getInfo()\n    if n == 0:\n        return None, 0\n    img = (col\n           .map(lambda i: i.updateMask(i.select('QA60').bitwiseAnd(1<<10).eq(0)))\n           .median())\n    ndti = img.normalizedDifference(['B4','B6']).rename('ndti')\n    cnt = ndti.reduceRegion(reducer=ee.Reducer.count(), geometry=roi, scale=100, maxPixels=1e9).get('ndti').getInfo()\n    if cnt == 0:\n        return None, 0\n    val = ndti.reduceRegion(reducer=ee.Reducer.mean(), geometry=roi, scale=100, maxPixels=1e9).get('ndti').getInfo()\n    return val, cnt\n\nndtiL, cntL = get_ndti(roiL)\nndtiA, cntA = get_ndti(roiA)\n\n# 3. Validation & Answer\nprint(f\"Langano NDTI: {ndtiL:.3f} Pixels: {cntL}\")\nprint(f\"Abijata NDTI: {ndtiA:.3f} Pixels: {cntA}\")\n\nif ndtiL is None or ndtiA is None:\n    print(\"<answer>C2</answer>\")\nelse:\n    print(\"<answer>A</answer>\" if ndtiL > ndtiA else \"<answer>B</answer>\")",
+            "exec_msg": "Langano NDTI: 0.188 Pixels: 312\nAbijata NDTI: -0.031 Pixels: 314\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<thinking>\n1. Analyze <exec_error>: There is no error in the `exec_error` section.\n2. Analyze <execution_message>: The `execution_message` clearly provides the NDTI values for both lakes and then prints `<answer>A</answer>`.\n3. Analyze <Code>: The code calculates NDTI for both lakes, checks for `None` values (which are not present as per the output), and then compares them. The comparison `ndtiL > ndtiA` is true (0.188 > -0.031), leading to the output `A`.\n</thinking>\n\n<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": "1. Analyze <exec_error>: There is no error in the `exec_error` section.\n2. Analyze <execution_message>: The `execution_message` clearly provides the NDTI values for both lakes and then prints `<answer>A</answer>`.\n3. Analyze <Code>: The code calculates NDTI for both lakes, checks for `None` values (which are not present as per the output), and then compares them. The comparison `ndtiL > ndtiA` is true (0.188 > -0.031), leading to the output `A`.",
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

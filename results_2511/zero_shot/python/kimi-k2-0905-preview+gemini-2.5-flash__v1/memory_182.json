@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did sea surface temperatures in the Arabian Sea reach at least 30 degrees Celcius in June of 2023?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_20-38-51",
+        "url": "https://earthobservatory.nasa.gov/images/151463/cyclone-biparjoy-churns-toward-india-and-pakistan",
+        "unique_id": 182
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy (Collection, Date, Location):\n   - Collection: NOAA GHRSST \"NOAA/CDR/OISST/V2_1\" (daily 0.25\u00b0 global SST)\n   - Date: filter to 2023-06-01 through 2023-06-30\n   - Location: Arabian Sea \u2013 use a rough polygon 8\u201324\u00b0N, 60\u201378\u00b0E to be safe.\n\n2. Masking strategy:\n   - SST product is gap-filled, so no cloud mask needed (over ocean only)\n\n3. Logic to distinguish Valid Zero (A/B) from Null/Error (C3):\n   - After composite/mean calculation, reduceRegion(count) \u2192 non-zero pixels: proceed\n   - ReduceRegion(mean) \u2192 value\n   - If max June SST (anywhere inside AOI) \u2265 30 \u00b0C \u2192 A (Yes)\n   - If result is None/NaN \u2192 C3\n   - If pixel count = 0 \u2192 C2\n   - If collection size = 0 \u2192 C1\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\narabian = ee.Geometry.Rectangle([60, 8, 78, 24])\njune2023 = ee.Filter.date('2023-06-01', '2023-06-30')\n\n# 2. Data Acquisition & Check\ncol = ee.ImageCollection('NOAA/CDR/OISST/V2_1').filterBounds(arabian).filter(june2023)\nimgs = col.size().getInfo()\nprint(f'2023-06 Images: {imgs}')\nif imgs == 0:\n    print('<answer>C1</answer>')\n\n# 3. Processing\njune_mean = col.select('sst').mean()\ncount = (june_mean.gt(0)  # 0K would indicate land/NaN -> exclude\n          .reduceRegion(reducer=ee.Reducer.count(),\n                        geometry=arabian,\n                        scale=25000,\n                        maxPixels=1e9)\n          .get('sst')\n          .getInfo())\nif count == 0:\n    print('<answer>C2</answer>')\n\nmax_sst = (june_mean.reduceRegion(reducer=ee.Reducer.max(),\n                                   geometry=arabian,\n                                   scale=25000,\n                                   maxPixels=1e9)\n                      .get('sst')\n                      .getInfo())\nprint(f'Max SST June 2023: {max_sst:.2f} \u00b0C, Pixels: {int(count)}')\n\n# 4. Validation & Final Answer\nif max_sst is None or max_sst < 0 or max_sst > 40:\n    print('<answer>C3</answer>')\nelif max_sst >= 30:\n    print('<answer>A</answer>')\nelse:\n    print('<answer>B</answer>')\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\narabian = ee.Geometry.Rectangle([60, 8, 78, 24])\njune2023 = ee.Filter.date('2023-06-01', '2023-06-30')\n\n# 2. Data Acquisition & Check\ncol = ee.ImageCollection('NOAA/CDR/OISST/V2_1').filterBounds(arabian).filter(june2023)\nimgs = col.size().getInfo()\nprint(f'2023-06 Images: {imgs}')\nif imgs == 0:\n    print('<answer>C1</answer>')\n\n# 3. Processing\njune_mean = col.select('sst').mean()\ncount = (june_mean.gt(0)  # 0K would indicate land/NaN -> exclude\n          .reduceRegion(reducer=ee.Reducer.count(),\n                        geometry=arabian,\n                        scale=25000,\n                        maxPixels=1e9)\n          .get('sst')\n          .getInfo())\nif count == 0:\n    print('<answer>C2</answer>')\n\nmax_sst = (june_mean.reduceRegion(reducer=ee.Reducer.max(),\n                                   geometry=arabian,\n                                   scale=25000,\n                                   maxPixels=1e9)\n                      .get('sst')\n                      .getInfo())\nprint(f'Max SST June 2023: {max_sst:.2f} \u00b0C, Pixels: {int(count)}')\n\n# 4. Validation & Final Answer\nif max_sst is None or max_sst < 0 or max_sst > 40:\n    print('<answer>C3</answer>')\nelif max_sst >= 30:\n    print('<answer>A</answer>')\nelse:\n    print('<answer>B</answer>')",
+            "exec_msg": "2023-06 Images: 29\nMax SST June 2023: 3168.55 \u00b0C, Pixels: 4313\n<answer>C3</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C3</answer>",
+            "answer": "C3",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

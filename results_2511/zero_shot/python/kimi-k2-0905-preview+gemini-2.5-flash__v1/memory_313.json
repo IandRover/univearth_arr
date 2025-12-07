@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Between June 15-21, 2017, did temperatures in Needles, California reach 115 degrees fahrenheit?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-24-48",
+        "url": "https://earthobservatory.nasa.gov/images/90443/heat-broils-the-american-southwest",
+        "unique_id": 313
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Collection: ERA5-Land hourly 2-m temperature (\u00b0C) \u2013 it is gap-free, global, and available for 2017.  \n   - Date: exactly 2017-06-15 \u2192 2017-06-21 inclusive (7 days).  \n   - Location: Needles, CA \u2013 a single Point at lat 34.8481, lon -114.6141.  \n\n2. Masking: ERA5-Land is re-analysis, no clouds to mask; just convert \u00b0C \u2192 \u00b0F.  \n\n3. Logic:  \n   - Compute the max 2-m temperature over the week, convert to \u00b0F, check \u2265 115 \u00b0F.  \n   - Collection size check: if 0 \u2192 C1.  \n   - ReduceRegion count: ERA5 gives one pixel per hourly image \u2192 count will be >0, so C2 won\u2019t apply.  \n   - If max is None/NaN \u2192 C3, else A/B based on \u2265115 \u00b0F.  \n   - Keep printed output \u226420 lines.  \n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\npt = ee.Geometry.Point([-114.6141, 34.8481])           # Needles, CA\nstart, end = '2017-06-15', '2017-06-21'\n\n# 2. Data Acquisition & Check\nera = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY') \\\n        .select('temperature_2m') \\\n        .filterDate(start, end)\nif era.size().getInfo() == 0:\n    print(\"No ERA5 images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Max temperature over the period (\u00b0C \u2192 \u00b0F)\nmaxK = era.max().multiply(0.01)                          # scale 0.01 K\nmaxC = maxK.subtract(273.15)                             # K \u2192 \u00b0C\nmaxF = maxC.multiply(1.8).add(32)                        # \u00b0C \u2192 \u00b0F\n\n# 4. Reduce & validate\nstats = maxF.reduceRegion(\n    reducer=ee.Reducer.mean(), geometry=pt, scale=1000, maxPixels=1e9)\nval = stats.get('temperature_2m').getInfo()\n\nif val is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Max temp: {val:.1f} \u00b0F\")\n    print(f\"Pixels: 1\")   # ERA5 single pixel\n    if val >= 115:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\npt = ee.Geometry.Point([-114.6141, 34.8481])           # Needles, CA\nstart, end = '2017-06-15', '2017-06-21'\n\n# 2. Data Acquisition & Check\nera = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY') \\\n        .select('temperature_2m') \\\n        .filterDate(start, end)\nif era.size().getInfo() == 0:\n    print(\"No ERA5 images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Max temperature over the period (\u00b0C \u2192 \u00b0F)\nmaxK = era.max().multiply(0.01)                          # scale 0.01 K\nmaxC = maxK.subtract(273.15)                             # K \u2192 \u00b0C\nmaxF = maxC.multiply(1.8).add(32)                        # \u00b0C \u2192 \u00b0F\n\n# 4. Reduce & validate\nstats = maxF.reduceRegion(\n    reducer=ee.Reducer.mean(), geometry=pt, scale=1000, maxPixels=1e9)\nval = stats.get('temperature_2m').getInfo()\n\nif val is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Max temp: {val:.1f} \u00b0F\")\n    print(f\"Pixels: 1\")   # ERA5 single pixel\n    if val >= 115:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "Max temp: -453.9 \u00b0F\nPixels: 1\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C3</answer>",
+            "answer": "C3",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

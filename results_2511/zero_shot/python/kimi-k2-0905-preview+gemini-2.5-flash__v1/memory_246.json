@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did vegetation greenness decrease in farmland southeast of Calgary, Alberta, between August 19, 2025, and August 24, 2025?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-35-42",
+        "url": "https://earthobservatory.nasa.gov/images/154724/hail-scars-alberta-farmland",
+        "unique_id": 246
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Collection: Sentinel-2 Surface Reflectance (COPERNICUS/S2_SR_HARMONIZED) \u2013 10 m NDVI \u2013 best for a 5-day farmland window.  \n   Dates: 2025-08-19 \u2192 2025-08-24 (inclusive).  \n   Geometry: A farmland rectangle ~20 km southeast of Calgary centroid (approx. 50.9 \u00b0N, \u2013113.8 \u00b0E).\n\n2. Cloud masking: Build SCL-based mask (keep classes 4,5,6,7) then compute NDVI = (B8-B4)/(B8+B4).  \n   Need at least one valid image in each 1-day window (19th and 24th); if not, try \u00b11 day fallback; if still zero \u2192 C1.\n\n3. Mean NDVI inside the farmland polygon for each date \u2192 compare 19-Aug vs 24-Aug.  \n   If either composite has 0 valid pixels after masking \u2192 C2.  \n   If any mean is None/NaN \u2192 C3.  \n   Decrease = (NDVI_24 - NDVI_19) < 0 \u2192 A; else B.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Area & dates\nfarmland = ee.Geometry.Rectangle([-113.9, 50.85, -113.7, 50.95])  # SE of Calgary\nd19 = '2025-08-19'\nd24 = '2025-08-24'\n\n# 2. Helper: get cloud-masked Sentinel-2 NDVI composite for a single date\ndef s2_ndvi_day(date):\n    start = ee.Date(date)\n    col = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n             .filterBounds(farmland)\n             .filterDate(start, start.advance(1, 'day'))\n             .map(lambda img: img.updateMask(img.select('SCL').gte(4).And(img.select('SCL').lte(7))))\n             .map(lambda img: img.normalizedDifference(['B8', 'B4']).rename('NDVI')))\n    if col.size().getInfo() == 0:\n        return None\n    comp = col.mean()\n    return comp\n\n# 3. Retrieve composites\nimg19 = s2_ndvi_day(d19)\nimg24 = s2_ndvi_day(d24)\nif img19 is None or img24 is None:\n    print(\"Images: 0 for at least one date\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 4. Pixel counts and means\nred = lambda img: img.reduceRegion(reducer=ee.Reducer.mean().combine(ee.Reducer.count(), '', True),\n                                   geometry=farmland, scale=100, maxPixels=1e9)\nstat19 = red(img19).getInfo()\nstat24 = red(img24).getInfo()\nn19 = int(stat19['NDVI_count'])\nn24 = int(stat24['NDVI_count'])\nif n19 == 0 or n24 == 0:\n    print(\"Valid pixels: 0 after masking\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\nmean19 = stat19['NDVI_mean']\nmean24 = stat24['NDVI_mean']\nif mean19 is None or mean24 is None:\n    print(\"Calculation error\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(f\"NDVI 19-Aug: {mean19:.3f} (pix {n19})\")\nprint(f\"NDVI 24-Aug: {mean24:.3f} (pix {n24})\")\nprint(\"<answer>A</answer>\" if mean24 < mean19 else \"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Area & dates\nfarmland = ee.Geometry.Rectangle([-113.9, 50.85, -113.7, 50.95])  # SE of Calgary\nd19 = '2025-08-19'\nd24 = '2025-08-24'\n\n# 2. Helper: get cloud-masked Sentinel-2 NDVI composite for a single date\ndef s2_ndvi_day(date):\n    start = ee.Date(date)\n    col = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n             .filterBounds(farmland)\n             .filterDate(start, start.advance(1, 'day'))\n             .map(lambda img: img.updateMask(img.select('SCL').gte(4).And(img.select('SCL').lte(7))))\n             .map(lambda img: img.normalizedDifference(['B8', 'B4']).rename('NDVI')))\n    if col.size().getInfo() == 0:\n        return None\n    comp = col.mean()\n    return comp\n\n# 3. Retrieve composites\nimg19 = s2_ndvi_day(d19)\nimg24 = s2_ndvi_day(d24)\nif img19 is None or img24 is None:\n    print(\"Images: 0 for at least one date\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 4. Pixel counts and means\nred = lambda img: img.reduceRegion(reducer=ee.Reducer.mean().combine(ee.Reducer.count(), '', True),\n                                   geometry=farmland, scale=100, maxPixels=1e9)\nstat19 = red(img19).getInfo()\nstat24 = red(img24).getInfo()\nn19 = int(stat19['NDVI_count'])\nn24 = int(stat24['NDVI_count'])\nif n19 == 0 or n24 == 0:\n    print(\"Valid pixels: 0 after masking\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\nmean19 = stat19['NDVI_mean']\nmean24 = stat24['NDVI_mean']\nif mean19 is None or mean24 is None:\n    print(\"Calculation error\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(f\"NDVI 19-Aug: {mean19:.3f} (pix {n19})\")\nprint(f\"NDVI 24-Aug: {mean24:.3f} (pix {n24})\")\nprint(\"<answer>A</answer>\" if mean24 < mean19 else \"<answer>B</answer>\")",
+            "exec_msg": "Images: 0 for at least one date\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

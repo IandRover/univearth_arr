@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the water extent in Sebkha el Melah (29.135547, -1.187011) increase between August 12, 2024, and September 29, 2024?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_21-56-31",
+        "url": "https://earthobservatory.nasa.gov/images/153475/water-for-a-desert-lake-in-algeria",
+        "unique_id": 212
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. **Search Strategy**:\n   - Location: Point(-1.187011, 29.135547) near Sebkha el Melah (salt flat/lakebed).\n   - Modern options: Sentinel-2 (10 m), Landsat (30 m). Lakebed surfaces sometimes switch to Sentinel-1 terrain to avoid clouds.\n   - Sentinel-2 will be tried first for high\u2010spatial\u2010resolution gains, but March-Aug its components over desert are usually cloud-free.\n   - Date range:  \n     \u2013 start: 2024-08-12 (no buffer for an exact single-date before)  \n     \u2013 end: 2024-09-29 (no buffer\u2014historically plenty of S2 imagery).\n   - Since surface may be dry marsh or shallow water, we rely on spectral indices (NDWI or mNDWI) to segment water extent.\n\n2. **Cloud Masking**:  \n   - For Sentinel-2 we apply the default QA60 mask. Mosaics in mid-Aug and late-Sep are made with few scenes.\n   \n3. **Logic to Decide \u201cincrease\u201d**:\n   - Use mNDWI = (Green-SWIR1)/(Green+SWIR1) > 0.05 to map water, balanced for arid surfaces.\n   - Define a 20 km Point radius to cover the whole salt depression.\n   - Report cloud/image counts, water pixel counts (pixels changed to km\u00b2 if necessary).\n   - Value in both periods is area in km\u00b2; compare.  \n   - Valid NAs will trigger C2, missing collections C1, corrupted numbers C3.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nloc = ee.Geometry.Point([-1.187011, 29.135547])\nbuffer = loc.buffer(20000)\ndate1, date2 = ['2024-08-12', '2024-09-29']\n\ndef get_col(date):\n    s2 = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n          .filterBounds(loc)\n          .filterDate(ee.Date(date).advance(-10, 'day'), ee.Date(date).advance(10, 'day')))\n    return s2.sort('CLOUD_COVER').limit(2).map(lambda img: img.updateMask(img.select('QA60').eq(0)))\n\ndef calc_water(col, label):\n    n = col.size().getInfo()\n    if n == 0:\n        print(f\"{label}: No images\")\n        print(\"<answer>C1</answer>\")\n        exit()\n    comp = col.median().select(['B3', 'B11']).rename('Green', 'SWIR1')\n    mndwi = comp.normalizedDifference(['Green', 'SWIR1']).gt(0.05).rename('water')\n    count = (mndwi.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=buffer,\n        scale=1000,\n        maxPixels=1e9).get('water').getInfo())\n    km2 = count * 1e3 * 1e3 * 1e-6  # km\u00b2\n    return km2, count\n\n# Run both epochs\ncol1 = get_col(date1)\ncol2 = get_col(date2)\nw1, c1 = calc_water(col1, 'Aug')\nw2, c2 = calc_water(col2, 'Sep')\n\nprint(f\"Aug water: {w1:.2f} km\u00b2; Sep water: {w2:.2f} km\u00b2; Pixels: {int(c1)}/{int(c2)}\")\nif None in [w1, w2] or c1 == 0 or c2 == 0:\n    print(\"<answer>C2</answer>\")\nelif w2 > w1:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nloc = ee.Geometry.Point([-1.187011, 29.135547])\nbuffer = loc.buffer(20000)\ndate1, date2 = ['2024-08-12', '2024-09-29']\n\ndef get_col(date):\n    s2 = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n          .filterBounds(loc)\n          .filterDate(ee.Date(date).advance(-10, 'day'), ee.Date(date).advance(10, 'day')))\n    return s2.sort('CLOUD_COVER').limit(2).map(lambda img: img.updateMask(img.select('QA60').eq(0)))\n\ndef calc_water(col, label):\n    n = col.size().getInfo()\n    if n == 0:\n        print(f\"{label}: No images\")\n        print(\"<answer>C1</answer>\")\n        exit()\n    comp = col.median().select(['B3', 'B11']).rename('Green', 'SWIR1')\n    mndwi = comp.normalizedDifference(['Green', 'SWIR1']).gt(0.05).rename('water')\n    count = (mndwi.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=buffer,\n        scale=1000,\n        maxPixels=1e9).get('water').getInfo())\n    km2 = count * 1e3 * 1e3 * 1e-6  # km\u00b2\n    return km2, count\n\n# Run both epochs\ncol1 = get_col(date1)\ncol2 = get_col(date2)\nw1, c1 = calc_water(col1, 'Aug')\nw2, c2 = calc_water(col2, 'Sep')\n\nprint(f\"Aug water: {w1:.2f} km\u00b2; Sep water: {w2:.2f} km\u00b2; Pixels: {int(c1)}/{int(c2)}\")\nif None in [w1, w2] or c1 == 0 or c2 == 0:\n    print(\"<answer>C2</answer>\")\nelif w2 > w1:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Aug water: 0.00 km\u00b2; Sep water: 158.96 km\u00b2; Pixels: 0/158\n<answer>C2</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C2</answer>",
+            "answer": "C2",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}
