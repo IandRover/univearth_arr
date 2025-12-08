@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does tropospheric nitrogen dioxide (NO2) levels in Chongqing, China increase during April 20-May 12, 2020 compared to February 10-25, 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-29-27",
+        "url": "https://www.earthobservatory.nasa.gov/images/146741/",
+        "unique_id": 359
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use Sentinel-5P OFFL L3 NO2 tropospheric column product for Chongqing, China.  \n2. Masking strategy: No cloud masking needed (this product is already cloud-screened and averaged daily); we just filter on date and region.  \n3. Logic: Compute mean tropospheric NO2 column for each period. Check collection sizes \u2192 C1 if no images, check pixel counts \u2192 C2 if 0 valid pixels. Compare averages: if mean2 > mean1 \u2192 A, else B. Validate for None/NaN \u2192 C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nchongqing = ee.Geometry.Point([106.5, 29.6])  # central Chongqing\nbuff = chongqing.buffer(25000)                 # ~25 km radius\n\nfeb10_25 = ('2020-02-10', '2020-02-25')\napr20_may12 = ('2020-04-20', '2020-05-12')\n\n# 2. Data Acquisition\ndef get_mean(dates):\n    col = (ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2')\n             .select('tropospheric_NO2_column_number_density')\n             .filterDate(*dates)\n             .filterBounds(buff))\n    n = col.size().getInfo()\n    if n == 0:\n        return None, 0\n    img = col.mean().clip(buff)\n    cnt = img.reduceRegion(reducer=ee.Reducer.count(), geometry=buff, scale=5000, maxPixels=1e9).get('tropospheric_NO2_column_number_density').getInfo()\n    mean = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=buff, scale=5000, maxPixels=1e9).get('tropospheric_NO2_column_number_density').getInfo()\n    return mean, cnt\n\nmean1, cnt1 = get_mean(feb10_25)\nmean2, cnt2 = get_mean(apr20_may12)\n\nprint(f\"Feb 10-25 mean: {mean1}; pixels: {cnt1}; Apr 20-May12 mean: {mean2}; pixels: {cnt2}\")\n\nif mean1 is None or mean2 is None:\n    print(\"<answer>C1</answer>\")\nelif cnt1 == 0 or cnt2 == 0:\n    print(\"<answer>C2</answer>\")\nelif mean1 is None or mean2 is None:\n    print(\"<answer>C3</answer>\")\nelif mean2 > mean1:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nchongqing = ee.Geometry.Point([106.5, 29.6])  # central Chongqing\nbuff = chongqing.buffer(25000)                 # ~25 km radius\n\nfeb10_25 = ('2020-02-10', '2020-02-25')\napr20_may12 = ('2020-04-20', '2020-05-12')\n\n# 2. Data Acquisition\ndef get_mean(dates):\n    col = (ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2')\n             .select('tropospheric_NO2_column_number_density')\n             .filterDate(*dates)\n             .filterBounds(buff))\n    n = col.size().getInfo()\n    if n == 0:\n        return None, 0\n    img = col.mean().clip(buff)\n    cnt = img.reduceRegion(reducer=ee.Reducer.count(), geometry=buff, scale=5000, maxPixels=1e9).get('tropospheric_NO2_column_number_density').getInfo()\n    mean = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=buff, scale=5000, maxPixels=1e9).get('tropospheric_NO2_column_number_density').getInfo()\n    return mean, cnt\n\nmean1, cnt1 = get_mean(feb10_25)\nmean2, cnt2 = get_mean(apr20_may12)\n\nprint(f\"Feb 10-25 mean: {mean1}; pixels: {cnt1}; Apr 20-May12 mean: {mean2}; pixels: {cnt2}\")\n\nif mean1 is None or mean2 is None:\n    print(\"<answer>C1</answer>\")\nelif cnt1 == 0 or cnt2 == 0:\n    print(\"<answer>C2</answer>\")\nelif mean1 is None or mean2 is None:\n    print(\"<answer>C3</answer>\")\nelif mean2 > mean1:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Feb 10-25 mean: 6.14504507622279e-05; pixels: 91; Apr 20-May12 mean: 0.00015599481152654332; pixels: 91\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

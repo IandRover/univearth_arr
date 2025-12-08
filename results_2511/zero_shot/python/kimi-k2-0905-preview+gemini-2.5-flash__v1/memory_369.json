@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the snow cover extent in the Tinguiririca basin (specifically -34.752733, -70.647985) increase in December 18, 2023, compared to December 18, 2021?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-26-54",
+        "url": "https://www.earthobservatory.nasa.gov/images/152309/andes-snowpack-hangs-on",
+        "unique_id": 369
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search Strategy:\n- Collection: We need snow cover data. MODIS daily snow product (MOD10A1.061) is ideal with band \"NDSI_Snow_Cover\".\n- Date: Target images on Dec 18, 2023 and Dec 18, 2021. We'll pull single-day collections (1d each side to ensure some images in case of missing satellite passes).\n- Location: Point is in Tinguiririca basin (-34.752733, -70.647985) in Chilean Andes. Winter snow is likely to be present in mid-December (southern hemisphere summer, but due to elevation snow can still persist).\n\n2. Masking strategy:\n- MOD10A1 includes flags for no-data, cloud, and unreliable NDSI. We will keep only valid snow pixels: Cloud != 1, QA != \"other\" and NDSI_Snow_Cover != 255 (no-data/fill). \n- Binary snow cover: NDSI_Snow_Cover >= 40 (Physical swath threshold for snow) and below 100 (exclude cloud/filtered).\n* For a pixel-based change question, we compute total number of snow-covered pixels within a ~5 km radius (approx. 3 km buffer) to reduce point mis-registrations and avoid using polygon (slow). We will compare counts for the two dates.\n\n3. Logic to Answer:\n- Use `reduceRegion()` with `ee.Reducer.count()` on binary snow mask to get number of snow pixels in the buffer.\n- Compare counts between 2023 and 2021. \n- If the count in 2023 > count in 2021 then answer A: Yes, otherwise B: No.\n- Check image collections sizes immediately. If zero, output C1.\n- If counts are zero, it's C2 (no valid snow pixels after cloud masking).\n- If result null/invalid, output C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & time window\npt = ee.Geometry.Point(-70.647985, -34.752733)  # x,y (lon,lat)\nradius = 3000  # meters\nroi = pt.buffer(radius)\ndate1 = '2021-12-18'\ndate2 = '2023-12-18'\n\ndef get_count(target_date):\n    d1 = ee.Date(target_date).advance(-1, 'day')\n    d2 = ee.Date(target_date).advance(1, 'day')\n    col = (ee.ImageCollection('MODIS/061/MOD10A1')\n             .filterDate(d1, d2)\n             .filterBounds(pt))\n    n = col.size().getInfo()\n    if n == 0:\n        return None\n    img = col.first()\n    # Binary mask snow (>=40 & < 100) + cloud mask (>0 precisely on useful band)\n    snow = img.select('NDSI_Snow_Cover')\n    cloudy = img.select('NDSI_Snow_Cover_Basic_QA').eq(1)  # bit0 cloud flag\n    mask = snow.gte(40).And(snow.lt(100)).And(cloudy.Not())\n    cnt = (mask\n           .reduceRegion(reducer=ee.Reducer.count(),\n                         geometry=roi,\n                         scale=500,\n                         maxPixels=1e9)\n           .get('NDSI_Snow_Cover'))\n    return cnt.getInfo()\n\n# Run both years\nc2021 = get_count(date1)\nif c2021 is None:\n    print(\"No images/Data for 2021.\")\n    print(\"<answer>C1</answer>\")\n    exit()\nc2023 = get_count(date2)\nif c2023 is None:\n    print(\"No images/Data for 2023.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n# C2 check\nif (c2021 == 0) and (c2023 == 0):\n    print(\"No valid snow pixels.\")\n    print(\"<answer>C2</answer>\")\n    exit()\nprint(f\"Snow pixels - 2021: {c2021}, 2023: {c2023}\")\nif c2023 > c2021:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & time window\npt = ee.Geometry.Point(-70.647985, -34.752733)  # x,y (lon,lat)\nradius = 3000  # meters\nroi = pt.buffer(radius)\ndate1 = '2021-12-18'\ndate2 = '2023-12-18'\n\ndef get_count(target_date):\n    d1 = ee.Date(target_date).advance(-1, 'day')\n    d2 = ee.Date(target_date).advance(1, 'day')\n    col = (ee.ImageCollection('MODIS/061/MOD10A1')\n             .filterDate(d1, d2)\n             .filterBounds(pt))\n    n = col.size().getInfo()\n    if n == 0:\n        return None\n    img = col.first()\n    # Binary mask snow (>=40 & < 100) + cloud mask (>0 precisely on useful band)\n    snow = img.select('NDSI_Snow_Cover')\n    cloudy = img.select('NDSI_Snow_Cover_Basic_QA').eq(1)  # bit0 cloud flag\n    mask = snow.gte(40).And(snow.lt(100)).And(cloudy.Not())\n    cnt = (mask\n           .reduceRegion(reducer=ee.Reducer.count(),\n                         geometry=roi,\n                         scale=500,\n                         maxPixels=1e9)\n           .get('NDSI_Snow_Cover'))\n    return cnt.getInfo()\n\n# Run both years\nc2021 = get_count(date1)\nif c2021 is None:\n    print(\"No images/Data for 2021.\")\n    print(\"<answer>C1</answer>\")\n    exit()\nc2023 = get_count(date2)\nif c2023 is None:\n    print(\"No images/Data for 2023.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n# C2 check\nif (c2021 == 0) and (c2023 == 0):\n    print(\"No valid snow pixels.\")\n    print(\"<answer>C2</answer>\")\n    exit()\nprint(f\"Snow pixels - 2021: {c2021}, 2023: {c2023}\")\nif c2023 > c2021:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Snow pixels - 2021: 112, 2023: 112\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

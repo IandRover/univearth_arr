@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was the mean NDSI for Mount Fuji lower in December 2020 than December 2019?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_00-29-10",
+        "url": "https://earthobservatory.nasa.gov/images/147780/mount-fujis-missing-snow",
+        "unique_id": 72
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Dataset: MODIS Daily Snow Cover (MOD10A1.061) \u2013 it provides NDSI and is available for 2019-2020.  \n   - Region: 1-km buffer around Mount Fuji summit point (35.3606\u00b0 N, 138.7274\u00b0 E).  \n   - Dates: 1-31 December 2019 vs 1-31 December 2020.  \n\n2. Masking strategy:  \n   - Use the built-in \u201cNDSI_Snow_Cover\u201d band (scale 0.0-100.0).  \n   - Apply the QA bitmask to keep only good-quality pixels (bits 0-1 = 0).  \n   - Cloud mask: MODIS snow product already flags clouds in the QA band; we will use only pixels marked as \u201cbest quality\u201d.  \n\n3. Logic to distinguish Valid Zero from Null/Error:  \n   - After QA masking, count valid pixels with ee.Reducer.count().  \n     \u2013 If 0 \u2192 C2.  \n   \u2013 Compute mean NDSI (0-100) with ee.Reducer.mean().  \n     \u2013 If result is None/NaN \u2192 C3.  \n   \u2013 Otherwise compare the two means: if 2020 mean < 2019 mean \u2192 A, else \u2192 B.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\npt = ee.Geometry.Point([138.7274, 35.3606]).buffer(1000)\ndec2019 = ee.DateRange('2019-12-01', '2020-01-01')\ndec2020 = ee.DateRange('2020-12-01', '2021-01-01')\n\ndef get_ndsi_mean(dr, label):\n    col = (ee.ImageCollection('MODIS/061/MOD10A1')\n             .filterBounds(pt)\n             .filterDate(dr)\n             .select(['NDSI_Snow_Cover', 'NDSI_Snow_Cover_Basic_QA']))\n    if col.size().getInfo() == 0:\n        print(f\"{label} Images: 0\")\n        return None, 0\n    # QA mask: keep only best quality (bits 0-1 == 0)\n    def qa_mask(img):\n        qa = img.select('NDSI_Snow_Cover_Basic_QA')\n        mask = qa.eq(0)\n        return img.updateMask(mask)\n    col = col.map(qa_mask)\n    img = col.mean().multiply(0.01)  # convert 0-100 -> 0-1\n    count = img.reduceRegion(reducer=ee.Reducer.count(),\n                             geometry=pt, scale=1000, maxPixels=1e9)\\\n                .get('NDSI_Snow_Cover').getInfo()\n    mean = img.reduceRegion(reducer=ee.Reducer.mean(),\n                            geometry=pt, scale=1000, maxPixels=1e9)\\\n              .get('NDSI_Snow_Cover').getInfo()\n    print(f\"{label} Images: {col.size().getInfo()} (Mean NDSI: {mean:.3f}, Pixels: {int(count)})\")\n    return mean, count\n\nndsi19, cnt19 = get_ndsi_mean(dec2019, \"2019\")\nndsi20, cnt20 = get_ndsi_mean(dec2020, \"2020\")\n\nif ndsi19 is None or ndsi20 is None:\n    print(\"<answer>C1</answer>\")\nelif cnt19 == 0 or cnt20 == 0:\n    print(\"<answer>C2</answer>\")\nelif ndsi19 is None or ndsi20 is None:\n    print(\"<answer>C3</answer>\")\nelif ndsi20 < ndsi19:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\npt = ee.Geometry.Point([138.7274, 35.3606]).buffer(1000)\ndec2019 = ee.DateRange('2019-12-01', '2020-01-01')\ndec2020 = ee.DateRange('2020-12-01', '2021-01-01')\n\ndef get_ndsi_mean(dr, label):\n    col = (ee.ImageCollection('MODIS/061/MOD10A1')\n             .filterBounds(pt)\n             .filterDate(dr)\n             .select(['NDSI_Snow_Cover', 'NDSI_Snow_Cover_Basic_QA']))\n    if col.size().getInfo() == 0:\n        print(f\"{label} Images: 0\")\n        return None, 0\n    # QA mask: keep only best quality (bits 0-1 == 0)\n    def qa_mask(img):\n        qa = img.select('NDSI_Snow_Cover_Basic_QA')\n        mask = qa.eq(0)\n        return img.updateMask(mask)\n    col = col.map(qa_mask)\n    img = col.mean().multiply(0.01)  # convert 0-100 -> 0-1\n    count = img.reduceRegion(reducer=ee.Reducer.count(),\n                             geometry=pt, scale=1000, maxPixels=1e9)\\\n                .get('NDSI_Snow_Cover').getInfo()\n    mean = img.reduceRegion(reducer=ee.Reducer.mean(),\n                            geometry=pt, scale=1000, maxPixels=1e9)\\\n              .get('NDSI_Snow_Cover').getInfo()\n    print(f\"{label} Images: {col.size().getInfo()} (Mean NDSI: {mean:.3f}, Pixels: {int(count)})\")\n    return mean, count\n\nndsi19, cnt19 = get_ndsi_mean(dec2019, \"2019\")\nndsi20, cnt20 = get_ndsi_mean(dec2020, \"2020\")\n\nif ndsi19 is None or ndsi20 is None:\n    print(\"<answer>C1</answer>\")\nelif cnt19 == 0 or cnt20 == 0:\n    print(\"<answer>C2</answer>\")\nelif ndsi19 is None or ndsi20 is None:\n    print(\"<answer>C3</answer>\")\nelif ndsi20 < ndsi19:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "2019 Images: 31 (Mean NDSI: 0.746, Pixels: 4)\n2020 Images: 31 (Mean NDSI: 0.242, Pixels: 4)\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

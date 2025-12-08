@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was there a decrease in rainfall in Zimbabwe in February 2024 compared to February 2023?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "javascript",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_02-47-27",
+        "url": "https://earthobservatory.nasa.gov/images/152711/severe-drought-in-southern-africa",
+        "unique_id": 206
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "const ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function runAnalysis() {\n  function evaluate(obj) {\n    return new Promise((resolve, reject) => {\n      obj.evaluate((res, err) => {\n        if (err) reject(err);\n        else resolve(res);\n      });\n    });\n  }\n\n  try {\n    const countries = ee.FeatureCollection('FAO/GAUL/2015/level0');\n    const zimFC = countries.filter(ee.Filter.eq('ADM0_NAME', 'Zimbabwe'));\n    const zimCount = await evaluate(zimFC.size());\n    if (!zimCount || zimCount === 0) {\n      console.log('Zimbabwe geometry not found.');\n      console.log('D');\n      return;\n    }\n    const zim = zimFC.geometry();\n\n    async function monthlyPrecipStats(startStr, endStr) {\n      let start = startStr;\n      let end = endStr;\n      let col = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n        .filterDate(start, end)\n        .filterBounds(zim);\n      let size = await evaluate(col.size());\n      if (size === 0) {\n        const s2 = ee.Date(start).advance(-3, 'day');\n        const e2 = ee.Date(end).advance(3, 'day');\n        let col2 = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n          .filterDate(s2, e2)\n          .filterBounds(zim);\n        const size2 = await evaluate(col2.size());\n        if (size2 === 0) {\n          return { status: 'C1', images: 0, pixels: 0, mean: null };\n        }\n        col = col2;\n        size = size2;\n      }\n      const sumImg = col.sum().clip(zim);\n      const pix = await evaluate(\n        sumImg.reduceRegion({\n          reducer: ee.Reducer.count(),\n          geometry: zim,\n          scale: 5000,\n          maxPixels: 1e10,\n        }).get('precipitation')\n      );\n      if (!pix || pix === 0) {\n        return { status: 'C2', images: size, pixels: pix || 0, mean: null };\n      }\n      const mean = await evaluate(\n        sumImg.reduceRegion({\n          reducer: ee.Reducer.mean(),\n          geometry: zim,\n          scale: 5000,\n          maxPixels: 1e10,\n        }).get('precipitation')\n      );\n      if (mean === null || isNaN(mean) || mean < 0 || mean > 2000) {\n        return { status: 'C3', images: size, pixels: pix, mean: mean };\n      }\n      return { status: 'OK', images: size, pixels: pix, mean: mean };\n    }\n\n    const feb2023 = await monthlyPrecipStats('2023-02-01', '2023-03-01');\n    const feb2024 = await monthlyPrecipStats('2024-02-01', '2024-03-01');\n\n    console.log('Dataset: CHIRPS Daily (mm/day), monthly sum and area-mean (mm)');\n    console.log(`2023 Images: ${feb2023.images}`);\n    console.log(`2023 Pixels: ${feb2023.pixels}`);\n    if (feb2023.mean !== null && !isNaN(feb2023.mean)) {\n      console.log(`2023 Mean(mm): ${feb2023.mean.toFixed(1)}`);\n    } else {\n      console.log('2023 Mean(mm): null');\n    }\n    console.log(`2024 Images: ${feb2024.images}`);\n    console.log(`2024 Pixels: ${feb2024.pixels}`);\n    if (feb2024.mean !== null && !isNaN(feb2024.mean)) {\n      console.log(`2024 Mean(mm): ${feb2024.mean.toFixed(1)}`);\n    } else {\n      console.log('2024 Mean(mm): null');\n    }\n\n    // Handle failure cases\n    if (feb2023.status === 'C1' || feb2024.status === 'C1') {\n      console.log('C1');\n      return;\n    }\n    if (feb2023.status === 'C2' || feb2024.status === 'C2') {\n      console.log('C2');\n      return;\n    }\n    if (feb2023.status === 'C3' || feb2024.status === 'C3') {\n      console.log('C3');\n      return;\n    }\n\n    const diff = feb2024.mean - feb2023.mean; // mm\n    console.log(`Diff(mm, 2024-2023): ${diff.toFixed(1)}`);\n\n    // Final answer: Decrease in 2024 vs 2023?\n    const eps = 0.01;\n    if (diff < -eps) {\n      console.log('A');\n    } else {\n      console.log('B');\n    }\n  } catch (e) {\n    console.log(`Error: ${e}`);\n    console.log('D');\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();",
+            "code": "'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'",
+            "exec_msg": "",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "thinking\nThe user provided an invalid code input, indicated by `'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'`.\nThere is no actual code to execute, no execution output, and no error log from a GEE execution.\nTherefore, I cannot classify a GEE code execution result.\nThe provided information indicates a problem with the input itself, not a GEE execution issue.\nHowever, I must classify the *execution* given the provided *output*. Since there's no code or output, the execution itself cannot be evaluated in terms of A, B, C, D.\nThe instruction states \"You must classify the execution into one of the categories\".\nGiven that no code was provided and therefore no execution *could* have happened, the most appropriate category is D: Execution Error, as the system effectively \"crashed\" or failed to even start execution due to malformed input (no code).<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

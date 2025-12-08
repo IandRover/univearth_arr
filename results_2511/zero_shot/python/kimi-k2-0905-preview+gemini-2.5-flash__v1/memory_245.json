@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did surface water extent in Keechelus Lake, Washington, decrease between July 2024 and July 2025?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_00-03-48",
+        "url": "https://earthobservatory.nasa.gov/images/154703/drought-parches-the-yakima-river-basin",
+        "unique_id": 245
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use Sentinel-2 surface reflectance (with QA60 cloud mask) to detect water via a water index. Keechelus Lake is in Washington State; JRC Global Surface Water is another option, but its update lag is unclear. Aim for two single images: one from July 2024, one from July 2025 (or the best available within a four-week window). If zero images for either year, fall back to Landsat-8/9.\n\n2. Masking strategy: Mask clouds using the QA60 bit for Sentinel-2 (and the QA_PIXEL bits for Landsat if used). Then compute the NDWI or another water index, apply a threshold (>0.0 for NDWI), and sum the water pixels within a small lake polygon.\n\n3. Logic: Count the number of valid (non-cloud) pixels for each year; if zero for either year, output C2. Then compare 2025 vs. 2024 water pixel counts; if 2025 < 2024 => A, else B. If any counts/values are None/NaN, output C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\nlake = ee.Geometry.Point([-121.242, 47.3807).buffer(2000)\nstart24,end24 = '2024-07-01','2024-07-31'\nstart25,end25 = '2025-07-01','2025-07-31'\n\ndef pull(year_start,year_end):\n    c = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\\\n        .filterBounds(lake).filterDate(year_start, year_end)\\\n        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE',60))\n    if c.size().getInfo()==0: return None,0\n    img = c.sort('CLOUDY_PIXEL_PERCENTAGE').first()\n    qa = img.select('QA60')\n    cloud = qa.bitwiseAnd(1<<10).Or(qa.bitwiseAnd(1<<11))\n    water = img.normalizedDifference(['B3','B8']).updateMask(cloud.Not()).gt(0)\n    cnt = water.reduceRegion(reducer=ee.Reducer.sum(), geometry=lake, scale=1000, maxPixels=1e9).get('nd').getInfo()\n    return cnt\n\ncnt24,pix24 = pull(start24,end24)\nif cnt24 is None:\n    print(\"No 2024 images.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    cnt25,pix25 = pull(start25,end25)\n    if cnt25 is None:\n        print(\"No 2025 images.\")\n        print(\"<answer>C1</answer>\")\n    else:\n        print(f\"2024 water pixels: {int(cnt24)}\")\n        print(f\"2025 water pixels: {int(cnt25)}\")\n        if cnt24==0 and cnt25==0:\n            print(\"<answer>C2</answer>\")\n        else:\n            print(\"<answer>A</answer>\" if cnt25<cnt24 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\nlake = ee.Geometry.Point([-121.242, 47.3807).buffer(2000)\nstart24,end24 = '2024-07-01','2024-07-31'\nstart25,end25 = '2025-07-01','2025-07-31'\n\ndef pull(year_start,year_end):\n    c = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\\\n        .filterBounds(lake).filterDate(year_start, year_end)\\\n        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE',60))\n    if c.size().getInfo()==0: return None,0\n    img = c.sort('CLOUDY_PIXEL_PERCENTAGE').first()\n    qa = img.select('QA60')\n    cloud = qa.bitwiseAnd(1<<10).Or(qa.bitwiseAnd(1<<11))\n    water = img.normalizedDifference(['B3','B8']).updateMask(cloud.Not()).gt(0)\n    cnt = water.reduceRegion(reducer=ee.Reducer.sum(), geometry=lake, scale=1000, maxPixels=1e9).get('nd').getInfo()\n    return cnt\n\ncnt24,pix24 = pull(start24,end24)\nif cnt24 is None:\n    print(\"No 2024 images.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    cnt25,pix25 = pull(start25,end25)\n    if cnt25 is None:\n        print(\"No 2025 images.\")\n        print(\"<answer>C1</answer>\")\n    else:\n        print(f\"2024 water pixels: {int(cnt24)}\")\n        print(f\"2025 water pixels: {int(cnt25)}\")\n        if cnt24==0 and cnt25==0:\n            print(\"<answer>C2</answer>\")\n        else:\n            print(\"<answer>A</answer>\" if cnt25<cnt24 else \"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765083891159235.py\", line 4\n    lake = ee.Geometry.Point([-121.242, 47.3807).buffer(2000)\n                                               ^\nSyntaxError: closing parenthesis ')' does not match opening parenthesis '['\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

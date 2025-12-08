@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the town of Marovoay have higher water extent in January 27, 2020 than January 18, 2017?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-46-48",
+        "url": "https://earthobservatory.nasa.gov/images/146225/flood-waters-overwhelm-northern-madagascar",
+        "unique_id": 45
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search Strategy  \n   - Water extent usually uses surface-reflectance data to derive water, then count pixels. As the question targets a fixed date, we\u2019ll use Sentinel-2 Level-2A (10 m) for 2017 first (in orbit since mid-2015), and 2020 (definitely available).  \n   - Geometry: point the rough centre of Marovoay, Madagascar (longitude 46.64 E, latitude \u221216.11 S).  \n   - Acquire one date-specific image for each year around the community central date:  \n        2020-01-27 has to be within \u00b11 d (S-2 revisit 5 d), so 18 Jan 2020 is accepted.  \n        2017-01-18, try the same window.  \n   - If either collection is empty attempt Landsat 8, then Landsat 9. If still empty, report C1.  \n\n2. Masking Strategy  \n   - Water extent should be cloud-free; apply Sentinel-2 Scene Classification Band (QA60 & SCL band) to mask clouds, cloud-shadow, snow. Values water, 6, =1; keep only water > 0 pixels.  \n\n3. Distinguish Valid-Zero vs NaN  \n   - Count water pixels in both images after masking. If either count is 0, answer C2.  \n   - Because it is a simple \"higher count\" comparison, NaN won\u2019t occur; a count is always \u22650.  \n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry and date window\nmarovoay = ee.Geometry.Point(46.64, -16.11)\nwin_days = 3\ncolS2 = 'COPERNICUS/S2_SR'          # Sentinel-2 L2A, 10 m\nbandSCL = 'SCL'\n\ndef get_water_pixels(year, month, day):\n    start = ee.Date.fromYMD(year, month, day).advance(-win_days, 'day')\n    end   = start.advance(win_days*2, 'day')\n    col = (ee.ImageCollection(colS2)\n              .filterBounds(marovoay)\n              .filterDate(start, end)\n              .sort('CLOUD_COVER'))\n    n = col.size().getInfo()\n    if n == 0:\n        return None\n    img = (col.first().select('SCL')\n              .remap([6],[1],[0])          # water=1 else 0\n              .clip(marovoay.buffer(5000))) \n    count = (img.reduceRegion(reducer=ee.Reducer.sum(),\n                              geometry=marovoay,\n                              scale=1000,\n                              maxPixels=1e9)\n                .get('remapped').getInfo())\n    return 0 if count is None else int(count)\n\n# 2. Evaluate both dates\nw17 = get_water_pixels(2017,1,18)\nif w17 is None:\n    print(\"2017 empty.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    w20 = get_water_pixels(2020,1,27)\n    if w20 is None:\n        print(\"2020 empty.\")\n        print(\"<answer>C1</answer>\")\n    else:\n        print(f\"2017 water pixels: {w17}\")\n        print(f\"2020 water pixels: {w20}\")\n        if w20 > w17:\n            print(\"<answer>A</answer>\")\n        else:\n            print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry and date window\nmarovoay = ee.Geometry.Point(46.64, -16.11)\nwin_days = 3\ncolS2 = 'COPERNICUS/S2_SR'          # Sentinel-2 L2A, 10 m\nbandSCL = 'SCL'\n\ndef get_water_pixels(year, month, day):\n    start = ee.Date.fromYMD(year, month, day).advance(-win_days, 'day')\n    end   = start.advance(win_days*2, 'day')\n    col = (ee.ImageCollection(colS2)\n              .filterBounds(marovoay)\n              .filterDate(start, end)\n              .sort('CLOUD_COVER'))\n    n = col.size().getInfo()\n    if n == 0:\n        return None\n    img = (col.first().select('SCL')\n              .remap([6],[1],[0])          # water=1 else 0\n              .clip(marovoay.buffer(5000))) \n    count = (img.reduceRegion(reducer=ee.Reducer.sum(),\n                              geometry=marovoay,\n                              scale=1000,\n                              maxPixels=1e9)\n                .get('remapped').getInfo())\n    return 0 if count is None else int(count)\n\n# 2. Evaluate both dates\nw17 = get_water_pixels(2017,1,18)\nif w17 is None:\n    print(\"2017 empty.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    w20 = get_water_pixels(2020,1,27)\n    if w20 is None:\n        print(\"2020 empty.\")\n        print(\"<answer>C1</answer>\")\n    else:\n        print(f\"2017 water pixels: {w17}\")\n        print(f\"2020 water pixels: {w20}\")\n        if w20 > w17:\n            print(\"<answer>A</answer>\")\n        else:\n            print(\"<answer>B</answer>\")",
+            "exec_msg": "2017 empty.\n<answer>C1</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for COPERNICUS/S2_SR! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by COPERNICUS/S2_SR_HARMONIZED\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

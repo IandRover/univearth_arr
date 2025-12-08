@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Between January 8 and January 15, 2020, did Sistan-Baluchestan experience over 3 inches of rainfall?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-19-44",
+        "url": "https://earthobservatory.nasa.gov/images/146150/flash-flooding-in-iran",
+        "unique_id": 39
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nsistan = ee.Geometry.Rectangle([60, 25, 63, 30])           # Sistan-Baluchestan rough bounds\nstart = '2020-01-08'\nend   = '2020-01-15'\nIN_TO_MM = 25.4\ntarget_mm = 3 * IN_TO_MM\n\n# 2. Data Acquisition\ncol = (ee.ImageCollection('NASA/GPM_L3/IMERG_V06')\n       .select('precipitationCal')\n       .filterDate(start, end)\n       .filterBounds(sistan))\n\nn = col.size().getInfo()\nif n == 0:\n    print(\"No IMERG images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Processing\ntotal = col.sum().multiply(24).clip(sistan)   # mm/day \u2192 mm\ncount = total.reduceRegion(reducer=ee.Reducer.count(),\n                           geometry=sistan, scale=10000, maxPixels=1e9)\\\n               .get('precipitationCal').getInfo()\nif count == 0:\n    print(\"No valid precipitation pixels.\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\n# 4. Calculation\nmean = total.reduceRegion(reducer=ee.Reducer.mean(),\n                          geometry=sistan, scale=10000, maxPixels=1e9)\\\n            .get('precipitationCal').getInfo()\n\nif mean is None or mean < 0:\n    print(\"Invalid result.\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(f\"Mean rainfall: {mean:.1f} mm, Pixels: {int(count)}\")\nprint(\"<answer>A</answer>\" if mean > target_mm else \"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nsistan = ee.Geometry.Rectangle([60, 25, 63, 30])           # Sistan-Baluchestan rough bounds\nstart = '2020-01-08'\nend   = '2020-01-15'\nIN_TO_MM = 25.4\ntarget_mm = 3 * IN_TO_MM\n\n# 2. Data Acquisition\ncol = (ee.ImageCollection('NASA/GPM_L3/IMERG_V06')\n       .select('precipitationCal')\n       .filterDate(start, end)\n       .filterBounds(sistan))\n\nn = col.size().getInfo()\nif n == 0:\n    print(\"No IMERG images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Processing\ntotal = col.sum().multiply(24).clip(sistan)   # mm/day \u2192 mm\ncount = total.reduceRegion(reducer=ee.Reducer.count(),\n                           geometry=sistan, scale=10000, maxPixels=1e9)\\\n               .get('precipitationCal').getInfo()\nif count == 0:\n    print(\"No valid precipitation pixels.\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\n# 4. Calculation\nmean = total.reduceRegion(reducer=ee.Reducer.mean(),\n                          geometry=sistan, scale=10000, maxPixels=1e9)\\\n            .get('precipitationCal').getInfo()\n\nif mean is None or mean < 0:\n    print(\"Invalid result.\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(f\"Mean rainfall: {mean:.1f} mm, Pixels: {int(count)}\")\nprint(\"<answer>A</answer>\" if mean > target_mm else \"<answer>B</answer>\")",
+            "exec_msg": "Mean rainfall: 2852.2 mm, Pixels: 1848\n<answer>A</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for NASA/GPM_L3/IMERG_V06! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by NASA/GPM_L3/IMERG_V07\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/NASA_GPM_L3_IMERG_V06\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

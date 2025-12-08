@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did Punjab and Haryana have less than 20,000 fires detections in November, 2024, as observed with the VIIRS sensor?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "javascript",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_02-10-23",
+        "url": "https://earthobservatory.nasa.gov/images/153826/is-fire-activity-declining-in-northwestern-india",
+        "unique_id": 217
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "const ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function runAnalysis() {\n  try {\n    // 1. Geometry & Time Definitions\n    const start = ee.Date('2024-11-01');\n    const end = ee.Date('2024-12-01');\n    const gaul = ee.FeatureCollection('FAO/GAUL/2015/level1')\n      .filter(ee.Filter.eq('ADM0_NAME', 'India'));\n    const punjab = gaul.filter(ee.Filter.eq('ADM1_NAME', 'Punjab')).geometry();\n    const haryana = gaul.filter(ee.Filter.eq('ADM1_NAME', 'Haryana')).geometry();\n    const region = punjab.union(haryana, 1);\n\n    // 2. Data Acquisition & Check\n    // Try likely FIRMS VIIRS Active Fire datasets (archive then NRT)\n    const candidateFCs = [\n      'FIRMS/NOAA/VIIRS/V1/VNP14IMGTDL',\n      'FIRMS/NOAA/VIIRS/V1/VNP14IMGTDL_NRT'\n    ];\n\n    let usedId = null;\n    let detectionsFC = null;\n    let totalCount = null;\n    let datasetErrorCount = 0;\n\n    for (const id of candidateFCs) {\n      try {\n        const fc = ee.FeatureCollection(id);\n        // Basic existence check (unfiltered)\n        await fc.limit(1).size().getInfo();\n        // Apply filters\n        const filtered = fc.filterBounds(region).filterDate(start, end);\n        const count = await filtered.size().getInfo();\n        if (count > 0) {\n          usedId = id;\n          detectionsFC = filtered;\n          totalCount = count;\n          break;\n        } else {\n          // Collection exists but no features in time/region -> might still be valid; keep as candidate.\n          if (usedId === null) {\n            usedId = id;\n            detectionsFC = filtered;\n            totalCount = count;\n          }\n        }\n      } catch (e) {\n        datasetErrorCount += 1;\n        continue;\n      }\n    }\n\n    if (datasetErrorCount === candidateFCs.length) {\n      console.log('Dataset error: Unable to access FIRMS VIIRS datasets tried.');\n      console.log('D');\n      return;\n    }\n\n    if (totalCount === 0) {\n      console.log(`Dataset used: ${usedId}`);\n      console.log('Total detections (Nov 2024, Punjab+Haryana): 0');\n      console.log('C1');\n      return;\n    }\n\n    // 3. Processing: per-state counts\n    const punjabCount = await detectionsFC.filterBounds(punjab).size().getInfo();\n    const haryanaCount = await detectionsFC.filterBounds(haryana).size().getInfo();\n\n    // 4. Validation & Final Answer\n    const vals = [totalCount, punjabCount, haryanaCount];\n    const anyNull = vals.some(v => v === null || v === undefined || isNaN(v));\n    if (anyNull) {\n      console.log('Calculation failure: null/NaN encountered.');\n      console.log('C3');\n      return;\n    }\n\n    // Evidence output (concise, <=20 lines)\n    console.log(`Dataset used: ${usedId}`);\n    console.log(`Date range: ${start.format('YYYY-MM-dd').getInfo()} to ${end.format('YYYY-MM-dd').getInfo()} (exclusive end)`);\n    console.log(`Punjab detections: ${punjabCount}`);\n    console.log(`Haryana detections: ${haryanaCount}`);\n    console.log(`Total detections (Nov 2024, Punjab+Haryana): ${totalCount}`);\n\n    // Threshold check\n    const threshold = 20000;\n    if (totalCount < threshold) {\n      console.log('A');\n    } else {\n      console.log('B');\n    }\n  } catch (err) {\n    // Any unexpected error\n    console.log(`Error: ${err}`);\n    console.log('D');\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();",
+            "code": "'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'",
+            "exec_msg": "",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "thinking\n1. **Analyze <exec_error>**: The error log is empty. This means there was no GEE-specific or Python runtime error reported for this execution.\n\n2. **Analyze <execution_message>**: The execution output is empty. There is no explicit A/B/C1/C2/C3/D label, nor any diagnostic messages.\n\n3. **Analyze <Code>**: The provided \"Code\" is literally `'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'`. This indicates that the code itself was not provided or failed to load.\n\n**Conclusion**: Since there was no actual code executed, and thus no output or error, it's impossible to classify the *execution* of the GEE code. The problem here is that no code was provided to be executed in the first place. This falls under a system/framework error rather than a GEE execution error. Given the categories, \"D: Execution Error (e.g., crashed, timed out)\" is the closest, as the *process of executing code* failed because there was no code to execute.<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

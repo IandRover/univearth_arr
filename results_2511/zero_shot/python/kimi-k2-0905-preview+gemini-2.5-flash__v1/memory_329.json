@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did northern Cambodia have more active fire detections than southern Cambodia between August 2016 and February 2018?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-17-10",
+        "url": "https://earthobservatory.nasa.gov/images/91771/its-fire-season-in-southeast-asia",
+        "unique_id": 329
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: We need active fire detections. The best collection is MODIS Fire Detections (MCD14ML) which is provided as a FeatureCollection, or alternatively we can use FIRMS active fire ImageCollections (FIRMS) with 1-day composites. The latter allows raster summarization by region. We will use the FIRMS collection: \"FIRMS\" with 1-day active fire confidence layer for 2015-03-05 onward, filter 2016-08-01 to 2018-02-28, and use confidence \u2265 30 to count \u2018active fire\u2019 pixels.\n\n2. Masking strategy: Not about clouds; we\u2019ll threshold confidence \u2265 30 (moderate/high) to keep quality active-fire pixels.\n\n3. Region: Cambodia as a whole, split into north vs south at roughly latitude 13.0\u00b0N. Use two ee.Geometry.Polygon rectangles. Split into two images: maskPixels == 1 if confidence \u2265 30; 0 otherwise. Compute total valid pixel fire counts for north vs south.\n\n4. Check for no images \u2192 C1.\n   Check for zero valid pixels \u2192 C2.\n   Ensure counts are valid numbers \u2192 else C3.\n   If northCount > southCount \u2192 A (Yes), else B (No).\n\n5. Scale: use 1000 m to stay within maxPixels and avoid timeout (FIRMS pixels are 1 km).\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1) Geometry & Time\ncambodia = ee.Geometry.Rectangle([102.1, 10.3, 107.7, 14.8])  # roughly Cambodia bounds, 14.8 as max lat\nnorth    = ee.Geometry.Rectangle([102.1, 13.0, 107.7, 14.8])\nsouth    = ee.Geometry.Rectangle([102.1, 10.3, 107.7, 13.0])\nstart, end = '2016-08-01', '2018-02-28'\n\n# 2) Acquire FIRMS active fire (use confidence band)\ncol = (ee.ImageCollection('FIRMS')\n         .filterDate(start, end)\n         .filterBounds(cambodia))\nif col.size().getInfo() == 0:\n    print(\"No images found.\")\n    print(\"<answer>C1</answer>\")\n\n# 3) Create fire mask (confidence >=30)\nfire = col.map(lambda img: img.select('T21').gte(30))\n\ndef count_fire(region):\n    total = fire.sum().selfMask() \\\n               .reduceRegion(reducer=ee.Reducer.sum(),\n                            geometry=region,\n                            scale=1000, maxPixels=1e9) \\\n               .get('T21')\n    return ee.Number(total).getInfo()\n\n# 4) Compute counts\nnorthCount = count_fire(north)\nsouthCount = count_fire(south)\n\n# 5) Validation\nif northCount is None or southCount is None:\n    print(\"<answer>C3</answer>\")\ntotalPixelsNorth = fire.sum().selfMask().reduceRegion(\n    reducer=ee.Reducer.count(), geometry=north, scale=1000, maxPixels=1e9).get('T21').getInfo()\ntotalPixelsSouth = fire.sum().selfMask().reduceRegion(\n    reducer=ee.Reducer.count(), geometry=south, scale=1000, maxPixels=1e9).get('T21').getInfo()\nif totalPixelsNorth == 0 and totalPixelsSouth == 0:\n    print(\"No valid fire pixels.\")\n    print(\"<answer>C2</answer>\")\n\nprint(f\"North active pixels: {int(northCount)}\")\nprint(f\"South active pixels: {int(southCount)}\")\n\nif northCount > southCount:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1) Geometry & Time\ncambodia = ee.Geometry.Rectangle([102.1, 10.3, 107.7, 14.8])  # roughly Cambodia bounds, 14.8 as max lat\nnorth    = ee.Geometry.Rectangle([102.1, 13.0, 107.7, 14.8])\nsouth    = ee.Geometry.Rectangle([102.1, 10.3, 107.7, 13.0])\nstart, end = '2016-08-01', '2018-02-28'\n\n# 2) Acquire FIRMS active fire (use confidence band)\ncol = (ee.ImageCollection('FIRMS')\n         .filterDate(start, end)\n         .filterBounds(cambodia))\nif col.size().getInfo() == 0:\n    print(\"No images found.\")\n    print(\"<answer>C1</answer>\")\n\n# 3) Create fire mask (confidence >=30)\nfire = col.map(lambda img: img.select('T21').gte(30))\n\ndef count_fire(region):\n    total = fire.sum().selfMask() \\\n               .reduceRegion(reducer=ee.Reducer.sum(),\n                            geometry=region,\n                            scale=1000, maxPixels=1e9) \\\n               .get('T21')\n    return ee.Number(total).getInfo()\n\n# 4) Compute counts\nnorthCount = count_fire(north)\nsouthCount = count_fire(south)\n\n# 5) Validation\nif northCount is None or southCount is None:\n    print(\"<answer>C3</answer>\")\ntotalPixelsNorth = fire.sum().selfMask().reduceRegion(\n    reducer=ee.Reducer.count(), geometry=north, scale=1000, maxPixels=1e9).get('T21').getInfo()\ntotalPixelsSouth = fire.sum().selfMask().reduceRegion(\n    reducer=ee.Reducer.count(), geometry=south, scale=1000, maxPixels=1e9).get('T21').getInfo()\nif totalPixelsNorth == 0 and totalPixelsSouth == 0:\n    print(\"No valid fire pixels.\")\n    print(\"<answer>C2</answer>\")\n\nprint(f\"North active pixels: {int(northCount)}\")\nprint(f\"South active pixels: {int(southCount)}\")\n\nif northCount > southCount:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "North active pixels: 186349\nSouth active pixels: 92105\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

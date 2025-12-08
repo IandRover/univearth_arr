@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did smoke plumes from the Itcha Lake fire spread south into the US Pacific Northwest on September 2, 2025?",
+        "answer": "No",
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-reasoner",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-34-48",
+        "url": "https://earthobservatory.nasa.gov/images/154751/bc-wildfires-send-smoke-skyward",
+        "unique_id": 248
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nitcha_lake = ee.Geometry.Point([-124.67, 52.43])  # BC, Canada\npnw_roi = ee.Geometry.Rectangle([-125, 45, -116, 49])  # WA/OR/ID region\ndate = '2025-09-02'\n\n# 2. Data Acquisition - Use VIIRS Aerosol Optical Depth for smoke detection\nviirs = ee.ImageCollection('NOAA/VIIRS/001/VNP09GA') \\\n    .filterDate(date, ee.Date(date).advance(1, 'day')) \\\n    .filterBounds(pnw_roi)\n\nif viirs.size().getInfo() == 0:\n    # Fallback to MODIS if VIIRS not available\n    viirs = ee.ImageCollection('MODIS/061/MOD09GA') \\\n        .filterDate(date, ee.Date(date).advance(1, 'day')) \\\n        .filterBounds(pnw_roi)\n    if viirs.size().getInfo() == 0:\n        print(\"Images: 0\")\n        print(\"<answer>C1</answer>\")\n        exit()\n\n# 3. Process Aerosol Optical Depth (AOD) band - indicator of smoke/particulates\nimg = viirs.first()\nif 'VIIRS' in str(viirs.first().getInfo()):  # VIIRS specific bands\n    aod = img.select('SurfReflect_Aerosol').multiply(0.001)  # Scale factor\nelse:  # MODIS fallback\n    aod = img.select('sur_refl_b01').multiply(0.0001)  # Different scaling\n\n# Define smoke threshold (AOD > 0.3 indicates significant aerosols/smoke)\nsmoke_mask = aod.gt(0.3)\n\n# 4. Calculate smoke coverage in PNW region\nstats = smoke_mask.reduceRegion(\n    reducer=ee.Reducer.sum().combine(ee.Reducer.count(), '', True),\n    geometry=pnw_roi,\n    scale=1000,\n    maxPixels=1e9\n)\n\ntry:\n    smoke_pixels = stats.get('sum').getInfo()\n    total_pixels = stats.get('count').getInfo()\n    smoke_percent = (smoke_pixels / total_pixels * 100) if total_pixels > 0 else 0\n    \n    print(f\"Smoke Pixels: {int(smoke_pixels)}\")\n    print(f\"Total Pixels: {int(total_pixels)}\")\n    print(f\"Smoke Coverage: {smoke_percent:.1f}%\")\n    \n    # 5. Validation & Final Answer\n    if total_pixels == 0:\n        print(\"<answer>C2</answer>\")\n    elif smoke_pixels is None or smoke_percent is None:\n        print(\"<answer>C3</answer>\")\n    elif smoke_pixels > 100:  # Significant smoke detected (>100 pixels)\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n        \nexcept Exception as e:\n    print(f\"Error: {str(e)[:50]}\")\n    print(\"<answer>D</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nitcha_lake = ee.Geometry.Point([-124.67, 52.43])  # BC, Canada\npnw_roi = ee.Geometry.Rectangle([-125, 45, -116, 49])  # WA/OR/ID region\ndate = '2025-09-02'\n\n# 2. Data Acquisition - Use VIIRS Aerosol Optical Depth for smoke detection\nviirs = ee.ImageCollection('NOAA/VIIRS/001/VNP09GA') \\\n    .filterDate(date, ee.Date(date).advance(1, 'day')) \\\n    .filterBounds(pnw_roi)\n\nif viirs.size().getInfo() == 0:\n    # Fallback to MODIS if VIIRS not available\n    viirs = ee.ImageCollection('MODIS/061/MOD09GA') \\\n        .filterDate(date, ee.Date(date).advance(1, 'day')) \\\n        .filterBounds(pnw_roi)\n    if viirs.size().getInfo() == 0:\n        print(\"Images: 0\")\n        print(\"<answer>C1</answer>\")\n        exit()\n\n# 3. Process Aerosol Optical Depth (AOD) band - indicator of smoke/particulates\nimg = viirs.first()\nif 'VIIRS' in str(viirs.first().getInfo()):  # VIIRS specific bands\n    aod = img.select('SurfReflect_Aerosol').multiply(0.001)  # Scale factor\nelse:  # MODIS fallback\n    aod = img.select('sur_refl_b01').multiply(0.0001)  # Different scaling\n\n# Define smoke threshold (AOD > 0.3 indicates significant aerosols/smoke)\nsmoke_mask = aod.gt(0.3)\n\n# 4. Calculate smoke coverage in PNW region\nstats = smoke_mask.reduceRegion(\n    reducer=ee.Reducer.sum().combine(ee.Reducer.count(), '', True),\n    geometry=pnw_roi,\n    scale=1000,\n    maxPixels=1e9\n)\n\ntry:\n    smoke_pixels = stats.get('sum').getInfo()\n    total_pixels = stats.get('count').getInfo()\n    smoke_percent = (smoke_pixels / total_pixels * 100) if total_pixels > 0 else 0\n    \n    print(f\"Smoke Pixels: {int(smoke_pixels)}\")\n    print(f\"Total Pixels: {int(total_pixels)}\")\n    print(f\"Smoke Coverage: {smoke_percent:.1f}%\")\n    \n    # 5. Validation & Final Answer\n    if total_pixels == 0:\n        print(\"<answer>C2</answer>\")\n    elif smoke_pixels is None or smoke_percent is None:\n        print(\"<answer>C3</answer>\")\n    elif smoke_pixels > 100:  # Significant smoke detected (>100 pixels)\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n        \nexcept Exception as e:\n    print(f\"Error: {str(e)[:50]}\")\n    print(\"<answer>D</answer>\")",
+            "exec_msg": "Error: Dictionary.get: Dictionary does not contain key: '\n<answer>D</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for NOAA/VIIRS/001/VNP09GA! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by NASA/VIIRS/002/VNP09GA\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/NOAA_VIIRS_001_VNP09GA\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

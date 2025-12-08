@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Between September through November 2021, did Seattle experience at least 40cm of rainfall?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-44-10",
+        "url": "https://earthobservatory.nasa.gov/images/149195/soggy-autumn-in-the-pacific-northwest",
+        "unique_id": 108
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Collection: CHIRPS daily precipitation (UCSB-CHG/CHIRPS/DAILY) \u2013 global rainfall, no clouds to mask.  \n   - Date: 2021-09-01 \u2192 2021-11-30 (inclusive).  \n   - Location: Seattle \u2013 a point around downtown (~ -122.33, 47.61) is enough; CHIRPS is 5 km so small polygon vs point makes little difference.  \n\n2. Masking: None needed \u2013 precipitation band is always valid (no clouds).  \n\n3. Logic:  \n   - Sum total precipitation over the three months.  \n   - 40 cm = 400 mm.  \n   - If sum \u2265 400 mm \u2192 \u201cA: Yes\u201d; else \u2192 \u201cB: No\u201d.  \n   - If collection size is 0 \u2192 C1; if reducer returns None/NaN \u2192 C3 (extremely unlikely for CHIRPS).  \n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nseattle = ee.Geometry.Point(-122.3321, 47.6062)\nstart, end = '2021-09-01', '2021-11-30'\n\n# 2. Data acquisition\ncol = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n        .filterDate(start, end) \\\n        .filterBounds(seattle)\nn = col.size().getInfo()\nif n == 0:\n    print(\"No images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Total rainfall (mm)\ntotal = col.sum().multiply(1) \\\n          .reduceRegion(reducer=ee.Reducer.first(),\n                        geometry=seattle,\n                        scale=5000,\n                        maxPixels=1e9) \\\n          .get('precipitation') \\\n          .getInfo()\n\nif total is None:\n    print(\"Calculation failed.\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(f\"Total rainfall: {total:.1f} mm (Images: {n})\")\n\n# 4. Answer\nprint(\"<answer>A</answer>\" if total >= 400 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nseattle = ee.Geometry.Point(-122.3321, 47.6062)\nstart, end = '2021-09-01', '2021-11-30'\n\n# 2. Data acquisition\ncol = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \\\n        .filterDate(start, end) \\\n        .filterBounds(seattle)\nn = col.size().getInfo()\nif n == 0:\n    print(\"No images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Total rainfall (mm)\ntotal = col.sum().multiply(1) \\\n          .reduceRegion(reducer=ee.Reducer.first(),\n                        geometry=seattle,\n                        scale=5000,\n                        maxPixels=1e9) \\\n          .get('precipitation') \\\n          .getInfo()\n\nif total is None:\n    print(\"Calculation failed.\")\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(f\"Total rainfall: {total:.1f} mm (Images: {n})\")\n\n# 4. Answer\nprint(\"<answer>A</answer>\" if total >= 400 else \"<answer>B</answer>\")",
+            "exec_msg": "Total rainfall: 303.3 mm (Images: 90)\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

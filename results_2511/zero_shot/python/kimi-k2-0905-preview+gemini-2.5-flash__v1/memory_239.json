@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "On August 3, 2025, were there more than 30 fires active in Manitoba, Canada?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-22-26",
+        "url": "https://earthobservatory.nasa.gov/images/154641/widespread-smoke-from-canadian-fires",
+        "unique_id": 239
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy (Collection, Date, Location).  \n   - Collection: MODIS active-fire product \u201cMODIS/006/MOD14A1\u201d (daily 1-km fire mask) or the FIRMS VIIRS active-fire dataset (\u201cFIRMS\u201d). Both report active fires per day; MODIS is fine for a Yes/No threshold.  \n   - Date: 2025-08-03.  \n   - Location: Manitoba province. Build a rough bounding box about 49\u201360\u00b0N, \u2013102 to \u201394\u00b0W (entirely covers Manitoba and keeps the region small enough for fast counting).  \n\n2. Masking strategy.  \n   - Active-fire mask band \u2018MaxFRP\u2019 (or \u2018FireMask\u2019) flags fire pixels. We simply count pixels whose fire mask = 7\u20139 (high-confidence fire) or MaxFRP > 0. No cloud masking needed\u2014this product is already daily cloud-screened.  \n\n3. Logic to distinguish Valid Zero (A/B) from Null/Error (C3).  \n   - Count the number of qualifying pixels inside the Manitoba box.  \n   - If the image collection for 2025-08-03 is size 0 \u2192 C1.  \n   - If after masking there are 0 qualifying pixels, that is a valid zero (answer = B).  \n   - If reducer returns None/NaN \u2192 C3.  \n   - Else compare pixel count to 30: >30 \u21d2 A, \u226430 \u21d2 B.  \n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nmb = ee.Geometry.Rectangle([-102, 49, -94, 60])  # covers Manitoba\ndate = '2025-08-03'\n\n# 2. Data Acquisition & Check\ncol = ee.ImageCollection('MODIS/006/MOD14A1') \\\n        .filterDate(date, ee.Date(date).advance(1, 'day')) \\\n        .filterBounds(mb)\nn = col.size().getInfo()\nif n == 0:\n    print(\"No MODIS image for 2025-08-03.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Processing: mask high-confidence fire pixels\nimg = col.first()\nfire = img.select('MaxFRP').gt(0)  # alternative: ('FireMask').gte(7)\ncount = fire.reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=mb,\n    scale=1000,\n    maxPixels=1e9\n).get('MaxFRP').getInfo()\n\n# 4. Validation & Answer\nif count is None:\n    print(\"Fire count is None.\")\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Active fire pixels: {int(count)}\")\n    print(\"<answer>A</answer>\" if count > 30 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nmb = ee.Geometry.Rectangle([-102, 49, -94, 60])  # covers Manitoba\ndate = '2025-08-03'\n\n# 2. Data Acquisition & Check\ncol = ee.ImageCollection('MODIS/006/MOD14A1') \\\n        .filterDate(date, ee.Date(date).advance(1, 'day')) \\\n        .filterBounds(mb)\nn = col.size().getInfo()\nif n == 0:\n    print(\"No MODIS image for 2025-08-03.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Processing: mask high-confidence fire pixels\nimg = col.first()\nfire = img.select('MaxFRP').gt(0)  # alternative: ('FireMask').gte(7)\ncount = fire.reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=mb,\n    scale=1000,\n    maxPixels=1e9\n).get('MaxFRP').getInfo()\n\n# 4. Validation & Answer\nif count is None:\n    print(\"Fire count is None.\")\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Active fire pixels: {int(count)}\")\n    print(\"<answer>A</answer>\" if count > 30 else \"<answer>B</answer>\")",
+            "exec_msg": "No MODIS image for 2025-08-03.\n<answer>C1</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for MODIS/006/MOD14A1! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by MODIS/061/MOD14A1\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MOD14A1\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nC1\n</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

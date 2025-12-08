@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Were there fires visible in a 50 mile radius around (latitude: 34.498828, longitude: -112.246886) between June 20, 2017 and June 30, 2017?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "javascript",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_15-08-02",
+        "url": "https://earthobservatory.nasa.gov/images/90501/fires-in-the-southwest",
+        "unique_id": 320
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "const ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function runAnalysis() {\n  function eeGetInfo(obj) {\n    return new Promise((resolve, reject) => obj.getInfo(resolve, reject));\n  }\n\n  try {\n    // 1. Geometry & Time Definitions\n    const lon = -112.246886;\n    const lat = 34.498828;\n    const radiusMeters = 50 * 1609.344; // 50 miles\n    const region = ee.Geometry.Point([lon, lat]).buffer(radiusMeters);\n    const start = ee.Date('2017-06-20');\n    const end = ee.Date('2017-07-01'); // end-exclusive\n\n    // Helper to get merged Terra + Aqua collections for a date range\n    function mergedCol(s, e) {\n      const terra = ee.ImageCollection('MODIS/061/MOD14A1').filterDate(s, e).filterBounds(region);\n      const aqua = ee.ImageCollection('MODIS/061/MYD14A1').filterDate(s, e).filterBounds(region);\n      return { terra, aqua, merged: terra.merge(aqua) };\n    }\n\n    // 2. Data Acquisition & Check\n    let { terra, aqua, merged } = mergedCol(start, end);\n    let terraCount = await eeGetInfo(terra.size());\n    let aquaCount = await eeGetInfo(aqua.size());\n    let mergedCount = terraCount + aquaCount;\n\n    if (mergedCount === 0) {\n      // Fallback: widen the date window by \u00b13 days\n      const start2 = start.advance(-3, 'day');\n      const end2 = end.advance(3, 'day');\n      ({ terra, aqua, merged } = mergedCol(start2, end2));\n      terraCount = await eeGetInfo(terra.size());\n      aquaCount = await eeGetInfo(aqua.size());\n      mergedCount = terraCount + aquaCount;\n      if (mergedCount === 0) {\n        console.log('Images (Terra, Aqua): 0, 0');\n        console.log('Expanded window also empty.');\n        console.log('C1');\n        return;\n      } else {\n        console.log('Note: Using expanded window (\u00b13 days) due to empty initial window.');\n      }\n    }\n\n    // 3. Processing: valid-pixel map (FireMask > 0), fire map (FireMask >= 7 [low+ nominal+ high conf])\n    const validAny = merged.map(img => img.select('FireMask').gt(0).rename('valid')).max();\n    const fireAny = merged.map(img => img.select('FireMask').gte(7).rename('fire')).max();\n\n    // Pixel counts\n    const potentialCount = await eeGetInfo(\n      ee.Image.constant(1).clip(region).reduceRegion({\n        reducer: ee.Reducer.count(),\n        geometry: region,\n        scale: 1000,\n        maxPixels: 1e9\n      }).get('constant')\n    );\n\n    const validCount = await eeGetInfo(\n      validAny.reduceRegion({\n        reducer: ee.Reducer.sum(),\n        geometry: region,\n        scale: 1000,\n        maxPixels: 1e9\n      }).get('valid')\n    );\n\n    const fireCount = await eeGetInfo(\n      fireAny.reduceRegion({\n        reducer: ee.Reducer.sum(),\n        geometry: region,\n        scale: 1000,\n        maxPixels: 1e9\n      }).get('fire')\n    );\n\n    // 4. Validation\n    console.log(`Date range: 2017-06-20 to 2017-06-30`);\n    console.log(`Images (Terra, Aqua): ${terraCount}, ${aquaCount}`);\n    console.log(`Potential pixels (~1km): ${potentialCount || 0}`);\n    console.log(`Valid pixels (processed): ${validCount || 0}`);\n    console.log(`Fire pixels (any day, conf\u2265low): ${fireCount || 0}`);\n\n    if (validCount === null || fireCount === null || isNaN(validCount) || isNaN(fireCount)) {\n      console.log('C3');\n      return;\n    }\n    if ((validCount || 0) === 0) {\n      console.log('C2');\n      return;\n    }\n\n    // 5. Final Answer\n    if ((fireCount || 0) > 0) {\n      console.log('A: Yes');\n    } else {\n      console.log('B: No');\n    }\n  } catch (err) {\n    try {\n      console.log(`Error: ${String(err).slice(0, 120)}`);\n    } catch (_e) {}\n    console.log('D');\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();",
+            "code": "'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'",
+            "exec_msg": "",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "thinking\nThe user provided a \"No <code> is found in the response\" message instead of actual code.\nThe execution output and error log are both empty.\nThis means no GEE code was actually executed.\nTherefore, the execution cannot be classified into A, B, C1, C2, C3, or D based on *code execution*.\nSince the input states \"No <code> is found in the response\", it implies the code itself was missing or invalid. This prevents any form of execution.\nThe most appropriate category in this scenario is 'D' as the system failed to execute any code due to the missing code input, which is a form of execution error.<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

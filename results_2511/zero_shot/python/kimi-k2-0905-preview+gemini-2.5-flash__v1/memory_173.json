@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was the increase in nighttime light intensity from February 21, 2023, to April 30, 2023, greater in Antakya, the capital of T\u00fcrkiye\u2019s Hatay Province, than in Alt\u0131n\u00f6z\u00fc?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-00-14",
+        "url": "https://earthobservatory.nasa.gov/images/151336/brighter-nights-in-antakya",
+        "unique_id": 173
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Nighttime lights data (VIIRS DNB) for the specified dates in two locations in Hatay Province, T\u00fcrkiye.\n2. Masking strategy: Not needed; VIIRS DNB is already cloud-masked and filtered for nighttime scenes.\n3. Logic: Compute mean radiance for each date/location. If any collection is empty -> C1. If after filtering valid pixels count is zero -> C2. If either mean is None/NaN -> C3. Otherwise compare increases: (Apr30_mean - Feb21_mean). If Antakya increase > Alt\u0131n\u00f6z\u00fc increase -> A, else -> B.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nantakya = ee.Geometry.Point([36.2333, 36.2333])  # Antakya\naltinozu = ee.Geometry.Point([36.3000, 36.1167]) # Alt\u0131n\u00f6z\u00fc\nfeb21 = '2023-02-21'\napr30 = '2023-04-30'\nradius = 3000\n\n# 2. Data Acquisition & Check\ndef get_rad(loc, date):\n    col = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')\\\n            .filterDate(date, ee.Date(date).advance(1, 'day'))\\\n            .filterBounds(loc.buffer(radius))\n    if col.size().getInfo() == 0:\n        return None\n    img = col.first()\n    count = img.select('avg_rad').reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=loc.buffer(radius),\n        scale=1000,\n        maxPixels=1e9\n    ).get('avg_rad').getInfo()\n    if count == 0:\n        return None\n    return img.select('avg_rad').reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=loc.buffer(radius),\n        scale=1000,\n        maxPixels=1e9\n    ).get('avg_rad').getInfo()\n\na_feb = get_rad(antakya, feb21)\na_apr = get_rad(antakya, apr30)\nb_feb = get_rad(altinozu, feb21)\nb_apr = get_rad(altinozu, apr30)\n\nif any(v is None for v in [a_feb, a_apr, b_feb, b_apr]):\n    print(\"C1\")\n    print(\"<answer>C1</answer>\")\nelse:\n    inc_a = a_apr - a_feb\n    inc_b = b_apr - b_feb\n    print(f\"Antakya: {inc_a:.3f}, Alt\u0131n\u00f6z\u00fc: {inc_b:.3f}\")\n    if inc_a > inc_b:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nantakya = ee.Geometry.Point([36.2333, 36.2333])  # Antakya\naltinozu = ee.Geometry.Point([36.3000, 36.1167]) # Alt\u0131n\u00f6z\u00fc\nfeb21 = '2023-02-21'\napr30 = '2023-04-30'\nradius = 3000\n\n# 2. Data Acquisition & Check\ndef get_rad(loc, date):\n    col = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')\\\n            .filterDate(date, ee.Date(date).advance(1, 'day'))\\\n            .filterBounds(loc.buffer(radius))\n    if col.size().getInfo() == 0:\n        return None\n    img = col.first()\n    count = img.select('avg_rad').reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=loc.buffer(radius),\n        scale=1000,\n        maxPixels=1e9\n    ).get('avg_rad').getInfo()\n    if count == 0:\n        return None\n    return img.select('avg_rad').reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=loc.buffer(radius),\n        scale=1000,\n        maxPixels=1e9\n    ).get('avg_rad').getInfo()\n\na_feb = get_rad(antakya, feb21)\na_apr = get_rad(antakya, apr30)\nb_feb = get_rad(altinozu, feb21)\nb_apr = get_rad(altinozu, apr30)\n\nif any(v is None for v in [a_feb, a_apr, b_feb, b_apr]):\n    print(\"C1\")\n    print(\"<answer>C1</answer>\")\nelse:\n    inc_a = a_apr - a_feb\n    inc_b = b_apr - b_feb\n    print(f\"Antakya: {inc_a:.3f}, Alt\u0131n\u00f6z\u00fc: {inc_b:.3f}\")\n    if inc_a > inc_b:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "C1\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Were black carbon AODs near the east of Australia, specifically within a 100km radius about (-34.344553, 157.706220), up during November 2019 to February 2020 in comparison to the same time the prior year? ",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "javascript",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_05-22-07",
+        "url": "https://earthobservatory.nasa.gov/images/149039/australian-fires-fueled-unprecedented-blooms",
+        "unique_id": 103
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "const ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function runAnalysis() {\n  try {\n    // 1. Geometry & Time Definitions\n    const point = ee.Geometry.Point([157.706220, -34.344553]);\n    const geom = point.buffer(100000); // 100 km radius\n\n    const prevStart = '2018-11-01';\n    const prevEnd = '2019-03-01'; // end is exclusive; covers Nov-Feb\n    const currStart = '2019-11-01';\n    const currEnd = '2020-03-01';\n\n    // 2. Helper: get a BC AOD collection with fallback\n    async function getBCCollection(start, end) {\n      const ids = [\n        'NASA/GEOS/MERRA2/M2T1NXAER', // hourly\n        'NASA/GEOS/MERRA2/M2TMNXAER'  // monthly\n      ];\n      for (let i = 0; i < ids.length; i++) {\n        try {\n          const col = ee.ImageCollection(ids[i]).select('BCEXTTAU').filterDate(start, end);\n          const size = await col.size().getInfo();\n          if (size > 0) {\n            return { id: ids[i], col: col, size: size };\n          }\n        } catch (e) {\n          // Try next dataset\n        }\n      }\n      return null;\n    }\n\n    // 3. Stats computation\n    async function computeStats(wrapper) {\n      const img = wrapper.col.mean();\n      const meanDict = await img.reduceRegion({\n        reducer: ee.Reducer.mean(),\n        geometry: geom,\n        scale: 30000,\n        maxPixels: 1e9,\n        bestEffort: true\n      }).getInfo();\n\n      const countDict = await img.reduceRegion({\n        reducer: ee.Reducer.count(),\n        geometry: geom,\n        scale: 30000,\n        maxPixels: 1e9,\n        bestEffort: true\n      }).getInfo();\n\n      const mean = meanDict ? meanDict.BCEXTTAU : null;\n      const count = countDict ? countDict.BCEXTTAU : 0;\n\n      return { mean, count };\n    }\n\n    function isValid(val) {\n      return typeof val === 'number' && isFinite(val) && val >= 0 && val <= 5;\n    }\n\n    // 4. Acquire collections\n    const prevWrap = await getBCCollection(prevStart, prevEnd);\n    const currWrap = await getBCCollection(currStart, currEnd);\n\n    if (!prevWrap || !currWrap) {\n      console.log(`Prev Images: ${prevWrap ? prevWrap.size : 0}`);\n      console.log(`Curr Images: ${currWrap ? currWrap.size : 0}`);\n      console.log('C1');\n      return;\n    }\n\n    // 5. Compute stats\n    const prevStats = await computeStats(prevWrap);\n    const currStats = await computeStats(currWrap);\n\n    console.log(`Prev Dataset: ${prevWrap.id}, Images: ${prevWrap.size}`);\n    console.log(`Curr Dataset: ${currWrap.id}, Images: ${currWrap.size}`);\n\n    if ((prevWrap.size > 0 && prevStats.count === 0) || (currWrap.size > 0 && currStats.count === 0)) {\n      console.log(`Prev Valid Pixels: ${prevStats.count}, Curr Valid Pixels: ${currStats.count}`);\n      console.log('C2');\n      return;\n    }\n\n    if (!isValid(prevStats.mean) || !isValid(currStats.mean)) {\n      console.log(`Prev Mean BC AOD: ${prevStats.mean}, Curr Mean BC AOD: ${currStats.mean}`);\n      console.log('C3');\n      return;\n    }\n\n    console.log(`Prev Mean BC AOD: ${prevStats.mean.toFixed(5)}, Pixels: ${prevStats.count}`);\n    console.log(`Curr Mean BC AOD: ${currStats.mean.toFixed(5)}, Pixels: ${currStats.count}`);\n    const delta = currStats.mean - prevStats.mean;\n    const pct = prevStats.mean > 0 ? (delta / prevStats.mean) * 100 : null;\n    console.log(`Delta: ${delta.toFixed(5)}${pct !== null ? ` (${pct.toFixed(1)}%)` : ''}`);\n\n    // 6. Final Answer\n    if (delta > 0) {\n      console.log('A');\n    } else {\n      console.log('B');\n    }\n  } catch (err) {\n    console.log(`Error: ${err && err.message ? err.message : err}`);\n    console.log('D');\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();",
+            "code": "'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'",
+            "exec_msg": "",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

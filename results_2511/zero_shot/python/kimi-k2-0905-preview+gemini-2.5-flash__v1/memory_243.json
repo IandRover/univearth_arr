@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the water 100 km south of Bear Island, Norway show more milky turquoise-blue color than that 250 km south of Bear Island on August 5, 2025?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-11-47",
+        "url": "https://earthobservatory.nasa.gov/images/154651/bloom-time-in-the-barents-sea",
+        "unique_id": 243
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Bear Island (Bj\u00f8rn\u00f8ya) lies at ~74.5\u00b0N, 19\u00b0E.  \n   - We need two ocean rectangles: one 100 km south (\u224873.0\u00b0N) and one 250 km south (\u224871.5\u00b0N).  \n2. Sentinel-2\u2019s true-colour bands (B2,B3,B4) give the milky turquoise look.  \n   - We will use Sentinel-2 L2A, 2025-08-05 \u00b11 day (polar daylight, only one day might exist).  \n   - Mask clouds (QA60 and SCL) and land (with the global 10 m coastline buffer).  \n3. Metric: average Rayleigh-corrected reflectance of the \u201cblue\u201d band (B2) inside each box.  \n   - Higher B2 means brighter/milkier turquoise water.  \n   - If either scene has 0 valid pixels after masking \u2192 C2.  \n   - If either collection is empty \u2192 C1.  \n   - If B2 is NaN/None \u2192 C3.  \n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point([19.0, 74.5])  # Bear Island\nbox100 = pt.buffer(25000).centroid().translate(0, -100*1000).buffer(25000).bounds()\nbox250 = pt.buffer(25000).centroid().translate(0, -250*1000).buffer(25000).bounds()\n\ndef getBlue(box):\n    col = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n             .filterDate('2025-08-04', '2025-08-06')\n             .filterBounds(box)\n             .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30)))\n    if col.size().getInfo() == 0:\n        return None\n    img = col.map(lambda i: i.updateMask(i.select('SCL').eq(6))  # water only\n                   .updateMask(i.select('QA60').eq(0))).mosaic()\n    count = img.select('B2').reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=box, scale=1000, maxPixels=1e9).get('B2').getInfo()\n    if count == 0:\n        return None\n    return img.select('B2').reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=box, scale=1000, maxPixels=1e9).get('B2').getInfo()\n\nb100 = getBlue(box100)\nb250 = getBlue(box250)\nprint(f\"B2 mean 100 km: {b100}\")\nprint(f\"B2 mean 250 km: {b250}\")\n\nif b100 is None or b250 is None:\n    print(\"<answer>C2</answer>\")\nelif b100 > b250:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point([19.0, 74.5])  # Bear Island\nbox100 = pt.buffer(25000).centroid().translate(0, -100*1000).buffer(25000).bounds()\nbox250 = pt.buffer(25000).centroid().translate(0, -250*1000).buffer(25000).bounds()\n\ndef getBlue(box):\n    col = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n             .filterDate('2025-08-04', '2025-08-06')\n             .filterBounds(box)\n             .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30)))\n    if col.size().getInfo() == 0:\n        return None\n    img = col.map(lambda i: i.updateMask(i.select('SCL').eq(6))  # water only\n                   .updateMask(i.select('QA60').eq(0))).mosaic()\n    count = img.select('B2').reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=box, scale=1000, maxPixels=1e9).get('B2').getInfo()\n    if count == 0:\n        return None\n    return img.select('B2').reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=box, scale=1000, maxPixels=1e9).get('B2').getInfo()\n\nb100 = getBlue(box100)\nb250 = getBlue(box250)\nprint(f\"B2 mean 100 km: {b100}\")\nprint(f\"B2 mean 250 km: {b250}\")\n\nif b100 is None or b250 is None:\n    print(\"<answer>C2</answer>\")\nelif b100 > b250:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765077151190828.py\", line 5, in <module>\n    box100 = pt.buffer(25000).centroid().translate(0, -100*1000).buffer(25000).bounds()\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'Geometry' object has no attribute 'translate'\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

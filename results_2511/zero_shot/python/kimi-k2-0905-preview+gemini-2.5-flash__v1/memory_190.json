@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the surface water width of the Mississippi River near Memphis decrease on September 2023 compared to September 2021?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-25-14",
+        "url": "https://earthobservatory.nasa.gov/images/151897/the-mississippi-is-mighty-parched",
+        "unique_id": 190
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use Sentinel-2 Surface Reflectance (COPERNICUS/S2_SR_HARMONIZED) for 30 m resolution over a ~4-year window (1 September \u00b12 months) to guarantee at least one clear scene.  \n   Location: Memphis, TN \u2013 a single 5 km box across the river downstream of the I-40 bridge (35.15\u00b0 N, \u201190.05\u00b0 W).  \n2. Masking: Keep only the \u201cwater\u201d class (pixel_qa band class 6) so clouds/shadows over water are removed, but we do NOT cloud-mask the whole scene (we want to measure water width, not land).  \n3. Logic: For each year we  \n   - mosaic the water mask,  \n   - sum water pixels inside the transect box,  \n   - multiply by 30 m to get an approximate width.  \n   If no images or zero water pixels \u2192 C1 / C2.  \n   Compute 2023 width \u2212 2021 width:  \n   positive \u21d2 decrease \u21d2 A, else B.  \n   NaN/None \u21d2 C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\ntransect = ee.Geometry.Rectangle([-90.08, 35.13, -90.02, 35.17])  # 6 km E-W across river\nsep21 = ('2021-08-01', '2021-10-31')\nsep23 = ('2023-08-01', '2023-10-31')\n\ndef water_width(dates):\n    col = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n             .filterBounds(transect.centroid())\n             .filterDate(*dates)\n             .select(['QA60','SCL'])                       # keep QA & scene-class bands\n             .map(lambda img: img.updateMask(img.select('SCL').eq(6))))  # keep water only\n    if col.size().getInfo() == 0:\n        return None\n    water = col.mosaic().select('SCL').neq(0)             # 1 = water, 0 = else\n    pix = water.reduceRegion(reducer=ee.Reducer.sum(),\n                             geometry=transect,\n                             scale=30,\n                             maxPixels=1e9).get('SCL').getInfo()\n    if pix is None or pix == 0:\n        return 0\n    return pix * 30                                     # ~width in metres\n\nw21 = water_width(sep21)\nw23 = water_width(sep23)\nprint(f\"2021 water pixels: {int(w21) if w21 is not None else 'None'}\")\nprint(f\"2023 water pixels: {int(w23) if w23 is not None else 'None'}\")\n\nif w21 is None or w23 is None:\n    print(\"<answer>C1</answer>\")\nelif w21 == 0 or w23 == 0:\n    print(\"<answer>C2</answer>\")\nelif (w23 - w21) > 0:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\ntransect = ee.Geometry.Rectangle([-90.08, 35.13, -90.02, 35.17])  # 6 km E-W across river\nsep21 = ('2021-08-01', '2021-10-31')\nsep23 = ('2023-08-01', '2023-10-31')\n\ndef water_width(dates):\n    col = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n             .filterBounds(transect.centroid())\n             .filterDate(*dates)\n             .select(['QA60','SCL'])                       # keep QA & scene-class bands\n             .map(lambda img: img.updateMask(img.select('SCL').eq(6))))  # keep water only\n    if col.size().getInfo() == 0:\n        return None\n    water = col.mosaic().select('SCL').neq(0)             # 1 = water, 0 = else\n    pix = water.reduceRegion(reducer=ee.Reducer.sum(),\n                             geometry=transect,\n                             scale=30,\n                             maxPixels=1e9).get('SCL').getInfo()\n    if pix is None or pix == 0:\n        return 0\n    return pix * 30                                     # ~width in metres\n\nw21 = water_width(sep21)\nw23 = water_width(sep23)\nprint(f\"2021 water pixels: {int(w21) if w21 is not None else 'None'}\")\nprint(f\"2023 water pixels: {int(w23) if w23 is not None else 'None'}\")\n\nif w21 is None or w23 is None:\n    print(\"<answer>C1</answer>\")\nelif w21 == 0 or w23 == 0:\n    print(\"<answer>C2</answer>\")\nelif (w23 - w21) > 0:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "2021 water pixels: 245710\n2023 water pixels: 221351\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

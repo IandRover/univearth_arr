@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Between June 15-21, 2017, did temperatures in Phoenix, Arizona reach at least 110 degrees fahrenheit?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "javascript",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_08-54-12",
+        "url": "https://earthobservatory.nasa.gov/images/90443/heat-broils-the-american-southwest",
+        "unique_id": 315
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "const ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function runAnalysis() {\n  try {\n    // 1. Geometry & Time Definitions\n    var aoi = ee.Geometry.Point([-112.074, 33.4484]).buffer(20000); // Phoenix downtown, 20 km buffer\n    var start = '2017-06-15';\n    var end = '2017-06-22'; // end is exclusive\n\n    // Helper to build collection, band, and conversion to Fahrenheit\n    function getSource(primary) {\n      if (primary) {\n        var col = ee.ImageCollection('IDAHO_EPSCOR/GRIDMET')\n          .filterDate(start, end)\n          .select('tmmx');\n        return {id: 'GRIDMET:tmmx', col: col, band: 'tmmx', scale: 4000, toF: function(img){ return img.subtract(273.15).multiply(9/5).add(32).rename('F'); }};\n      } else {\n        var col = ee.ImageCollection('NASA/ORNL/DAYMET_V4')\n          .filterDate(start, end)\n          .select('tmax');\n        return {id: 'DAYMET:tmax', col: col, band: 'tmax', scale: 1000, toF: function(img){ return img.multiply(9/5).add(32).rename('F'); }}; // Daymet tmax in C\n      }\n    }\n\n    // 2. Data Acquisition & Check\n    var src = getSource(true);\n    var size = await new Promise((resolve, reject) => src.col.size().getInfo((v, e) => e ? reject(e) : resolve(v)));\n    if (size === 0) {\n      var fallback = getSource(false);\n      var fsize = await new Promise((resolve, reject) => fallback.col.size().getInfo((v, e) => e ? reject(e) : resolve(v)));\n      if (fsize === 0) {\n        console.log('Images (GRIDMET): 0');\n        console.log('Images (DAYMET): 0');\n        console.log('C1: Empty Collection (No images found in date/location for one or both comparison points).');\n        console.log('C1');\n        return;\n      } else {\n        src = fallback;\n        size = fsize;\n        console.log(`Dataset: ${src.id}, Images: ${size}`);\n      }\n    } else {\n      console.log(`Dataset: ${src.id}, Images: ${size}`);\n    }\n\n    // 3. Processing: per-day AOI max Fahrenheit and valid pixel count\n    var fc = src.col.map(function(img) {\n      var f = src.toF(img.select(src.band));\n      var stats = f.reduceRegion({\n        reducer: ee.Reducer.max().combine(ee.Reducer.count(), '', true),\n        geometry: aoi,\n        scale: src.scale,\n        maxPixels: 1e9,\n        bestEffort: true\n      });\n      var maxF = ee.Algorithms.If(stats.get('F_max'), stats.get('F_max'), null);\n      var cnt = ee.Algorithms.If(stats.get('F_count'), stats.get('F_count'), 0);\n      return ee.Feature(null, {\n        date: img.date().format('YYYY-MM-dd'),\n        maxF: maxF,\n        count: cnt\n      });\n    });\n\n    var results = await new Promise((resolve, reject) => fc.aggregate_array('date').evaluate(async (dates, err) => {\n      if (err) return reject(err);\n      try {\n        var maxFs = await new Promise((res, rej) => fc.aggregate_array('maxF').evaluate((v,e)=> e?rej(e):res(v)));\n        var counts = await new Promise((res, rej) => fc.aggregate_array('count').evaluate((v,e)=> e?rej(e):res(v)));\n        resolve({dates, maxFs, counts});\n      } catch(e) { reject(e); }\n    }));\n\n    // 4. Validation & Final Answer\n    if (!results || !results.dates || results.dates.length === 0) {\n      console.log('No features produced.');\n      console.log('C3: Calculation Failure (Result is None/NaN or invalid).');\n      console.log('C3');\n      return;\n    }\n\n    var allNull = true, anyValidPixels = false, anyGE110 = false, lines = [];\n    for (var i = 0; i < results.dates.length; i++) {\n      var d = results.dates[i];\n      var v = results.maxFs[i];\n      var c = results.counts[i] || 0;\n      var valStr = (v === null || v === undefined || Number.isNaN(v)) ? 'null' : v.toFixed(1);\n      lines.push(`${d} MaxF: ${valStr}, Pixels: ${c}`);\n      if (c > 0) anyValidPixels = true;\n      if (v !== null && v !== undefined && !Number.isNaN(v)) {\n        allNull = false;\n        if (v >= 110) anyGE110 = true;\n      }\n    }\n\n    // Print concise evidence lines\n    lines.forEach(l => console.log(l));\n    var daysGE = results.maxFs.filter(v => (v !== null && v !== undefined && !Number.isNaN(v) && v >= 110)).length;\n    console.log(`Days >=110F: ${daysGE}`);\n\n    if (!anyValidPixels) {\n      console.log('C2: No Valid Pixels (Images exist, but after processing, 0 pixels remain).');\n      console.log('C2');\n      return;\n    }\n    if (allNull) {\n      console.log('C3: Calculation Failure (Result is None/NaN or invalid).');\n      console.log('C3');\n      return;\n    }\n\n    // Final tag\n    if (anyGE110) {\n      console.log('A: Yes');\n    } else {\n      console.log('B: No');\n    }\n\n  } catch (e) {\n    console.log(`Error: ${e}`);\n    console.log('D');\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();",
+            "code": "'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'",
+            "exec_msg": "",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "In January 2021, did Nambia experience over 7 inches of rainfall?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-01-23",
+        "url": "https://earthobservatory.nasa.gov/images/147924/abundant-rain-turns-namibia-green",
+        "unique_id": 77
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Daily precipitation (mm) \u2192 CHIRPS or IMERG.  \n   January 2021 (whole Namibia \u2248 country polygon from FAO/GAUL/WDPA is not allowed, so we build a simple box or use a library roi).  \n   We actually just need the national mean; a coarse rectangle covering Namibia is fine.\n2. No cloud masking; precipitation products are already gap-filled.\n3. Sum the month \u2192 compare to 178 mm (7 in).  \n   If CHIRPS has 0 images or reducer returns None/NaN \u2192 C3.  \n   If calculated sum > 178 \u2192 A, else \u2192 B.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Namibia bounding box (approx)\nnam = ee.Geometry.Rectangle(11.6, -29.1, 25.2, -16.8)  # lon/lat\n\n# 2. CHIRPS daily collection for Jan 2021\nstart, end = '2021-01-01', '2021-02-01'\ncol = (ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n       .filterDate(start, end)\n       .filterBounds(nam))\n\nn = col.size().getInfo()\nif n == 0:\n    print(\"No CHIRPS images found for Jan 2021.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Monthly total (mm)\n    monthly = col.sum().clip(nam)\n    total = monthly.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=nam,\n        scale=5000,\n        maxPixels=1e9\n    ).get('precipitation').getInfo()\n\n    # 4. Validation\n    if total is None or ee.Algorithms.isNaN(total):\n        print(\"Calculation returned None/NaN.\")\n        print(\"<answer>C3</answer>\")\n    else:\n        print(f\"Jan 2021 mean rainfall: {total:.1f} mm\")\n        if total > 178.0:  # 7 inches \u2248 178 mm\n            print(\"<answer>A</answer>\")\n        else:\n            print(\"<answer>B</answer>\")\n```\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Namibia bounding box (approx)\nnam = ee.Geometry.Rectangle(11.6, -29.1, 25.2, -16.8)  # lon/lat\n\n# 2. CHIRPS daily collection for Jan 2021\nstart, end = '2021-01-01', '2021-02-01'\ncol = (ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n       .filterDate(start, end)\n       .filterBounds(nam))\n\nn = col.size().getInfo()\nif n == 0:\n    print(\"No CHIRPS images found for Jan 2021.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Monthly total (mm)\n    monthly = col.sum().clip(nam)\n    total = monthly.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=nam,\n        scale=5000,\n        maxPixels=1e9\n    ).get('precipitation').getInfo()\n\n    # 4. Validation\n    if total is None or ee.Algorithms.isNaN(total):\n        print(\"Calculation returned None/NaN.\")\n        print(\"<answer>C3</answer>\")\n    else:\n        print(f\"Jan 2021 mean rainfall: {total:.1f} mm\")\n        if total > 178.0:  # 7 inches \u2248 178 mm\n            print(\"<answer>A</answer>\")\n        else:\n            print(\"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/__init__.py\", line 81, in __getattr__\n    return self[name]\n           ~~~~^^^^^^\nKeyError: 'isNaN'\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765076507893572.py\", line 28, in <module>\n    if total is None or ee.Algorithms.isNaN(total):\n                        ^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/__init__.py\", line 84, in __getattr__\n    raise AttributeError  # pylint: disable=raise-missing-from\n    ^^^^^^^^^^^^^^^^^^^^\nAttributeError\n",
+            "exec_returncode": 1,
+            "raw_answer": "<thinking>\n1. Analyze <exec_error>: The error log clearly shows an `AttributeError` on `ee.Algorithms.isNaN(total)`. This indicates a programming error where a method or attribute was called incorrectly.\n\n2. Analyze <execution_message>: The execution message is empty, so there are no explicit tags or diagnostic messages from the code itself.\n\n3. Analyze <Code>: The code attempts to check for `None` or `NaN` values. The `total` variable is the result of `getInfo()`, which should return a Python float or `None`. For Python floats, `ee.Algorithms.isNaN()` is not the correct way to check for `NaN`. One should use `math.isnan()` or `total != total` for standard Python floats. The GEE `isNaN()` function is typically for GEE objects, not direct Python values retrieved with `getInfo()`. This is a programming error, not a data issue.\nThe error occurred before any meaningful calculation result could be printed or evaluated.<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did nighttime brightness over Houston decrease on May 18, 2024, compared to April 2024?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-14-50",
+        "url": "https://www.earthobservatory.nasa.gov/images/152843/derecho-darkens-houston",
+        "unique_id": 371
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Need nighttime lights data. VIIRS DNB is the standard product for this. Use the monthly composite version (VNP46A3) since we're comparing month-to-month.\n\n2. Masking strategy: Monthly VIIRS DNB composites are already cloud-masked and filtered. No additional masking needed.\n\n3. Logic: Calculate mean nighttime lights for Houston in April 2024 and May 2024, then compare. Need to check for valid pixels and avoid C3 (null values).\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nhouston = ee.Geometry.Point([-95.3698, 29.7604]).buffer(20000)\napr2024 = ee.DateRange('2024-04-01', '2024-04-30')\nmay2024 = ee.DateRange('2024-05-01', '2024-05-31')\n\n# 2. Data Acquisition\ncol = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')\n\naprIm = col.filterDate(apr2024).filterBounds(houston)\nmayIm = col.filterDate(may2024).filterBounds(houston)\n\nif aprIm.size().getInfo() == 0 or mayIm.size().getInfo() == 0:\n    print(\"C1: One or both months have no images\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Processing\naprImg = aprIm.first().select('avg_rad').multiply(ee.Image(1))\n\nmayImg = mayIm.first().select('avg_rad').multiply(ee.Image(1))\n\n# 4. Calculation  \naprMean = aprImg.reduceRegion(reducer=ee.Reducer.mean(), geometry=houston, scale=1000, maxPixels=1e9).get('avg_rad')\nmayMean = mayImg.reduceRegion(reducer=ee.Reducer.mean(), geometry=houston, scale=1000, maxPixels=1e9).get('avg_rad')\n\naprv = aprMean.getInfo()\nmayv = mayMean.getInfo()\n\nif aprv is None or mayv is None:\n    print(\"C3: One of the values is None\")\n    print(\"<answer>C3</answer>\")\n\nprint(f\"April 2024: {aprv:.3f} | May 2024: {mayv:.3f} | Change: {mayv-aprv:.3f}\")\n\n# 5. Answer\nif mayv < aprv:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nhouston = ee.Geometry.Point([-95.3698, 29.7604]).buffer(20000)\napr2024 = ee.DateRange('2024-04-01', '2024-04-30')\nmay2024 = ee.DateRange('2024-05-01', '2024-05-31')\n\n# 2. Data Acquisition\ncol = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')\n\naprIm = col.filterDate(apr2024).filterBounds(houston)\nmayIm = col.filterDate(may2024).filterBounds(houston)\n\nif aprIm.size().getInfo() == 0 or mayIm.size().getInfo() == 0:\n    print(\"C1: One or both months have no images\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Processing\naprImg = aprIm.first().select('avg_rad').multiply(ee.Image(1))\n\nmayImg = mayIm.first().select('avg_rad').multiply(ee.Image(1))\n\n# 4. Calculation  \naprMean = aprImg.reduceRegion(reducer=ee.Reducer.mean(), geometry=houston, scale=1000, maxPixels=1e9).get('avg_rad')\nmayMean = mayImg.reduceRegion(reducer=ee.Reducer.mean(), geometry=houston, scale=1000, maxPixels=1e9).get('avg_rad')\n\naprv = aprMean.getInfo()\nmayv = mayMean.getInfo()\n\nif aprv is None or mayv is None:\n    print(\"C3: One of the values is None\")\n    print(\"<answer>C3</answer>\")\n\nprint(f\"April 2024: {aprv:.3f} | May 2024: {mayv:.3f} | Change: {mayv-aprv:.3f}\")\n\n# 5. Answer\nif mayv < aprv:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "April 2024: 56.430 | May 2024: 52.092 | Change: -4.337\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

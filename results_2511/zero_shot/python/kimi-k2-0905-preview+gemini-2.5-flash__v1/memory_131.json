@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Is there an increase in corn, wheat, and soybean planting from 2003 to 2019 in the Great Plains grasslands, US?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-47-30",
+        "url": "https://earthobservatory.nasa.gov/images/149617/global-croplands-expand",
+        "unique_id": 131
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:\n   - Collection: Use MODIS Land Cover Type (MCD12Q1) or Cropland Data Layer (CDL) for crop-specific classes.\n   - MODIS has annual data from 2001; CDL starts 2008 for CONUS. We'll try CDL for precise crop classes (corn, wheat, soybean). If CDL fails (empty or no pixels), fall back to MODIS land-cover, checking classes that include these crops.\n   - Region: Great Plains grasslands (we\u2019ll define a representative polygon covering central US grassland states, e.g., Kansas, Nebraska, South Dakota, North Dakota, eastern Colorado/wyoming).\n   - Band: \u2018landcover\u2019 or specific crop mask.\n\n2. Masking strategy:\n   - CDL: no cloud mask needed; select crop classes 1=corn, 21-22=winter/spring wheat, 5=soybeans (USDA NASS CDL legend).\n   - Create binary masks for total crop area (corn OR wheat OR soybean) for 2003 and 2019.\n   - Count number of pixels in each year.\n\n3. Logic:\n   - If any collection size == 0 -> C1.\n   - After masking crops, count valid pixels for each year; if count == 0 -> C2 (unlikely but possible).\n   - Compare total area (pixel count * 30m * 30m for CDL) between 2003 and 2019.\n   - If the 2019 area is greater than 2003 area -> A (Yes), else B (No).\n   - If reducer returns None/NaN -> C3.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry: a representative rectangle over Great Plains grasslands\ngeom = ee.Geometry.Rectangle([-105, 38, -98, 45])  # covers KS, NE, CO, SD\n\n# 2. Data acquisition: USDA NASS Cropland Data Layer\ncdl2003 = ee.ImageCollection('USDA/NASS/CDL').filterDate('2003-01-01', '2003-12-31').select('cropland').first()\ncdl2019 = ee.ImageCollection('USDA/NASS/CDL').filterDate('2019-01-01', '2019-12-31').select('cropland').first()\n\nif cdl2003 is None or cdl2019 is None:\n    print(\"No CDL data for 2003 or 2019.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Masks for corn, wheat, soybeans\ncorn = ee.List([1])\nwheat = ee.List([21, 22])  # winter + spring wheat\nsoy = ee.List([5])\ncrops = corn.cat(wheat).cat(soy)\n\nmask2003 = cdl2003.remap(crops, ee.List.repeat(1, crops.size())).rename('crop')\nmask2019 = cdl2019.remap(crops, ee.List.repeat(1, crops.size())).rename('crop')\n\n# 4. Pixel counts\ncts2003 = mask2003.reduceRegion(reducer=ee.Reducer.sum(), geometry=geom, scale=300, maxPixels=1e9).get('crop').getInfo()\ncts2019 = mask2019.reduceRegion(reducer=ee.Reducer.sum(), geometry=geom, scale=300, maxPixels=1e9).get('crop').getInfo()\n\nif cts2003 is None or cts2019 is None:\n    print(\"<answer>C3</answer>\")\n\nprint(f\"2003 crop pixels: {int(cts2003)}, 2019 crop pixels: {int(cts2019)}\")\n\nif cts2003 + cts2019 == 0:\n    print(\"<answer>C2</answer>\")\nelif cts2019 > cts2003:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry: a representative rectangle over Great Plains grasslands\ngeom = ee.Geometry.Rectangle([-105, 38, -98, 45])  # covers KS, NE, CO, SD\n\n# 2. Data acquisition: USDA NASS Cropland Data Layer\ncdl2003 = ee.ImageCollection('USDA/NASS/CDL').filterDate('2003-01-01', '2003-12-31').select('cropland').first()\ncdl2019 = ee.ImageCollection('USDA/NASS/CDL').filterDate('2019-01-01', '2019-12-31').select('cropland').first()\n\nif cdl2003 is None or cdl2019 is None:\n    print(\"No CDL data for 2003 or 2019.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Masks for corn, wheat, soybeans\ncorn = ee.List([1])\nwheat = ee.List([21, 22])  # winter + spring wheat\nsoy = ee.List([5])\ncrops = corn.cat(wheat).cat(soy)\n\nmask2003 = cdl2003.remap(crops, ee.List.repeat(1, crops.size())).rename('crop')\nmask2019 = cdl2019.remap(crops, ee.List.repeat(1, crops.size())).rename('crop')\n\n# 4. Pixel counts\ncts2003 = mask2003.reduceRegion(reducer=ee.Reducer.sum(), geometry=geom, scale=300, maxPixels=1e9).get('crop').getInfo()\ncts2019 = mask2019.reduceRegion(reducer=ee.Reducer.sum(), geometry=geom, scale=300, maxPixels=1e9).get('crop').getInfo()\n\nif cts2003 is None or cts2019 is None:\n    print(\"<answer>C3</answer>\")\n\nprint(f\"2003 crop pixels: {int(cts2003)}, 2019 crop pixels: {int(cts2019)}\")\n\nif cts2003 + cts2019 == 0:\n    print(\"<answer>C2</answer>\")\nelif cts2019 > cts2003:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "2003 crop pixels: 217992, 2019 crop pixels: 646150\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

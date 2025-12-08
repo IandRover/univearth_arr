@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the sea surface temperature in the eastern tropical Pacific decrease in November 2021, compared with the long-term average during November?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-32-46",
+        "url": "https://earthobservatory.nasa.gov/images/149201/la-nina-returns-for-a-second-winter",
+        "unique_id": 113
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Collection: Use NOAA Optimum Interpolation SST (OISST, daily, 0.25\u00b0) because we need sea-surface temperature.  \n   - Location: eastern tropical Pacific \u2192 lon \u2248 \u2013140\u00b0 to \u201390\u00b0W, lat \u2248 15\u00b0S \u2013 5\u00b0N; create a small rectangle geometry so total pixels are \u2264 1e9 at 3 km, enough for a mean.  \n   - Timeframe:  \n     \u2013 Nov-2021 images (30 daily images).  \n     \u2013 Long-term average using the same dataset\u2019s climatology band or, if not present, compute the 30-year average (1991-2020) for the same calendar November days.  \n2. Masking: SST measures water. (1) Mask land using the \u201cland\u201d QA if present, or (2) simply restrict geometry to open ocean (no land). No cloud mask needed for SST.  \n3. Logic: Compute mean SST for 1-30 Nov 2021, then mean SST for 1-30 Nov across 1991-2020. If 2021 < historical \u2192 A (Yes, decreased). Also output pixel counts to guard against C2. Detect C1 if no images for either period, C3 if any result is None/NaN.  \n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry (eastern tropical Pacific)\naoi = ee.Geometry.Rectangle([-140, -15, -90, 5])   # lon, lat\n\n# 2. Monthly mean over Nov-2021 (01\u201330 Nov)\ncol21 = (ee.ImageCollection('NOAA/CDR/OISST/V2_1').select('sst')\n          .filter(ee.Filter.calendarRange(2021, 2021, 'year'))\n          .filter(ee.Filter.calendarRange(11, 11, 'month')))\nsst21 = col21.mean().multiply(0.01)               # scale: 0.01 \u00b0C\n\n# 3. Long-term Nov climatology (1991-2020) \u2013 same dataset, same Nov days\nltcol = (ee.ImageCollection('NOAA/CDR/OISST/V2_1').select('sst')\n         .filterDate('1991-11-01', '2020-11-30')\n         .filter(ee.Filter.calendarRange(11, 11, 'month')))\nsstLT = ltcol.mean().multiply(0.01)\n\n# Check at least one image in each collection\nn21 = col21.size().getInfo()\nnLT = ltcol.size().getInfo()\nprint(f\"Images 2021: {n21} | Images 1991-2020 Nov: {nLT}\")\nif n21 == 0 or nLT == 0:\n    print(\"<answer>C1</answer>\")\n\n# 4. Calculation\nred = lambda img: ee.Image(img).reduceRegion(ee.Reducer.mean(), aoi, scale=25000, maxPixels=1e9).get('sst')\nval21 = sst21.reduceRegion(ee.Reducer.mean(), aoi, scale=25000, maxPixels=1e9).get('sst').getInfo()*0.01\nvalLT = sstLT.reduceRegion(ee.Reducer.mean(), aoi, scale=25000, maxPixels=1e9).get('sst').getInfo()*0.01\nif val21 is None or valLT is None:\n    print(\"<answer>C3</answer>\")\ncount = sst21.reduceRegion(ee.Reducer.count(), aoi, scale=25000, maxPixels=1e9).get('sst').getInfo()\nif count == 0:\n    print(\"<answer>C2</answer>\")\n\n# 5. Result\nprint(f\"Nov 2021 SST: {val21:.2f} \u00b0C | LT Nov avg: {valLT:.2f} \u00b0C\")\nprint(\"<answer>A</answer>\" if val21 < valLT else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry (eastern tropical Pacific)\naoi = ee.Geometry.Rectangle([-140, -15, -90, 5])   # lon, lat\n\n# 2. Monthly mean over Nov-2021 (01\u201330 Nov)\ncol21 = (ee.ImageCollection('NOAA/CDR/OISST/V2_1').select('sst')\n          .filter(ee.Filter.calendarRange(2021, 2021, 'year'))\n          .filter(ee.Filter.calendarRange(11, 11, 'month')))\nsst21 = col21.mean().multiply(0.01)               # scale: 0.01 \u00b0C\n\n# 3. Long-term Nov climatology (1991-2020) \u2013 same dataset, same Nov days\nltcol = (ee.ImageCollection('NOAA/CDR/OISST/V2_1').select('sst')\n         .filterDate('1991-11-01', '2020-11-30')\n         .filter(ee.Filter.calendarRange(11, 11, 'month')))\nsstLT = ltcol.mean().multiply(0.01)\n\n# Check at least one image in each collection\nn21 = col21.size().getInfo()\nnLT = ltcol.size().getInfo()\nprint(f\"Images 2021: {n21} | Images 1991-2020 Nov: {nLT}\")\nif n21 == 0 or nLT == 0:\n    print(\"<answer>C1</answer>\")\n\n# 4. Calculation\nred = lambda img: ee.Image(img).reduceRegion(ee.Reducer.mean(), aoi, scale=25000, maxPixels=1e9).get('sst')\nval21 = sst21.reduceRegion(ee.Reducer.mean(), aoi, scale=25000, maxPixels=1e9).get('sst').getInfo()*0.01\nvalLT = sstLT.reduceRegion(ee.Reducer.mean(), aoi, scale=25000, maxPixels=1e9).get('sst').getInfo()*0.01\nif val21 is None or valLT is None:\n    print(\"<answer>C3</answer>\")\ncount = sst21.reduceRegion(ee.Reducer.count(), aoi, scale=25000, maxPixels=1e9).get('sst').getInfo()\nif count == 0:\n    print(\"<answer>C2</answer>\")\n\n# 5. Result\nprint(f\"Nov 2021 SST: {val21:.2f} \u00b0C | LT Nov avg: {valLT:.2f} \u00b0C\")\nprint(\"<answer>A</answer>\" if val21 < valLT else \"<answer>B</answer>\")",
+            "exec_msg": "Images 2021: 30 | Images 1991-2020 Nov: 899\nNov 2021 SST: 0.24 \u00b0C | LT Nov avg: 0.25 \u00b0C\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

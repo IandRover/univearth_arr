@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Were there more than 8 active fires in the Sakha Republic on August 6, 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-17-01",
+        "url": "https://earthobservatory.nasa.gov/images/147083/another-intense-summer-of-fires-in-siberia",
+        "unique_id": 62
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use MODIS Thermal Anomalies/Fire (MCD14DL, FeatureCollection of point detections). Date: 2020-08-06 to 2020-08-07. Location: an interior rectangle within Sakha Republic (lon 120\u2013140 E, lat 60\u201370 N) to avoid counting outside regions while ensuring it\u2019s inside Sakha.\n2. Masking strategy: Not needed for point-based fire detections. If MCD14DL were empty (unlikely), fallback to MODIS MOD14A1 (image) and count FireMask \u2265 7 pixels.\n3. Logic: If count is None/NaN \u2192 C3. If collections empty after recovery \u2192 C1. Valid zero count \u2192 B. Otherwise, count > 8 \u2192 A.\n</thinking>\n\n<code>\n```python\nimport ee, math, sys\nee.Initialize(project='earthsense-436113')\n\ntry:\n    # 1) Geometry (interior of Sakha Republic to avoid outside regions)\n    geom = ee.Geometry.Rectangle([120.0, 60.0, 140.0, 70.0], geodesic=False)\n    area_km2 = ee.Number(geom.area(maxError=1)).divide(1e6).getInfo()\n\n    # 2) Time window: same-day window\n    start = '2020-08-06'\n    end   = '2020-08-07'\n\n    print(f\"Area (km^2): {area_km2:.0f}\")\n    print(f\"Date: {start}\")\n\n    # 3) Primary dataset: MODIS Thermal Anomalies/Fire (point detections)\n    fc = (ee.FeatureCollection('MODIS/061/MCD14DL')\n          .filterDate(start, end)\n          .filterBounds(geom))\n    mcd_count = fc.size().getInfo()\n    print(f\"MCD14DL detections: {mcd_count}\")\n\n    if mcd_count is None:\n        print(\"MCD14DL count is None.\")\n        print(\"C3\")\n        sys.exit(0)\n\n    count = mcd_count\n\n    # 4) Fallback if empty (unlikely): use MODIS MOD14A1 FireMask >= 7\n    if count == 0:\n        mod_col = (ee.ImageCollection('MODIS/061/MOD14A1')\n                   .filterDate(start, end)\n                   .filterBounds(geom))\n        mod_size = mod_col.size().getInfo()\n        print(f\"MOD14A1 images: {mod_size}\")\n        if mod_size == 0:\n            print(\"No images in fallback.\")\n            print(\"C1\")\n            sys.exit(0)\n        mod_img = mod_col.mosaic()\n        fire = mod_img.select('FireMask').gte(7)\n        fire_pixels = fire.reduceRegion(\n            reducer=ee.Reducer.sum(),\n            geometry=geom,\n            scale=1000,\n            maxPixels=1e9\n        ).get('FireMask').getInfo()\n        if fire_pixels is None or (isinstance(fire_pixels, float) and (math.isnan(fire_pixels))):\n            print(\"Fallback calculation invalid.\")\n            print(\"C3\")\n            sys.exit(0)\n        print(f\"MOD14A1 fire pixels (>=7): {int(fire_pixels)}\")\n        count = int(fire_pixels)\n\n    # 5) Decision: more than 8 active fires?\n    if count > 8:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept Exception as e:\n    print(f\"Error: {str(e)[:180]}\")\n    print(\"D\")\n```",
+            "code": "import ee, math, sys\nee.Initialize(project='earthsense-436113')\n\ntry:\n    # 1) Geometry (interior of Sakha Republic to avoid outside regions)\n    geom = ee.Geometry.Rectangle([120.0, 60.0, 140.0, 70.0], geodesic=False)\n    area_km2 = ee.Number(geom.area(maxError=1)).divide(1e6).getInfo()\n\n    # 2) Time window: same-day window\n    start = '2020-08-06'\n    end   = '2020-08-07'\n\n    print(f\"Area (km^2): {area_km2:.0f}\")\n    print(f\"Date: {start}\")\n\n    # 3) Primary dataset: MODIS Thermal Anomalies/Fire (point detections)\n    fc = (ee.FeatureCollection('MODIS/061/MCD14DL')\n          .filterDate(start, end)\n          .filterBounds(geom))\n    mcd_count = fc.size().getInfo()\n    print(f\"MCD14DL detections: {mcd_count}\")\n\n    if mcd_count is None:\n        print(\"MCD14DL count is None.\")\n        print(\"C3\")\n        sys.exit(0)\n\n    count = mcd_count\n\n    # 4) Fallback if empty (unlikely): use MODIS MOD14A1 FireMask >= 7\n    if count == 0:\n        mod_col = (ee.ImageCollection('MODIS/061/MOD14A1')\n                   .filterDate(start, end)\n                   .filterBounds(geom))\n        mod_size = mod_col.size().getInfo()\n        print(f\"MOD14A1 images: {mod_size}\")\n        if mod_size == 0:\n            print(\"No images in fallback.\")\n            print(\"C1\")\n            sys.exit(0)\n        mod_img = mod_col.mosaic()\n        fire = mod_img.select('FireMask').gte(7)\n        fire_pixels = fire.reduceRegion(\n            reducer=ee.Reducer.sum(),\n            geometry=geom,\n            scale=1000,\n            maxPixels=1e9\n        ).get('FireMask').getInfo()\n        if fire_pixels is None or (isinstance(fire_pixels, float) and (math.isnan(fire_pixels))):\n            print(\"Fallback calculation invalid.\")\n            print(\"C3\")\n            sys.exit(0)\n        print(f\"MOD14A1 fire pixels (>=7): {int(fire_pixels)}\")\n        count = int(fire_pixels)\n\n    # 5) Decision: more than 8 active fires?\n    if count > 8:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept Exception as e:\n    print(f\"Error: {str(e)[:180]}\")\n    print(\"D\")",
+            "exec_msg": "Area (km^2): 1043753\nDate: 2020-08-06\nError: Collection.loadTable: Collection asset 'MODIS/061/MCD14DL' not found.\nD\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

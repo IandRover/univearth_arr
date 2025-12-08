@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the number of fire hotspots in the Paran\u00e1 River delta from January through July 22, 2020, exceed those detected during the same period in 2019?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-01-03",
+        "url": "https://www.earthobservatory.nasa.gov/images/147031/",
+        "unique_id": 361
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use MODIS Active Fire Locations (MCD14DL) FeatureCollection, filter to Paran\u00e1 River Delta polygon, for 2019-01-01 to 2019-07-22 and 2020-01-01 to 2020-07-22, and count detections. Try MODIS/061/MCD14DL, fallback to MODIS/006/MCD14DL if needed.\n2. Masking strategy: Not applicable (point detections, not imagery), so no cloud masking.\n3. Valid Zero vs. Null/Error: A count of 0 is valid. If dataset loading/query fails -> D. If counts are computed, compare; None/NaN would trigger C3 (unlikely for sizes).\n</thinking>\n\n<code>\n```python\nimport ee, sys\n\ndef safe_init():\n    try:\n        ee.Initialize(project='earthsense-436113')\n        return True\n    except Exception as e:\n        print(\"Init error.\")\n        print(\"D\")\n        return False\n\nif not safe_init():\n    sys.exit(0)\n\n# 1. Geometry & Time Definitions\ndelta_geom = ee.Geometry.Polygon(\n    [[[-60.95, -34.9],\n      [-60.95, -32.2],\n      [-57.40, -32.2],\n      [-57.40, -34.9],\n      [-60.95, -34.9]]],\n    None, False\n)\n\nperiods = {\n    \"2019\": (\"2019-01-01\", \"2019-07-23\"),  # end is exclusive; includes 2019-07-22\n    \"2020\": (\"2020-01-01\", \"2020-07-23\"),\n}\n\n# 2. Data Acquisition & Check\ndef load_dataset_id():\n    for ds in [\"MODIS/061/MCD14DL\", \"MODIS/006/MCD14DL\"]:\n        try:\n            # Force server check\n            _ = ee.FeatureCollection(ds).limit(1).size().getInfo()\n            return ds\n        except Exception:\n            continue\n    return None\n\nds_id = load_dataset_id()\nif ds_id is None:\n    print(\"Dataset load failed: MCD14DL 061/006\")\n    print(\"D\")\n    sys.exit(0)\n\nfc_all = ee.FeatureCollection(ds_id)\n\ndef count_hotspots(start, end, geom):\n    try:\n        sub = fc_all.filterDate(start, end).filterBounds(geom)\n        return int(sub.size().getInfo())\n    except Exception:\n        return None\n\n# 3. Processing\narea_km2 = delta_geom.area(maxError=1).getInfo() / 1e6\nn2019 = count_hotspots(*periods[\"2019\"], delta_geom)\nn2020 = count_hotspots(*periods[\"2020\"], delta_geom)\n\n# 4. Validation & Final Answer\nprint(f\"Dataset: {ds_id}\")\nprint(f\"AOI area (km\u00b2): {area_km2:.1f}\")\nprint(f\"2019 Period: {periods['2019'][0]} to 2019-07-22\")\nprint(f\"2020 Period: {periods['2020'][0]} to 2020-07-22\")\nprint(f\"2019 Hotspots: {n2019}\")\nprint(f\"2020 Hotspots: {n2020}\")\n\n# Check for calculation failures\nif n2019 is None or n2020 is None:\n    print(\"C3\")\n    sys.exit(0)\n\ndelta = n2020 - n2019\nprint(f\"Difference (2020-2019): {delta}\")\n\n# 5. Final Tag\nif n2020 > n2019:\n    print(\"A\")\nelse:\n    print(\"B\")\n```\n</code>",
+            "code": "import ee, sys\n\ndef safe_init():\n    try:\n        ee.Initialize(project='earthsense-436113')\n        return True\n    except Exception as e:\n        print(\"Init error.\")\n        print(\"D\")\n        return False\n\nif not safe_init():\n    sys.exit(0)\n\n# 1. Geometry & Time Definitions\ndelta_geom = ee.Geometry.Polygon(\n    [[[-60.95, -34.9],\n      [-60.95, -32.2],\n      [-57.40, -32.2],\n      [-57.40, -34.9],\n      [-60.95, -34.9]]],\n    None, False\n)\n\nperiods = {\n    \"2019\": (\"2019-01-01\", \"2019-07-23\"),  # end is exclusive; includes 2019-07-22\n    \"2020\": (\"2020-01-01\", \"2020-07-23\"),\n}\n\n# 2. Data Acquisition & Check\ndef load_dataset_id():\n    for ds in [\"MODIS/061/MCD14DL\", \"MODIS/006/MCD14DL\"]:\n        try:\n            # Force server check\n            _ = ee.FeatureCollection(ds).limit(1).size().getInfo()\n            return ds\n        except Exception:\n            continue\n    return None\n\nds_id = load_dataset_id()\nif ds_id is None:\n    print(\"Dataset load failed: MCD14DL 061/006\")\n    print(\"D\")\n    sys.exit(0)\n\nfc_all = ee.FeatureCollection(ds_id)\n\ndef count_hotspots(start, end, geom):\n    try:\n        sub = fc_all.filterDate(start, end).filterBounds(geom)\n        return int(sub.size().getInfo())\n    except Exception:\n        return None\n\n# 3. Processing\narea_km2 = delta_geom.area(maxError=1).getInfo() / 1e6\nn2019 = count_hotspots(*periods[\"2019\"], delta_geom)\nn2020 = count_hotspots(*periods[\"2020\"], delta_geom)\n\n# 4. Validation & Final Answer\nprint(f\"Dataset: {ds_id}\")\nprint(f\"AOI area (km\u00b2): {area_km2:.1f}\")\nprint(f\"2019 Period: {periods['2019'][0]} to 2019-07-22\")\nprint(f\"2020 Period: {periods['2020'][0]} to 2020-07-22\")\nprint(f\"2019 Hotspots: {n2019}\")\nprint(f\"2020 Hotspots: {n2020}\")\n\n# Check for calculation failures\nif n2019 is None or n2020 is None:\n    print(\"C3\")\n    sys.exit(0)\n\ndelta = n2020 - n2019\nprint(f\"Difference (2020-2019): {delta}\")\n\n# 5. Final Tag\nif n2020 > n2019:\n    print(\"A\")\nelse:\n    print(\"B\")",
+            "exec_msg": "Dataset load failed: MCD14DL 061/006\nD\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

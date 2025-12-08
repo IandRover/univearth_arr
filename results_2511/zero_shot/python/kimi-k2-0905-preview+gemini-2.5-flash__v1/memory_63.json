@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was there more sea ice visible in Hudson Bay (56.271030, -87.160422) on July 29, 2020 than on July 13, 2020?",
+        "answer": "No",
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-58-13",
+        "url": "https://earthobservatory.nasa.gov/images/147086/hunting-for-ice-on-hudson-bay",
+        "unique_id": 63
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use Sentinel-1 SAR (C-band) \u2013 ice shows bright in HH/HV, cloud-free summer scenes.  \n   Collection: COPERNICUS/S1_GRD, orbit direction descending (common), IW mode.  \n   Band ratio HH/HV or simple HH gives strong ice contrast; threshold \u2265 \u201319 dB \u2261 sea-ice.\n\n2. Area: 200 km buffer around the supplied point over Hudson Bay (coastal ice vs. open water).\n\n3. Dates: 2020-07-13 and 2020-07-29 (\u00b13 days to guarantee at least one image).  \n   If one date has no images, fall back to \u00b15 days, then \u00b110 days; if still zero \u2192 C1.\n\n4. Masking: SAR needs no cloud mask. Mask out land using a 5 km buffer of the Global Self-consistent Hierarchical High-resolution Shorelines (GSHHS) layer so only ocean pixels are counted.\n\n5. Ice detection: Convert HH to dB, apply threshold \u201319 dB (pixels \u2264 \u201319 dB are ice).  \n   Compute total ice pixels (count) for each date.  \n   Compare counts; if 2020-07-29 > 2020-07-13 \u2192 A, otherwise B.  \n   If either count is 0 \u2192 C2.  \n   If any calculation returns None/NaN \u2192 C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\npt = ee.Geometry.Point([-87.160422, 56.271030])\nroi = pt.buffer(200000)\ndate1 = ('2020-07-13', '2020-07-16')   # \u00b13 d fallback: 13\u219216\ndate2 = ('2020-07-26', '2020-07-29')   # \u00b13 d fallback: 26\u219229\n\n# 2. Helper: get ice pixel count\ndef ice_pixels(drange):\n    col = (ee.ImageCollection('COPERNICUS/S1_GRD')\n             .filterBounds(roi)\n             .filterDate(*drange)\n             .filter(ee.Filter.eq('instrumentMode', 'IW'))\n             .filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING'))\n             .select('HH'))\n    if col.size().getInfo() == 0:\n        return None\n    img = col.mean().clip(roi)\n    land = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\n    ocean = land.geometry().buffer(5000).bounds().difference(land.geometry())\n    water = img.updateMask(ocean)\n    db = water.log10().multiply(10.0)   # to dB\n    ice = db.lte(-19)                   # ice mask\n    count = int(ice.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=roi,\n        scale=1000,\n        maxPixels=1e9\n    ).get('HH').getInfo() or 0)\n    return count\n\n# 3. Run counts\nc1 = ice_pixels(date1)\nif c1 is None:\n    c1 = ice_pixels(('2020-07-10','2020-07-16'))  # \u00b16\nc2 = ice_pixels(date2)\nif c2 is None:\n    c2 = ice_pixels(('2020-07-23','2020-07-29'))  # \u00b16\n\n# 4. Validate & decide\nif c1 is None or c2 is None:\n    print(\"Images: 0 (one date)\")\n    print(\"<answer>C1</answer>\")\nelif c1 == 0 and c2 == 0:\n    print(\"Valid pixels: 0\")\n    print(\"<answer>C2</answer>\")\nelse:\n    print(f\"Jul 13 ice pixels: {c1}, Jul 29 ice pixels: {c2}\")\n    print(\"<answer>A</answer>\" if c2 > c1 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\npt = ee.Geometry.Point([-87.160422, 56.271030])\nroi = pt.buffer(200000)\ndate1 = ('2020-07-13', '2020-07-16')   # \u00b13 d fallback: 13\u219216\ndate2 = ('2020-07-26', '2020-07-29')   # \u00b13 d fallback: 26\u219229\n\n# 2. Helper: get ice pixel count\ndef ice_pixels(drange):\n    col = (ee.ImageCollection('COPERNICUS/S1_GRD')\n             .filterBounds(roi)\n             .filterDate(*drange)\n             .filter(ee.Filter.eq('instrumentMode', 'IW'))\n             .filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING'))\n             .select('HH'))\n    if col.size().getInfo() == 0:\n        return None\n    img = col.mean().clip(roi)\n    land = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\n    ocean = land.geometry().buffer(5000).bounds().difference(land.geometry())\n    water = img.updateMask(ocean)\n    db = water.log10().multiply(10.0)   # to dB\n    ice = db.lte(-19)                   # ice mask\n    count = int(ice.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=roi,\n        scale=1000,\n        maxPixels=1e9\n    ).get('HH').getInfo() or 0)\n    return count\n\n# 3. Run counts\nc1 = ice_pixels(date1)\nif c1 is None:\n    c1 = ice_pixels(('2020-07-10','2020-07-16'))  # \u00b16\nc2 = ice_pixels(date2)\nif c2 is None:\n    c2 = ice_pixels(('2020-07-23','2020-07-29'))  # \u00b16\n\n# 4. Validate & decide\nif c1 is None or c2 is None:\n    print(\"Images: 0 (one date)\")\n    print(\"<answer>C1</answer>\")\nelif c1 == 0 and c2 == 0:\n    print(\"Valid pixels: 0\")\n    print(\"<answer>C2</answer>\")\nelse:\n    print(f\"Jul 13 ice pixels: {c1}, Jul 29 ice pixels: {c2}\")\n    print(\"<answer>A</answer>\" if c2 > c1 else \"<answer>B</answer>\")",
+            "exec_msg": "Images: 0 (one date)\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nC1\n</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

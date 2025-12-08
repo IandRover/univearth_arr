@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the active fire presence in La Palma, Spain decrease in July 17-18, 2023 compared to July 15-16, 2023?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-57-38",
+        "url": "https://www.earthobservatory.nasa.gov/images/151601/",
+        "unique_id": 368
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Fire product: MODIS FIRMS active\u2010fire detections (MOD14/MYD14) which are delivered as a FeatureCollection: \u201cFIRMS/\u200cVIIRS/\u201d datasets (SUOMI and NOAA-20). The nearest daily layer is \u201cFIRMS/\u200cVIIRS/\u200cNOAA20/\u200cNRT/\u200cVEARLY\u201d. Its DateTime field \u201cYYYYMMDD\u201d goes back to 2022. (MODIS is weekly in Earth Engine).  \n   - Dates: Compare 15-16 July 2023 (period1) vs 17-18 July 2023 (period2).  \n   - Location: La Palma island (Canarias). Bounding box used in literature ~ -17.95 W to -17.75 W, 28.52 N to 28.70 N.\n\n2. Masking / cleaning: None needed. Each feature is one confident fire pixel (FRP > 0 is required by FIRMS).\n\n3. Logic to distinguish valid zero vs null:  \n   - If either selected FeatureCollection size() is 0, it is a valid zero (no fires detected).  \n   - The script prints counts (\u201cFires period1\u201d, \u201cFires period2\u201d) first.  \n   - A decrease means count_p1 > count_p2. If equal, it is \u201cNo decrease\u201d \u2192 answer B.  \n   - If any collection is empty because no images exist (unlikely here), output C1; if collection is None or reducer gives Null, output C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry\nla_palma = ee.Geometry.Rectangle(-17.95, 28.52, -17.75, 28.70)\n\n# 2. Data\ndef fire_feats(d1, d2):\n    return ee.FeatureCollection('FIRMS/VIIRS/NOAA20/NRT/VEARLY') \\\n               .filterDate(d1, d2).filterBounds(la_palma)\n\np1 = fire_feats('2023-07-15', '2023-07-17')  # 15-16 inclusive\np2 = fire_feats('2023-07-17', '2023-07-19')  # 17-18 inclusive\n\n# sizes\nn1 = p1.size().getInfo()\nn2 = p2.size().getInfo()\n\nprint(f\"Fire pixels 15-16 Jul 2023: {n1}\")\nprint(f\"Fire pixels 17-18 Jul 2023: {n2}\")\n\nif n1 is None or n2 is None:\n    print(\"<answer>C3</answer>\")\nelif n1 > n2:  # fewer on second period (decrease)\n    print(\"<answer>A</answer>\")\nelse:  # equal or increase\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry\nla_palma = ee.Geometry.Rectangle(-17.95, 28.52, -17.75, 28.70)\n\n# 2. Data\ndef fire_feats(d1, d2):\n    return ee.FeatureCollection('FIRMS/VIIRS/NOAA20/NRT/VEARLY') \\\n               .filterDate(d1, d2).filterBounds(la_palma)\n\np1 = fire_feats('2023-07-15', '2023-07-17')  # 15-16 inclusive\np2 = fire_feats('2023-07-17', '2023-07-19')  # 17-18 inclusive\n\n# sizes\nn1 = p1.size().getInfo()\nn2 = p2.size().getInfo()\n\nprint(f\"Fire pixels 15-16 Jul 2023: {n1}\")\nprint(f\"Fire pixels 17-18 Jul 2023: {n2}\")\n\nif n1 is None or n2 is None:\n    print(\"<answer>C3</answer>\")\nelif n1 > n2:  # fewer on second period (decrease)\n    print(\"<answer>A</answer>\")\nelse:  # equal or increase\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 349, in _execute_cloud_call\n    return call.execute(num_retries=num_retries)\n           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/googleapiclient/_helpers.py\", line 130, in positional_wrapper\n    return wrapped(*args, **kwargs)\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/googleapiclient/http.py\", line 938, in execute\n    raise HttpError(resp, content, uri=self.uri)\ngoogleapiclient.errors.HttpError: <HttpError 400 when requesting https://earthengine.googleapis.com/v1/projects/earthsense-436113/value:compute?prettyPrint=false&alt=json returned \"Collection.loadTable: Collection asset 'FIRMS/VIIRS/NOAA20/NRT/VEARLY' not found.\". Details: \"Collection.loadTable: Collection asset 'FIRMS/VIIRS/NOAA20/NRT/VEARLY' not found.\">\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765079895849251.py\", line 16, in <module>\n    n1 = p1.size().getInfo()\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/computedobject.py\", line 108, in getInfo\n    return data.computeValue(self)\n           ~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 1064, in computeValue\n    return _execute_cloud_call(\n           ~~~~~~~~~~~~~~~~~~~^\n        _get_cloud_projects()\n        ^^^^^^^^^^^^^^^^^^^^^\n        .value()\n        ^^^^^^^^\n        .compute(body=body, project=_get_projects_path(), prettyPrint=False)\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )['result']\n    ^\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 351, in _execute_cloud_call\n    raise _translate_cloud_exception(e)  # pylint: disable=raise-missing-from\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nee.ee_exception.EEException: Collection.loadTable: Collection asset 'FIRMS/VIIRS/NOAA20/NRT/VEARLY' not found.\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

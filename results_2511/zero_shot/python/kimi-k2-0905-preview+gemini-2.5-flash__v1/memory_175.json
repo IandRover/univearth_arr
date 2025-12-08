@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the temperature over C\u00f3rdoba airport reach over 40 degrees Celcius on April 26, 2023?",
+        "answer": "No",
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-04-54",
+        "url": "https://earthobservatory.nasa.gov/images/151366/spain-browned-by-drought",
+        "unique_id": 175
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy (Collection, Date, Location).  \n   - Use ERA5-Land hourly 2 m surface temperature (ECMWF/ERA5_LAND/HOURLY).  \n   - Target: single day 2023-04-26 \u2192 filter that UTC day (00:00\u201323:00).  \n   - Location: a 1-km box centered on C\u00f3rdoba airport (approx. \u22124.845, 37.85).  \n\n2. Masking strategy.  \n   - ERA5-Land is a reanalysis product \u2013 no clouds to mask.  \n   - Just convert from Kelvin to \u00b0C: T \u00b0C = T K \u2013 273.15.\n\n3. Distinguish Valid Zero (A/B) from Null/Error (C3).  \n   - Collection size must be 24 (1 h \u00d7 24). If 0 \u2192 C1.  \n   - After conversion, max value must be a finite number. If None/NaN \u2192 C3.  \n   - If max \u2264 40 \u00b0C \u2192 B; else \u2192 A.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\napt = ee.Geometry.Point([-4.845, 37.85])  # C\u00f3rdoba airport\nday = '2023-04-26'\nstart = ee.Date(day)\nend = start.advance(1, 'day')\n\n# 2. Load ERA5-Land 2 m temperature (K)\nera = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY') \\\n        .select('temperature_2m') \\\n        .filterDate(start, end)\nn = era.size().getInfo()\nif n == 0:\n    print(\"No hourly images for 26 Apr 2023.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Convert K \u2192 \u00b0C and find daily max\ndef k_to_c(img): \n    return img.subtract(273.15).copyProperties(img, ['system:time_start'])\nera_c = era.map(k_to_c)\ntmax = era_c.max()\n\n# 4. Reduce to airport region\nmax_c = tmax.reduceRegion(\n    reducer=ee.Reducer.max(),\n    geometry=apt.buffer(500),\n    scale=1000,\n    maxPixels=1e9\n).get('temperature_2m').getInfo()\n\nif max_c is None:\n    print(\"Calculation returned None.\")\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Max T \u00b0C on 26 Apr 2023: {max_c:.2f}, Images: {n}\")\n    print(\"<answer>A>\" if max_c > 40 else \"<answer>B>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\napt = ee.Geometry.Point([-4.845, 37.85])  # C\u00f3rdoba airport\nday = '2023-04-26'\nstart = ee.Date(day)\nend = start.advance(1, 'day')\n\n# 2. Load ERA5-Land 2 m temperature (K)\nera = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY') \\\n        .select('temperature_2m') \\\n        .filterDate(start, end)\nn = era.size().getInfo()\nif n == 0:\n    print(\"No hourly images for 26 Apr 2023.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Convert K \u2192 \u00b0C and find daily max\ndef k_to_c(img): \n    return img.subtract(273.15).copyProperties(img, ['system:time_start'])\nera_c = era.map(k_to_c)\ntmax = era_c.max()\n\n# 4. Reduce to airport region\nmax_c = tmax.reduceRegion(\n    reducer=ee.Reducer.max(),\n    geometry=apt.buffer(500),\n    scale=1000,\n    maxPixels=1e9\n).get('temperature_2m').getInfo()\n\nif max_c is None:\n    print(\"Calculation returned None.\")\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Max T \u00b0C on 26 Apr 2023: {max_c:.2f}, Images: {n}\")\n    print(\"<answer>A>\" if max_c > 40 else \"<answer>B>\")",
+            "exec_msg": "Max T \u00b0C on 26 Apr 2023: 34.29, Images: 24\n<answer>B>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

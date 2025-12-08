@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was it hotter in a 30 mile radius around Kabul, Afghanistan in February 2018 in comparison to February 2017?",
+        "answer": "no",
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-46-58",
+        "url": "https://earthobservatory.nasa.gov/images/91851/record-low-snowpack-in-afghanistan",
+        "unique_id": 331
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>1. Search strategy (Collection, Date, Location).\n   - Collection: ERA5-Land daily aggregated 2 m air temperature (or ERA5 2 m if that fails) for reliable near-surface air temperature.  \n   - Dates:  \n     \u2022 Feb-2017: 2017-02-01 \u2013 2017-02-28  \n     \u2022 Feb-2018: 2018-02-01 \u2013 2018-02-28  \n   - Location: 30-mile (~48.3 km) radius around Kabul (34.5553, 69.2075).\n\n2. Masking strategy (Should I mask clouds? Or is the question about clouds?).\n   - ERA5-Land is gap-filled re-analysis; no cloud mask needed.\n\n3. Logic to distinguish Valid Zero (A/B) from Null/Error (C3).\n   - Compute mean 2-m temperature for each February inside the circle.\n   - Check collection sizes first; if 0 images \u2192 C1.\n   - After reducing, if pixel count == 0 \u2192 C2.\n   - If either mean is None/NaN or outside physically plausible range (say \u201380\u202680 \u00b0C) \u2192 C3.\n   - Otherwise compare 2018 vs 2017: if 2018 mean > 2017 mean \u2192 A (Yes), else \u2192 B (No).\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\nkabul = ee.Geometry.Point([69.2075, 34.5553]).buffer(48300)  # 30 mi \u2248 48.3 km\nfeb17 = ee.ImageCollection('ECMWF/ERA5_LAND/DAILY_AGGR').select('temperature_2m').filterDate('2017-02-01', '2017-02-28')\nfeb18 = ee.ImageCollection('ECMWF/ERA5_LAND/DAILY_AGGR').select('temperature_2m').filterDate('2018-02-01', '2018-02-28')\n\nif feb17.size().getInfo() == 0 or feb18.size().getInfo() == 0:\n    print(\"Feb2017 images:\", feb17.size().getInfo(), \"Feb2018 images:\", feb18.size().getInfo())\n    print(\"<answer>C1</answer>\")\n\ntmp17 = feb17.mean().multiply(0.01).subtract(273.15)  # scale 0.01 & Kelvin\u2192Celsius\ntmp18 = feb18.mean().multiply(0.01).subtract(273.15)\n\ncount17 = tmp17.reduceRegion(reducer=ee.Reducer.count(), geometry=kabul, scale=1000, maxPixels=1e9).get('temperature_2m').getInfo()\ncount18 = tmp18.reduceRegion(reducer=ee.Reducer.count(), geometry=kabul, scale=1000, maxPixels=1e9).get('temperature_2m').getInfo()\nif count17 == 0 or count18 == 0:\n    print(\"Valid pixels Feb2017:\", count17, \"Feb2018:\", count18)\n    print(\"<answer>C2</answer>\")\n\nmean17 = tmp17.reduceRegion(reducer=ee.Reducer.mean(), geometry=kabul, scale=1000, maxPixels=1e9).get('temperature_2m').getInfo()\nmean18 = tmp18.reduceRegion(reducer=ee.Reducer.mean(), geometry=kabul, scale=1000, maxPixels=1e9).get('temperature_2m').getInfo()\n\nif mean17 is None or mean18 is None:\n    print(\"<answer>C3</answer>\")\n\nprint(\"Feb2017 mean \u00b0C: %.2f, Feb2018 mean \u00b0C: %.2f, pixels: %d/%d\" % (mean17, mean18, count17, count18))\n\nif mean18 > mean17:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\nkabul = ee.Geometry.Point([69.2075, 34.5553]).buffer(48300)  # 30 mi \u2248 48.3 km\nfeb17 = ee.ImageCollection('ECMWF/ERA5_LAND/DAILY_AGGR').select('temperature_2m').filterDate('2017-02-01', '2017-02-28')\nfeb18 = ee.ImageCollection('ECMWF/ERA5_LAND/DAILY_AGGR').select('temperature_2m').filterDate('2018-02-01', '2018-02-28')\n\nif feb17.size().getInfo() == 0 or feb18.size().getInfo() == 0:\n    print(\"Feb2017 images:\", feb17.size().getInfo(), \"Feb2018 images:\", feb18.size().getInfo())\n    print(\"<answer>C1</answer>\")\n\ntmp17 = feb17.mean().multiply(0.01).subtract(273.15)  # scale 0.01 & Kelvin\u2192Celsius\ntmp18 = feb18.mean().multiply(0.01).subtract(273.15)\n\ncount17 = tmp17.reduceRegion(reducer=ee.Reducer.count(), geometry=kabul, scale=1000, maxPixels=1e9).get('temperature_2m').getInfo()\ncount18 = tmp18.reduceRegion(reducer=ee.Reducer.count(), geometry=kabul, scale=1000, maxPixels=1e9).get('temperature_2m').getInfo()\nif count17 == 0 or count18 == 0:\n    print(\"Valid pixels Feb2017:\", count17, \"Feb2018:\", count18)\n    print(\"<answer>C2</answer>\")\n\nmean17 = tmp17.reduceRegion(reducer=ee.Reducer.mean(), geometry=kabul, scale=1000, maxPixels=1e9).get('temperature_2m').getInfo()\nmean18 = tmp18.reduceRegion(reducer=ee.Reducer.mean(), geometry=kabul, scale=1000, maxPixels=1e9).get('temperature_2m').getInfo()\n\nif mean17 is None or mean18 is None:\n    print(\"<answer>C3</answer>\")\n\nprint(\"Feb2017 mean \u00b0C: %.2f, Feb2018 mean \u00b0C: %.2f, pixels: %d/%d\" % (mean17, mean18, count17, count18))\n\nif mean18 > mean17:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Feb2017 mean \u00b0C: -270.46, Feb2018 mean \u00b0C: -270.43, pixels: 8811/8811\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

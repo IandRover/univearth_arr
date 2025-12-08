@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did nitrogen oxide concentrations in the Northern Hemisphere increase from 2019 to 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_00-15-52",
+        "url": "https://earthobservatory.nasa.gov/images/150967/why-methane-surged-in-2020",
+        "unique_id": 168
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: use Sentinel-5P OFFL NO2 tropospheric column (NO2 is a proxy for NOx). Northern Hemisphere: pick a representative mid-latitude rectangle, e.g. 30\u201360\u00b0 N, 0\u201330\u00b0 E. Date: full years 2019 vs 2020.  \n2. Masking: NO2 band is already quality-screened in OFFL product; we want annual means so we\u2019ll simply mosaic each year (mean reducer).  \n3. Logic: compute mean NO2 tropospheric column for 2019 and 2020 over the same region. If both values are valid numbers and 2020 > 2019 then A, else B. If any collection is empty \u2192 C1; if valid-pixel count is 0 after processing \u2192 C2; if either mean is None/NaN \u2192 C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\ngeom = ee.Geometry.Rectangle(0, 30, 30, 60)  # mid-latitude N.Hemisphere box\nscale = 3000\n\ndef annual_no2(year):\n    col = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2') \\\n             .filterBounds(geom) \\\n             .filterDate(f'{year}-01-01', f'{year+1}-01-01') \\\n             .select('tropospheric_NO2_column_number_density')\n    if col.size().getInfo() == 0:\n        return None\n    mean = col.mean().multiply(1e6)  # mol/m\u00b2 -> \u00b5mol/m\u00b2\n    stats = mean.reduceRegion(\n        reducer=ee.Reducer.mean().combine(ee.Reducer.count(), '', True),\n        geometry=geom, scale=scale, maxPixels=1e9)\n    val = stats.get('tropospheric_NO2_column_number_density_mean').getInfo()\n    cnt = stats.get('tropospheric_NO2_column_number_density_count').getInfo()\n    return val, cnt\n\nno2_2019 = annual_no2(2019)\nno2_2020 = annual_no2(2020)\n\nif no2_2019 is None or no2_2020 is None:\n    print(\"Missing collection for at least one year.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    v19, c19 = no2_2019\n    v20, c20 = no2_2020\n    print(f\"2019: {v19:.2f} \u00b5mol/m\u00b2 (pixels: {c19})\")\n    print(f\"2020: {v20:.2f} \u00b5mol/m\u00b2 (pixels: {c20})\")\n    if None in [v19, v20] or any(c == 0 for c in [c19, c20]):\n        print(\"<answer>C2></answer>\" if 0 in [c19, c20] else \"<answer>C3</answer>\")\n    else:\n        print(\"<answer>A</answer>\" if v20 > v19 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\ngeom = ee.Geometry.Rectangle(0, 30, 30, 60)  # mid-latitude N.Hemisphere box\nscale = 3000\n\ndef annual_no2(year):\n    col = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2') \\\n             .filterBounds(geom) \\\n             .filterDate(f'{year}-01-01', f'{year+1}-01-01') \\\n             .select('tropospheric_NO2_column_number_density')\n    if col.size().getInfo() == 0:\n        return None\n    mean = col.mean().multiply(1e6)  # mol/m\u00b2 -> \u00b5mol/m\u00b2\n    stats = mean.reduceRegion(\n        reducer=ee.Reducer.mean().combine(ee.Reducer.count(), '', True),\n        geometry=geom, scale=scale, maxPixels=1e9)\n    val = stats.get('tropospheric_NO2_column_number_density_mean').getInfo()\n    cnt = stats.get('tropospheric_NO2_column_number_density_count').getInfo()\n    return val, cnt\n\nno2_2019 = annual_no2(2019)\nno2_2020 = annual_no2(2020)\n\nif no2_2019 is None or no2_2020 is None:\n    print(\"Missing collection for at least one year.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    v19, c19 = no2_2019\n    v20, c20 = no2_2020\n    print(f\"2019: {v19:.2f} \u00b5mol/m\u00b2 (pixels: {c19})\")\n    print(f\"2020: {v20:.2f} \u00b5mol/m\u00b2 (pixels: {c20})\")\n    if None in [v19, v20] or any(c == 0 for c in [c19, c20]):\n        print(\"<answer>C2></answer>\" if 0 in [c19, c20] else \"<answer>C3</answer>\")\n    else:\n        print(\"<answer>A</answer>\" if v20 > v19 else \"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Execution timed out after 120 seconds",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

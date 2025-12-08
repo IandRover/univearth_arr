@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the burn scar area near Hermit Park in Santa Fe, New Mexico (35.759, 105.503), increase between April 19, 2022, and April 23, 2022?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-09-42",
+        "url": "https://earthobservatory.nasa.gov/images/149748/wildfires-scorch-northern-new-mexico",
+        "unique_id": 138
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Collection: Landsat 8 or 9 (surface reflectance) \u2013 they have 30 m pixels and short-wave infrared (SWIR) / near-infrared (NIR) bands needed for burn-scar indices (NBR, dNBR).  \n   - Location: 35.759\u00b0N, 105.503\u00b0W \u2192 a small Point buffer (\u2248 500 m) around Hermit Park, Santa Fe.  \n   - Date: exactly 19 Apr 2022 and 23 Apr 2022 (\u00b11 day on each side to guarantee acquisition).  \n\n2. Masking strategy:  \n   - Use the \u2018QA_PIXEL\u2019 band to mask clouds/cloud-shadows.  \n   - Compute Normalized Burn Ratio (NBR) = (NIR \u2013 SWIR2) / (NIR + SWIR2) to highlight burn scars (low NBR).  \n   - Use a threshold of NBR \u2264 \u20130.15 inside the buffer to label \u201cburn-scar\u201d pixels.  \n   - Sum the number of burn pixels in each date; compare 19 Apr \u2192 23 Apr.  \n\n3. Logic to distinguish valid zero vs null/error:  \n   - After cloud masking, if reducer returns 0 pixels \u2192 C2.  \n   - If reducer result is None/NaN \u2192 C3.  \n   - Else if burn-pixel count on 23 Apr > 19 Apr \u2192 A (Yes, area increased).  \n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & time\npt  = ee.Geometry.Point([-105.503, 35.759]).buffer(500)  # 500 m around Hermit Park\nPre = ee.Date('2022-04-19')\nPost = ee.Date('2022-04-23')\n\n# 2. Data acquisition\ndef get_l8_col(d):\n    return (ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')\n              .filterBounds(pt)\n              .filterDate(d.advance(-1, 'day'), d.advance(1, 'day'))\n              .map(lambda img: img.updateMask(\n                    img.select('QA_PIXEL').bitwiseAnd(int('11111',2)).eq(0))))  # cloud/shadow mask\n\ncol_pre  = get_l8_col(Pre)\ncol_post = get_l8_col(Post)\n\nif col_pre.size().getInfo()==0 or col_post.size().getInfo()==0:\n    print(\"Empty collection on at least one date.\")\n    print(\"<answer>C1</answer>\"); exit()\n\nimg_pre  = col_pre.first()\nimg_post = col_post.first()\n\n# 3. Burn-scar index (NBR) and threshold\ndef nbr(img):\n    return img.normalizedDifference(['SR_B5','SR_B7']).rename('NBR')  # NIR=B5, SWIR2=B7\n\nburn_pre  = nbr(img_pre).lte(-0.15)\nburn_post = nbr(img_post).lte(-0.15)\n\n# 4. Pixel counts\npx_pre  = burn_pre.reduceRegion(reducer=ee.Reducer.sum(), geometry=pt, scale=30, maxPixels=1e9).get('NBR').getInfo()\npx_post = burn_post.reduceRegion(reducer=ee.Reducer.sum(), geometry=pt, scale=30, maxPixels=1e9).get('NBR').getInfo()\n\nif px_pre is None or px_post is None:\n    print(\"<answer>C3</answer>\"); exit()\nif px_pre == 0 and px_post == 0:\n    print(\"Zero valid burn pixels on both dates.\")\n    print(\"<answer>B</answer>\"); exit()\n\nprint(f\"19 Apr 2022 burn pixels: {int(px_pre)}\")\nprint(f\"23 Apr 2022 burn pixels: {int(px_post)}\")\n\nprint(\"<answer>A</answer>\" if px_post > px_pre else \"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & time\npt  = ee.Geometry.Point([-105.503, 35.759]).buffer(500)  # 500 m around Hermit Park\nPre = ee.Date('2022-04-19')\nPost = ee.Date('2022-04-23')\n\n# 2. Data acquisition\ndef get_l8_col(d):\n    return (ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')\n              .filterBounds(pt)\n              .filterDate(d.advance(-1, 'day'), d.advance(1, 'day'))\n              .map(lambda img: img.updateMask(\n                    img.select('QA_PIXEL').bitwiseAnd(int('11111',2)).eq(0))))  # cloud/shadow mask\n\ncol_pre  = get_l8_col(Pre)\ncol_post = get_l8_col(Post)\n\nif col_pre.size().getInfo()==0 or col_post.size().getInfo()==0:\n    print(\"Empty collection on at least one date.\")\n    print(\"<answer>C1</answer>\"); exit()\n\nimg_pre  = col_pre.first()\nimg_post = col_post.first()\n\n# 3. Burn-scar index (NBR) and threshold\ndef nbr(img):\n    return img.normalizedDifference(['SR_B5','SR_B7']).rename('NBR')  # NIR=B5, SWIR2=B7\n\nburn_pre  = nbr(img_pre).lte(-0.15)\nburn_post = nbr(img_post).lte(-0.15)\n\n# 4. Pixel counts\npx_pre  = burn_pre.reduceRegion(reducer=ee.Reducer.sum(), geometry=pt, scale=30, maxPixels=1e9).get('NBR').getInfo()\npx_post = burn_post.reduceRegion(reducer=ee.Reducer.sum(), geometry=pt, scale=30, maxPixels=1e9).get('NBR').getInfo()\n\nif px_pre is None or px_post is None:\n    print(\"<answer>C3</answer>\"); exit()\nif px_pre == 0 and px_post == 0:\n    print(\"Zero valid burn pixels on both dates.\")\n    print(\"<answer>B</answer>\"); exit()\n\nprint(f\"19 Apr 2022 burn pixels: {int(px_pre)}\")\nprint(f\"23 Apr 2022 burn pixels: {int(px_post)}\")\n\nprint(\"<answer>A</answer>\" if px_post > px_pre else \"<answer>B</answer>\")",
+            "exec_msg": "Empty collection on at least one date.\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

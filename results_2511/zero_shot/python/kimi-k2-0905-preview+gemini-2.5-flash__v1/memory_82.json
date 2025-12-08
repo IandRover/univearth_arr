@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does forest cover decrease in the area near Banamepe along the Digul River between November 2002 and November 2019?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-04-48",
+        "url": "https://earthobservatory.nasa.gov/images/148021/deforestation-in-papua",
+        "unique_id": 82
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Forest cover proxy: MODIS Land Cover (MCD12Q1) \u201cLC_Type1\u201d class 1\u20135 (Evergreen/Deciduous/Needle-leaf/Mixed).  \n   - Geometry centred on Banamepe (lat \u2248 -6.1, lon \u2248 140.9) along Digul River; 10 km radius buffer.  \n   - Two single-date images: 1 Nov 2002 and 1 Nov 2019. MCD12Q1 is annual, so exact 1 Nov is fine.  \n\n2. Masking/clouds: No clouds \u2013 LC product is classified.  \n\n3. Logic: \n   - Extract forest pixel counts for each year.  \n   - If either collection is empty \u2192 C1.  \n   - If any year has 0 valid pixels \u2192 C2.  \n   - Compute \u0394 = forest_2019 \u2013 forest_2002. If \u0394 < 0 \u2192 forest decreased \u2192 A; else B.  \n   - If counts can\u2019t be retrieved (None/NaN) \u2192 C3.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & dates\nbanamepe = ee.Geometry.Point([140.90, -6.10]).buffer(10000)\nt2002 = ee.Date('2002-11-01')\nt2019 = ee.Date('2019-11-01')\n\n# 2. Data acquisition & check\ndef get_forest yr:\n    col = (ee.ImageCollection('MODIS/006/MCD12Q1')\n             .filter(ee.Filter.calendarRange(yr, yr, 'year'))\n             .filterBounds(banamepe))\n    if col.size().getInfo() == 0:\n        return None\n    lc = col.first().select('LC_Type1')\n    forest = lc.gt(0).And(lc.lte(5))  # classes 1-5\n    cnt = forest.reduceRegion(reducer=ee.Reducer.sum(),\n                              geometry=banamepe, scale=1000,\n                              maxPixels=1e9).get('LC_Type1').getInfo()\n    return cnt\n\ncnt02 = get_forest(2002)\ncnt19 = get_forest(2019)\n\nif cnt02 is None or cnt19 is None:\n    print(\"No images.\")\n    print(\"<answer>C1</answer>\")\nelif cnt02 == 0 or cnt19 == 0:\n    print(\"No valid pixels.\")\n    print(\"<answer>C2</answer>\")\nelse:\n    print(f\"Forest 2002: {int(cnt02)}  2019: {int(cnt19)}\")\n    ans = \"A\" if cnt19 < cnt02 else \"B\"\n    print(f\"<answer>{ans}</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & dates\nbanamepe = ee.Geometry.Point([140.90, -6.10]).buffer(10000)\nt2002 = ee.Date('2002-11-01')\nt2019 = ee.Date('2019-11-01')\n\n# 2. Data acquisition & check\ndef get_forest yr:\n    col = (ee.ImageCollection('MODIS/006/MCD12Q1')\n             .filter(ee.Filter.calendarRange(yr, yr, 'year'))\n             .filterBounds(banamepe))\n    if col.size().getInfo() == 0:\n        return None\n    lc = col.first().select('LC_Type1')\n    forest = lc.gt(0).And(lc.lte(5))  # classes 1-5\n    cnt = forest.reduceRegion(reducer=ee.Reducer.sum(),\n                              geometry=banamepe, scale=1000,\n                              maxPixels=1e9).get('LC_Type1').getInfo()\n    return cnt\n\ncnt02 = get_forest(2002)\ncnt19 = get_forest(2019)\n\nif cnt02 is None or cnt19 is None:\n    print(\"No images.\")\n    print(\"<answer>C1</answer>\")\nelif cnt02 == 0 or cnt19 == 0:\n    print(\"No valid pixels.\")\n    print(\"<answer>C2</answer>\")\nelse:\n    print(f\"Forest 2002: {int(cnt02)}  2019: {int(cnt19)}\")\n    ans = \"A\" if cnt19 < cnt02 else \"B\"\n    print(f\"<answer>{ans}</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765080331780031.py\", line 10\n    def get_forest yr:\n                   ^^\nSyntaxError: expected '('\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

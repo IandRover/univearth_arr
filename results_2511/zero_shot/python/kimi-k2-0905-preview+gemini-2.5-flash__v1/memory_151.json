@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did Dallasport, Washington reach air temperatures of at least 95 degrees fahrenheit in July 2022?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-06-03",
+        "url": "https://earthobservatory.nasa.gov/images/150152/a-july-of-extremes",
+        "unique_id": 151
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Collection: ERA5-Land hourly air temperature at 2 m (skin) \u2013 `ECMWF/ERA5_LAND/HOURLY`  \n   - Date: All hours 1 \u2013 31 July 2022 (`2022-07-01` \u2192 `2022-07-31`)  \n   - Location: Dallasport, WA \u2248 47.00, \u2013120.05  \n\n2. Masking strategy: None needed (ERA5-Land is gap-filled re-analysis).\n\n3. Logic to detect valid zero vs null/error:  \n   - ERA5-Land band is \u2018temperature_2m\u2019 in K; convert to \u00b0F (F = K * 9/5 \u2013 459.67).  \n   - Max daily T in July converted to \u00b0F; if \u2265 95 \u00b0F return A, else B.  \n   - If collection is empty or all masks remove pixels \u2192 C1 / C2.  \n   - If resulting max is None or NaN \u2192 C3.\n</thinking>\n\n<code>\nimport ee\nee.Initialize(project='earthsense-436113')\n\ndallasport = ee.Geometry.Point([-120.05, 47.00])\njul2022 = ee.DateRange('2022-07-01', '2022-07-31')\nera5 = (ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')\n          .select('temperature_2m')\n          .filterDate(jul2022))\n\nn = era5.size().getInfo()\nif n == 0:\n    print(\"No ERA5 images for July 2022.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\nmaxK = (era5.max()\n          .multiply(9/5).subtract(459.67)\n          .rename('T_F'))\n\nstats = maxK.reduceRegion(\n    reducer=ee.Reducer.mean(),\n    geometry=dallasport,\n    scale=10000,\n    maxPixels=1e9)\n\ntry:\n    val = stats.get('T_F').getInfo()\nexcept Exception:\n    val = None\n\nif val is None or ee.Algorithms.IsNaN(val).getInfo():\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(f\"July 2022 max 2-m air temp (\u00b0F): {val:.1f}, nImages: {n}\")\nprint(\"<answer>A</answer>\" if val >= 95 else \"<answer>B</answer>\")\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\ndallasport = ee.Geometry.Point([-120.05, 47.00])\njul2022 = ee.DateRange('2022-07-01', '2022-07-31')\nera5 = (ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')\n          .select('temperature_2m')\n          .filterDate(jul2022))\n\nn = era5.size().getInfo()\nif n == 0:\n    print(\"No ERA5 images for July 2022.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\nmaxK = (era5.max()\n          .multiply(9/5).subtract(459.67)\n          .rename('T_F'))\n\nstats = maxK.reduceRegion(\n    reducer=ee.Reducer.mean(),\n    geometry=dallasport,\n    scale=10000,\n    maxPixels=1e9)\n\ntry:\n    val = stats.get('T_F').getInfo()\nexcept Exception:\n    val = None\n\nif val is None or ee.Algorithms.IsNaN(val).getInfo():\n    print(\"<answer>C3</answer>\")\n    exit()\n\nprint(f\"July 2022 max 2-m air temp (\u00b0F): {val:.1f}, nImages: {n}\")\nprint(\"<answer>A</answer>\" if val >= 95 else \"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/__init__.py\", line 81, in __getattr__\n    return self[name]\n           ~~~~^^^^^^\nKeyError: 'IsNaN'\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765080398984224.py\", line 31, in <module>\n    if val is None or ee.Algorithms.IsNaN(val).getInfo():\n                      ^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/__init__.py\", line 84, in __getattr__\n    raise AttributeError  # pylint: disable=raise-missing-from\n    ^^^^^^^^^^^^^^^^^^^^\nAttributeError\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

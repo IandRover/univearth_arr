@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did an island appear in the Caspian Sea within 4 km of coordinates 39.014501, 49.357405 on February 13, 2023, but did not exist on November 19, 2022?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_00-18-22",
+        "url": "https://earthobservatory.nasa.gov/images/153799/satellites-spot-a-ghost-island",
+        "unique_id": 215
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use Sentinel-2 (10 m) around the given point in the northern Caspian; winter images closest to the two dates.  \n2. Masking: No Scene-based cloud mask \u2013 winter, low sun, most clouds are snow/ice; instead create a water mask with NDWI < \u20110.2 (land) vs \u2265 \u20110.2 (water).  \n3. Validation: Count valid pixels on a 4 km radius circle; if 0 pixels remain \u2192 C2. If any date is empty \u2192 C1. If Feb 2023 has \u2265 5 connected land pixels (\u2248 0.5 ha) but Nov 2022 has 0 in the same spot \u2192 island appeared \u2192 A, otherwise B.\n</thinking>\n\n<code>\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry\nloc = ee.Geometry.Point([49.357405, 39.014501])\nroi = loc.buffer(4000)\n\n# 2. Acquire Sentinel-2 images\ndef get_closest(d):  # d: 'YYYY-MM-DD'\n    d = ee.Date(d)\n    return (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n              .filterBounds(roi)\n              .filterDate(d.advance(-10, 'day'), d.advance(10, 'day'))\n              .sort('CLOUD_COVER')\n              .first())\n\nnov = get_closest('2022-11-19')\nfeb = get_closest('2023-02-13')\n\n# 3. Check availability\nfor name, img in [('Nov22', nov), ('Feb23', feb)]:\n    if img.getInfo() is None:\n        print(f\"{name} Images: 0\")\n        print(\"<answer>C1</answer>\")\n\n# 4. Water mask (NDWI threshold) and pixel counts\ndef land_pixels(img, label):\n    water = img.normalizedDifference(['B3', 'B8']).gte(-0.2)  # land = False\n    land = water.Not()\n    n = (land.updateMask(land)\n            .reduceRegion(reducer=ee.Reducer.count(),\n                          geometry=roi, scale=20, maxPixels=1e9)\n            .get('nd').getInfo())\n    print(f\"{label} Land pixels: {int(n)}\")\n    return n\n\nnov_land = land_pixels(nov, 'Nov22')\nfeb_land = land_pixels(feb, 'Feb23')\n\n# 5. Decide\nif nov_land == 0 and feb_land >= 5:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry\nloc = ee.Geometry.Point([49.357405, 39.014501])\nroi = loc.buffer(4000)\n\n# 2. Acquire Sentinel-2 images\ndef get_closest(d):  # d: 'YYYY-MM-DD'\n    d = ee.Date(d)\n    return (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')\n              .filterBounds(roi)\n              .filterDate(d.advance(-10, 'day'), d.advance(10, 'day'))\n              .sort('CLOUD_COVER')\n              .first())\n\nnov = get_closest('2022-11-19')\nfeb = get_closest('2023-02-13')\n\n# 3. Check availability\nfor name, img in [('Nov22', nov), ('Feb23', feb)]:\n    if img.getInfo() is None:\n        print(f\"{name} Images: 0\")\n        print(\"<answer>C1</answer>\")\n\n# 4. Water mask (NDWI threshold) and pixel counts\ndef land_pixels(img, label):\n    water = img.normalizedDifference(['B3', 'B8']).gte(-0.2)  # land = False\n    land = water.Not()\n    n = (land.updateMask(land)\n            .reduceRegion(reducer=ee.Reducer.count(),\n                          geometry=roi, scale=20, maxPixels=1e9)\n            .get('nd').getInfo())\n    print(f\"{label} Land pixels: {int(n)}\")\n    return n\n\nnov_land = land_pixels(nov, 'Nov22')\nfeb_land = land_pixels(feb, 'Feb23')\n\n# 5. Decide\nif nov_land == 0 and feb_land >= 5:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Nov22 Land pixels: 0\nFeb23 Land pixels: 203\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

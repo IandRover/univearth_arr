@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does cloud cover increase in Western Australia (specifically (-20.59, 125.93)) between 11:00 and 14:00 local time on January 14, 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "javascript",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_15-28-57",
+        "url": "https://www.earthobservatory.nasa.gov/images/146158/",
+        "unique_id": 357
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "const ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function runAnalysis() {\n  try {\n    // 1. Geometry & Time Definitions\n    const point = ee.Geometry.Point([125.93, -20.59]);\n    const aoi = point.buffer(15000); // 15 km radius\n    const tzOffsetHours = 8; // AWST (UTC+8)\n    // Local 11:00 -> 03:00Z; Local 14:00 -> 06:00Z on 2020-01-14\n    const t1Start = ee.Date('2020-01-14T03:00:00Z');\n    const t1End = t1Start.advance(1, 'hour');\n    const t2Start = ee.Date('2020-01-14T06:00:00Z');\n    const t2End = t2Start.advance(1, 'hour');\n\n    // Helper to get stats for a given hour window\n    async function getHourStats(start, end, label) {\n      let col = ee.ImageCollection('ECMWF/ERA5/HOURLY')\n        .filterDate(start, end)\n        .select(['total_cloud_cover']);\n      let size = await col.size().getInfo();\n      // Recovery: if empty, widen to 2-hour window\n      if (size === 0) {\n        const widenedEnd = ee.Date(start).advance(2, 'hour');\n        col = ee.ImageCollection('ECMWF/ERA5/HOURLY')\n          .filterDate(start, widenedEnd)\n          .select(['total_cloud_cover']);\n        size = await col.size().getInfo();\n      }\n      if (size === 0) {\n        console.log(`${label} Images: 0`);\n        return {status: 'C1'};\n      }\n      const img = ee.Image(col.first());\n      // Compute pixel count and mean cloud fraction over AOI\n      const count = await img.reduceRegion({\n        reducer: ee.Reducer.count(),\n        geometry: aoi,\n        scale: 3000,\n        maxPixels: 1e9\n      }).get('total_cloud_cover').getInfo();\n      if (!count || count === 0) {\n        console.log(`${label} Images: ${size} (Valid px: 0)`);\n        return {status: 'C2'};\n      }\n      const mean = await img.reduceRegion({\n        reducer: ee.Reducer.mean(),\n        geometry: aoi,\n        scale: 3000,\n        maxPixels: 1e9\n      }).get('total_cloud_cover').getInfo();\n      if (mean === null || isNaN(mean) || mean < 0 || mean > 1) {\n        console.log(`${label} Images: ${size} (Mean invalid)`);\n        return {status: 'C3'};\n      }\n      const pct = mean * 100.0;\n      console.log(`${label} Images: ${size}`);\n      console.log(`${label} Pixels: ${count}, Cloud%: ${pct.toFixed(1)}`);\n      return {status: 'OK', mean, pct, count, size};\n    }\n\n    console.log(`AOI: (-20.59,125.93) AWST=UTC+8; Date: 2020-01-14`);\n    const s11 = await getHourStats(t1Start, t1End, '11:00 LT');\n    if (s11.status !== 'OK') {\n      console.log(s11.status);\n      return;\n    }\n    const s14 = await getHourStats(t2Start, t2End, '14:00 LT');\n    if (s14.status !== 'OK') {\n      console.log(s14.status);\n      return;\n    }\n\n    const delta = (s14.mean - s11.mean) * 100.0;\n    console.log(`\u0394 Cloud% (14h-11h): ${delta.toFixed(1)}`);\n\n    // Final Answer\n    if (delta > 0) {\n      console.log('A');\n    } else {\n      console.log('B');\n    }\n  } catch (err) {\n    console.log(`Error: ${String(err).slice(0,200)}`);\n    console.log('D');\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();",
+            "code": "'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'",
+            "exec_msg": "",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "thinking\n1. **Analyze <exec_error>**: The `exec_error` is empty.\n2. **Analyze <execution_message>**: The `execution_message` is empty.\n3. **Analyze <Code>**: The `Code` section states: `'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'` This clearly indicates that no GEE code was provided for execution.\n\nSince no code was provided, no execution actually happened, and therefore, no meaningful output or error related to GEE processing can be observed. The task is to classify the *execution*. An execution that didn't happen (because there was no code) cannot be classified as A, B, C1, C2, C3, or D in the context of GEE API execution.\n\nHowever, given the strict options, \"D: Execution Error\" is the most fitting, as the *system* failed to execute any code due to its absence. It's a failure in the execution pipeline, even if not a GEE runtime error. It implies the program *could not be run*.<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

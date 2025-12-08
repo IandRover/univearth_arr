@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the surface reflectance of Lake Elton increase from 2004 to 2009?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "javascript",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_08-54-46",
+        "url": "https://earthobservatory.nasa.gov/images/84781",
+        "unique_id": 288
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "const ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function runAnalysis() {\n  try {\n    // Helpers\n    const getInfo = (obj) => new Promise((res, rej) => obj.getInfo(res, rej));\n\n    // 1. Geometry & Water Mask (Lake Elton, Russia)\n    const lakeCenter = ee.Geometry.Point([46.70, 49.13]);\n    const roi = lakeCenter.buffer(12000).bounds();\n    const gsw = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').clip(roi);\n    const waterMask = gsw.gt(50).selfMask(); // persistent water >50%\n    const waterOnes = ee.Image(1).updateMask(waterMask);\n    const waterPix = await getInfo(waterOnes.reduceRegion({\n      reducer: ee.Reducer.count(),\n      geometry: roi,\n      scale: 1000,\n      maxPixels: 1e9\n    }));\n    const waterPixCount = waterPix ? waterPix.constant || 0 : 0;\n    console.log(`Water baseline pixels (1km): ${waterPixCount}`);\n\n    async function yearStats(year) {\n      const startMS = ee.Date.fromYMD(year, 5, 1);\n      const endMS = ee.Date.fromYMD(year, 9, 30);\n      const startFB = ee.Date.fromYMD(year, 1, 1);\n      const endFB = ee.Date.fromYMD(year, 12, 31);\n\n      function maskScaleL57(image) {\n        const qa = image.select('QA_PIXEL');\n        const mask = qa.bitwiseAnd(1 << 3).eq(0) // cloud\n          .and(qa.bitwiseAnd(1 << 4).eq(0)) // shadow\n          .and(qa.bitwiseAnd(1 << 5).eq(0)) // snow\n          .and(qa.bitwiseAnd(1 << 1).eq(0)); // dilated cloud\n        const scaled = image.select(['SR_B1', 'SR_B2', 'SR_B3'])\n          .multiply(0.0000275).add(-0.2)\n          .rename(['blue', 'green', 'red']);\n        return scaled.updateMask(mask);\n      }\n\n      const l5_ms = ee.ImageCollection('LANDSAT/LT05/C02/T1_L2')\n        .filterDate(startMS, endMS).filterBounds(roi).map(maskScaleL57);\n      const l7_ms = ee.ImageCollection('LANDSAT/LE07/C02/T1_L2')\n        .filterDate(startMS, endMS).filterBounds(roi).map(maskScaleL57);\n      let col = l5_ms.merge(l7_ms);\n      let nImg = await getInfo(col.size());\n      let usedWindow = 'May-Sep';\n      if (!nImg || nImg === 0) {\n        const l5_fb = ee.ImageCollection('LANDSAT/LT05/C02/T1_L2')\n          .filterDate(startFB, endFB).filterBounds(roi).map(maskScaleL57);\n        const l7_fb = ee.ImageCollection('LANDSAT/LE07/C02/T1_L2')\n          .filterDate(startFB, endFB).filterBounds(roi).map(maskScaleL57);\n        col = l5_fb.merge(l7_fb);\n        nImg = await getInfo(col.size());\n        usedWindow = 'Year';\n      }\n      return { col, nImg, usedWindow };\n    }\n\n    // Get stats for both years\n    const y2004 = await yearStats(2004);\n    const y2009 = await yearStats(2009);\n\n    if ((y2004.nImg || 0) === 0 || (y2009.nImg || 0) === 0) {\n      console.log('One or both years have 0 images after fallback.');\n      console.log('C1');\n      return;\n    }\n\n    function visComposite(col) {\n      const visCol = col.map(img => {\n        const visMean = img.select(['blue', 'green', 'red']).reduce(ee.Reducer.mean()).rename('vis_mean');\n        return visMean;\n      });\n      return visCol.median();\n    }\n\n    async function summarize(year, info) {\n      const comp = visComposite(info.col).updateMask(waterMask);\n      const stats = await getInfo(comp.reduceRegion({\n        reducer: ee.Reducer.mean().combine({ reducer2: ee.Reducer.count(), sharedInputs: true }),\n        geometry: roi,\n        scale: 1000,\n        maxPixels: 1e9\n      }));\n      const mean = stats ? stats.vis_mean_mean : null;\n      const count = stats ? stats.vis_mean_count : 0;\n      const cover = waterPixCount > 0 ? (100 * (count || 0) / waterPixCount) : 0;\n      console.log(`${year} ${info.usedWindow} imgs: ${info.nImg}, validPx: ${count || 0}, cover: ${cover.toFixed(1)}%, visMean: ${mean !== null ? mean.toFixed(4) : 'null'}`);\n      return { mean, count };\n    }\n\n    const s2004 = await summarize(2004, y2004);\n    const s2009 = await summarize(2009, y2009);\n\n    if ((s2004.count || 0) === 0 || (s2009.count || 0) === 0) {\n      console.log('C2');\n      return;\n    }\n\n    const m2004 = s2004.mean;\n    const m2009 = s2009.mean;\n    if (m2004 === null || m2009 === null || !isFinite(m2004) || !isFinite(m2009)) {\n      console.log('C3');\n      return;\n    }\n\n    // Final Answer: Did reflectance increase from 2004 to 2009?\n    console.log(m2009 > m2004 ? 'A' : 'B');\n  } catch (e) {\n    console.log('D');\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();",
+            "code": "'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'",
+            "exec_msg": "",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

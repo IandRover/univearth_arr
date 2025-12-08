@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Were chlorophyll concertrations at 100km radius around (-41.729403, -125.410394) up during November 2019 to February 2020 in comparison to the same time the prior year?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-29-57",
+        "url": "https://earthobservatory.nasa.gov/images/149039/australian-fires-fueled-unprecedented-blooms",
+        "unique_id": 104
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use MODIS Aqua Chlorophyll (OC product) at 1 km resolution (chlor_a band) for the targeted Pacific Ocean location. Apply same-month, different-year windows:\n   - Nov\u2212Feb 2019/2020 (2019-11-01 \u279d 2020-02-29)  \n   - Nov\u2212Feb 2018/2019 (2018-11-01 \u279d 2019-02-28)\n\n2. Masking: Land/no-data already set as flags; use the built-in quality mask (clear sky, weight \u2265 1) provided by chlor_a\u2019s QA flags (keep only valid pixels).\n\n3. Geometry: circular buffer (100 km) around the lon/lat point.\n\n4. Logic to decide \u201cup\u201d:\n   Compute mean chlorophyll inside buffer for each season.\n   \u2013 If either collection is empty \u2192 C1\n   \u2013 If masked valid-pixel count = 0 \u2192 C2\n   \u2013 If resulting mean is NaN/None \u2192 C3\n   \u2013 2020-season mean > 2019-season mean \u2192 A; else \u2192 B.\n</thinking>\n\n```python\nimport ee; ee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point([-125.410394, -41.729403])\nroi = pt.buffer(100_000)\n\ndef get_chl_period(year, end_year=None):\n    start, end = f\"{year}-11-01\", f\"{end_year}-02-28\"\n    return (ee.ImageCollection(\"NASA/OCEANDATA/MODIS-Aqua/L3SMI\")\n              .filterDate(start, end)\n              .select('chlor_a')\n              .map(lambda img: img.updateMask(img.neq(32767)))  # respect valid flag\n           )\n\ncol20 = get_chl_period(2019, 2020)\nif col20.size().getInfo() == 0:\n    print(\"No MODIS-Chl 2019\u20132020.\")\n    print(\"<answer>C1</answer>\")\n\ncol19 = get_chl_period(2018, 2019)\nif col19.size().getInfo() == 0:\n    print(\"No MODIS-Chl 2018\u20132019.\")\n    print(\"<answer>C1</answer>\")\n\ndef mean_chl(coll):\n    img = coll.mean().clip(roi)\n    c = img.reduceRegion(reducer=ee.Reducer.count(), geometry=roi, scale=1000,\n                         maxPixels=1e9).get('chlor_a').getInfo()\n    m = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=roi, scale=1000,\n                         maxPixels=1e9).get('chlor_a').getInfo()\n    return None if c == 0 else m, c\n\nchl20, cnt20 = mean_chl(col20)\nchl19, cnt19 = mean_chl(col19)\n\nif chl20 is None or chl19 is None:\n    print(\"Valid pixels: C2.\")\n    print(\"<answer>C2</answer>\")\n\nif chl20 is None or chl19 is None or ee.Algorithms.IsNaN(chl20) or ee.Algorithms.IsNaN(chl19):\n    print(\"NaN result.\")\n    print(\"<answer>C3</answer>\")\n\nprint(f\"Chl 2019\u201320: {chl20:.2f} mg/m3, Pixels: {cnt20}\")\nprint(f\"Chl 2018\u201319: {chl19:.2f} mg/m3, Pixels: {cnt19}\")\n\nprint(\"<answer>A</answer>\" if chl20 > chl19 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee; ee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point([-125.410394, -41.729403])\nroi = pt.buffer(100_000)\n\ndef get_chl_period(year, end_year=None):\n    start, end = f\"{year}-11-01\", f\"{end_year}-02-28\"\n    return (ee.ImageCollection(\"NASA/OCEANDATA/MODIS-Aqua/L3SMI\")\n              .filterDate(start, end)\n              .select('chlor_a')\n              .map(lambda img: img.updateMask(img.neq(32767)))  # respect valid flag\n           )\n\ncol20 = get_chl_period(2019, 2020)\nif col20.size().getInfo() == 0:\n    print(\"No MODIS-Chl 2019\u20132020.\")\n    print(\"<answer>C1</answer>\")\n\ncol19 = get_chl_period(2018, 2019)\nif col19.size().getInfo() == 0:\n    print(\"No MODIS-Chl 2018\u20132019.\")\n    print(\"<answer>C1</answer>\")\n\ndef mean_chl(coll):\n    img = coll.mean().clip(roi)\n    c = img.reduceRegion(reducer=ee.Reducer.count(), geometry=roi, scale=1000,\n                         maxPixels=1e9).get('chlor_a').getInfo()\n    m = img.reduceRegion(reducer=ee.Reducer.mean(), geometry=roi, scale=1000,\n                         maxPixels=1e9).get('chlor_a').getInfo()\n    return None if c == 0 else m, c\n\nchl20, cnt20 = mean_chl(col20)\nchl19, cnt19 = mean_chl(col19)\n\nif chl20 is None or chl19 is None:\n    print(\"Valid pixels: C2.\")\n    print(\"<answer>C2</answer>\")\n\nif chl20 is None or chl19 is None or ee.Algorithms.IsNaN(chl20) or ee.Algorithms.IsNaN(chl19):\n    print(\"NaN result.\")\n    print(\"<answer>C3</answer>\")\n\nprint(f\"Chl 2019\u201320: {chl20:.2f} mg/m3, Pixels: {cnt20}\")\nprint(f\"Chl 2018\u201319: {chl19:.2f} mg/m3, Pixels: {cnt19}\")\n\nprint(\"<answer>A</answer>\" if chl20 > chl19 else \"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/__init__.py\", line 81, in __getattr__\n    return self[name]\n           ~~~~^^^^^^\nKeyError: 'IsNaN'\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/17650782379179258.py\", line 39, in <module>\n    if chl20 is None or chl19 is None or ee.Algorithms.IsNaN(chl20) or ee.Algorithms.IsNaN(chl19):\n                                         ^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/__init__.py\", line 84, in __getattr__\n    raise AttributeError  # pylint: disable=raise-missing-from\n    ^^^^^^^^^^^^^^^^^^^^\nAttributeError\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

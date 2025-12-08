@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was nightime brightness around the Aswan High Dam higher than the Grand Ethopian Renaissance Dam in 2016?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-27-15",
+        "url": "https://earthobservatory.nasa.gov/images/149691/a-grand-new-dam-on-the-nile",
+        "unique_id": 135
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Night-time brightness = VIIRS DNB. Collection: NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG. Date = 2016, full year median composite. Location: two points: Aswan High Dam (24.21, 32.88) and Grand Ethiopian Renaissance Dam (GERD) ~11.21, 35.09).  \n2. Masking: VIIRS DNB already cloud-masked; no extra mask needed.  \n3. Logic: compute 2016 median at each dam, compare the two numbers.  \n   - If either collection is empty \u2192 C1.  \n   - If valid-pixel count after reduceRegion is 0 \u2192 C2.  \n   - If result is None/NaN \u2192 C3.  \n   - Else if Aswan > GERD \u2192 A, else \u2192 B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\naswan = ee.Geometry.Point(32.88, 24.21)\ngerd  = ee.Geometry.Point(35.09, 11.21)\nstart, end = '2016-01-01', '2017-01-01'\n\n# 2. Data Acquisition & Check\ncol = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG') \\\n          .filterDate(start, end)\nif col.size().getInfo() == 0:\n    print(\"No 2016 VIIRS images.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Processing\nimg2016 = col.median()\n\n# 4. Calculation\ndef bright(p):\n    return img2016.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=p,\n        scale=1000,\n        maxPixels=1e9).get('avg_rad').getInfo()\n\naw = bright(aswan)\ngr = bright(gerd)\n\n# 5. Validation & Answer\nif aw is None or gr is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Aswan: {aw:.3f}, GERD: {gr:.3f}\")\n    print(\"<answer>A</answer>\" if aw > gr else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\naswan = ee.Geometry.Point(32.88, 24.21)\ngerd  = ee.Geometry.Point(35.09, 11.21)\nstart, end = '2016-01-01', '2017-01-01'\n\n# 2. Data Acquisition & Check\ncol = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG') \\\n          .filterDate(start, end)\nif col.size().getInfo() == 0:\n    print(\"No 2016 VIIRS images.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Processing\nimg2016 = col.median()\n\n# 4. Calculation\ndef bright(p):\n    return img2016.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=p,\n        scale=1000,\n        maxPixels=1e9).get('avg_rad').getInfo()\n\naw = bright(aswan)\ngr = bright(gerd)\n\n# 5. Validation & Answer\nif aw is None or gr is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Aswan: {aw:.3f}, GERD: {gr:.3f}\")\n    print(\"<answer>A</answer>\" if aw > gr else \"<answer>B</answer>\")",
+            "exec_msg": "Aswan: 14.160, GERD: 56.738\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

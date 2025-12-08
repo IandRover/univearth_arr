@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did Lake Menindee, Australia shrink from February 2, 2019 to May 14, 2021?",
+        "answer": "No",
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-53-34",
+        "url": "https://earthobservatory.nasa.gov/images/148336/menindee-lakes-finally-refilling",
+        "unique_id": 85
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Use Sentinel-2 for both dates (good spatial resolution over inland water bodies).  \n   - February 2, 2019 exactly; 5-day window \u00b12 days ensures at least one cloud-free scene.  \n   - May 14, 2021 exactly, same lander window.  \n   - Lake Menindee bounding box defined by point (-32.09, 142.23) buffered 8 km gives ~9300 km\u00b2 polygon but we only need Menindee surface area.  \n\n2. Masking strategy:  \n   - Use S2_CLOUD_PROBABILITY (.ge(60)) mask; remove after processing but retain full scenes.  \n   - Also apply B4 > 0 mask: Sentinel-2 uses B2,B3,B4 > 0 for valid pixels/ coastal scenes help outside ocean.  \n\n3. Logic:  \n   - water = NDVI \u2264 0 (aggressive threshold for inland water) applied after masking clouds.  \n   - Compute# pixels water per-date.  \n   - If either date collection size is 0 \u2192 C1.  \n   - After water masking, count=0 \u2192 C2.  \n   - If counts valid, classify shrink/compare: if 2021 count < 2019 \u2192 A (\"Yes\", it shrunk) else B (\"No\").\n</thinking>\n\n<code>\nimport ee\nee.Initialize(project=\"earthsense-436113\")\n\n# 1. Geometry\npt = ee.Geometry.Point([142.23, -32.09]).buffer(8000)  # Lake Menindee vicinity \n\n# 2. Fetch collections\ndef get_col(d, before=2, after=2):\n    return (ee.ImageCollection(\"COPERNICUS/S2\")\n              .filterBounds(pt)\n              .filter(ee.Filter.date(ee.Date(d).advance(-before,'day'), ee.Date(d).advance(after,'day')))\n              .sort('CLOUDY_PIXEL_PERCENTAGE'))\n\ns2_2019 = get_col(\"2019-02-02\")\ns2_2021 = get_col(\"2021-05-14\")\n\nn19 = s2_2019.size().getInfo()\nn21 = s2_2021.size().getInfo()\n\nif n19==0 or n21==0:\n    print(\"C1\"); print(\"<answer>C1</answer>\")\n\n# 3. water mask (NDVI \u22640) and cloud mask (S2_CLOUD_PROBABILITY<60)\ndef water_area(ic, label):\n    img = ic.first()\n    prob = ee.ImageCollection(\"COPERNICUS/S2_CLOUD_PROBABILITY\").filterBounds(pt).filter(ee.Filter.metadata('system:time_start','equals',img.get('system:time_start'))).first()\n    cloud60 = prob.lt(60)\n    ndvi = img.normalizedDifference(['B8','B4']).updateMask(cloud60).updateMask(img.select('B4').gt(0))\n    water = ndvi.lte(0).rename('water')\n    count = water.reduceRegion(reducer=ee.Reducer.sum(), geometry=pt, scale=1000, maxPixels=1e9).get('water').getInfo()\n    pct_cloud = (cloud60.Not().reduceRegion(reducer=ee.Reducer.mean(), geometry=pt, scale=1000, maxPixels=1e9).get('probability').getInfo())*100\n    print(f\"{label} Images: {ic.size().getInfo()}, Water px: {int(count)}, Cloud pct: {pct_cloud:.1f}%\")\n    return count\n\narea19 = water_area(s2_2019, \"2019\")\narea21 = water_area(s2_2021, \"2021\")\n\nif (area19 is None) or (area21 is None):\n    print(\"C3\"); print(\"<answer>C3</answer>\")\n\nif area19==0 and area21==0:\n    print(\"C2\"); print(\"<answer>C2</answer>\")\n\nshrunk = area21 < area19\nprint(\"Shrunk:\", shrunk)\nif shrunk: print(\"<answer>A</answer>\")\nelse:      print(\"<answer>B</answer>\")\n</code>",
+            "code": "import ee\nee.Initialize(project=\"earthsense-436113\")\n\n# 1. Geometry\npt = ee.Geometry.Point([142.23, -32.09]).buffer(8000)  # Lake Menindee vicinity \n\n# 2. Fetch collections\ndef get_col(d, before=2, after=2):\n    return (ee.ImageCollection(\"COPERNICUS/S2\")\n              .filterBounds(pt)\n              .filter(ee.Filter.date(ee.Date(d).advance(-before,'day'), ee.Date(d).advance(after,'day')))\n              .sort('CLOUDY_PIXEL_PERCENTAGE'))\n\ns2_2019 = get_col(\"2019-02-02\")\ns2_2021 = get_col(\"2021-05-14\")\n\nn19 = s2_2019.size().getInfo()\nn21 = s2_2021.size().getInfo()\n\nif n19==0 or n21==0:\n    print(\"C1\"); print(\"<answer>C1</answer>\")\n\n# 3. water mask (NDVI \u22640) and cloud mask (S2_CLOUD_PROBABILITY<60)\ndef water_area(ic, label):\n    img = ic.first()\n    prob = ee.ImageCollection(\"COPERNICUS/S2_CLOUD_PROBABILITY\").filterBounds(pt).filter(ee.Filter.metadata('system:time_start','equals',img.get('system:time_start'))).first()\n    cloud60 = prob.lt(60)\n    ndvi = img.normalizedDifference(['B8','B4']).updateMask(cloud60).updateMask(img.select('B4').gt(0))\n    water = ndvi.lte(0).rename('water')\n    count = water.reduceRegion(reducer=ee.Reducer.sum(), geometry=pt, scale=1000, maxPixels=1e9).get('water').getInfo()\n    pct_cloud = (cloud60.Not().reduceRegion(reducer=ee.Reducer.mean(), geometry=pt, scale=1000, maxPixels=1e9).get('probability').getInfo())*100\n    print(f\"{label} Images: {ic.size().getInfo()}, Water px: {int(count)}, Cloud pct: {pct_cloud:.1f}%\")\n    return count\n\narea19 = water_area(s2_2019, \"2019\")\narea21 = water_area(s2_2021, \"2021\")\n\nif (area19 is None) or (area21 is None):\n    print(\"C3\"); print(\"<answer>C3</answer>\")\n\nif area19==0 and area21==0:\n    print(\"C2\"); print(\"<answer>C2</answer>\")\n\nshrunk = area21 < area19\nprint(\"Shrunk:\", shrunk)\nif shrunk: print(\"<answer>A</answer>\")\nelse:      print(\"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Execution timed out after 120 seconds",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

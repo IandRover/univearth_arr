@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the coastal city of La Serena experience at least 6cm of rainfall in July 2022?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "javascript",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_02-13-16",
+        "url": "https://earthobservatory.nasa.gov/images/150100/snow-blanket-for-the-andes",
+        "unique_id": 145
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "const ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function getInfo(obj) {\n  return await new Promise((resolve, reject) => {\n    obj.getInfo(resolve, reject);\n  });\n}\n\nasync function runAnalysis() {\n  try {\n    // 1. Geometry & Time Definitions\n    const city = ee.Geometry.Point([-71.23, -29.90]); // La Serena, inland to avoid ocean-only pixels\n    const region = city.buffer(5000); // 5 km\n    const start = '2022-07-01';\n    const end = '2022-08-01';\n    const threshMM = 60.0;\n\n    console.log('Target: La Serena, Chile (5 km buffer)');\n    console.log('Period: 2022-07');\n\n    // Helper to compute monthly total (time-sum) then spatial mean and valid pixel count.\n    async function meanAndCount(img, band, geom, scale) {\n      const stats = await getInfo(\n        img.reduceRegion({\n          reducer: ee.Reducer.mean().combine({reducer2: ee.Reducer.count(), sharedInputs: true}),\n          geometry: geom,\n          scale: scale,\n          maxPixels: 1e9\n        })\n      );\n      const mean = stats ? stats[band + '_mean'] : null;\n      const count = stats ? stats[band + '_count'] : 0;\n      return {mean, count};\n    }\n\n    // 2. Primary dataset: CHIRPS Daily\n    let answerVal = null;\n    let usedDataset = null;\n\n    const chirpsCol = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n      .filterDate(start, end)\n      .select('precipitation');\n\n    const chirpsCount = await getInfo(chirpsCol.size());\n    console.log(`CHIRPS Daily Images: ${chirpsCount}`);\n\n    if (chirpsCount === 0) {\n      // Fallback to ERA5-Land Hourly\n      console.log('CHIRPS empty. Fallback -> ERA5-Land');\n    } else {\n      const chirpsSum = chirpsCol.sum(); // mm over July\n      const chirpsStats = await meanAndCount(chirpsSum, 'precipitation', region, 5000);\n      const cMean = chirpsStats.mean;\n      const cPx = chirpsStats.count;\n      console.log(`CHIRPS Pixels: ${cPx}, July total (mm, area-mean): ${cMean !== null ? cMean.toFixed(1) : 'null'}`);\n\n      if (cPx > 0 && cMean !== null && isFinite(cMean)) {\n        answerVal = cMean;\n        usedDataset = 'CHIRPS';\n      } else {\n        console.log('CHIRPS invalid/empty over region. Fallback -> ERA5-Land');\n      }\n    }\n\n    // 3. Fallback dataset: ERA5-Land Hourly (sum hourly total_precipitation, convert m -> mm)\n    if (answerVal === null) {\n      const eraCol = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')\n        .filterDate(start, end)\n        .select('total_precipitation');\n\n      const eraCount = await getInfo(eraCol.size());\n      console.log(`ERA5 Hourly Images: ${eraCount}`);\n\n      if (eraCount === 0) {\n        console.log('Both datasets empty for the period/location.');\n        console.log('C1');\n        return;\n      }\n\n      const eraSumMM = eraCol.sum().multiply(1000).rename('precipitation'); // m -> mm\n      const eraStats = await meanAndCount(eraSumMM, 'precipitation', region, 9000);\n      const eMean = eraStats.mean;\n      const ePx = eraStats.count;\n      console.log(`ERA5 Pixels: ${ePx}, July total (mm, area-mean): ${eMean !== null ? eMean.toFixed(1) : 'null'}`);\n\n      if (ePx === 0) {\n        console.log('No valid pixels after processing.');\n        console.log('C2');\n        return;\n      }\n      if (eMean === null || !isFinite(eMean)) {\n        console.log('Computation resulted in null/NaN.');\n        console.log('C3');\n        return;\n      }\n      answerVal = eMean;\n      usedDataset = 'ERA5';\n    }\n\n    // 4. Validation & Final Answer\n    const meets = answerVal >= threshMM;\n    console.log(`Used: ${usedDataset}, Threshold 60 mm met?: ${meets ? 'Yes' : 'No'}`);\n    if (!isFinite(answerVal)) {\n      console.log('C3');\n      return;\n    }\n    console.log(meets ? 'A' : 'B');\n  } catch (err) {\n    const msg = (err && err.message) ? err.message : String(err);\n    console.log(`Error: ${msg.substring(0, 140)}`);\n    console.log('D');\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();",
+            "code": "'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'",
+            "exec_msg": "",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

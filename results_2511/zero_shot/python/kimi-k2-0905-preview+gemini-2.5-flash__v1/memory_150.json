@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did regions of the Pacific Northwest like Dallasport, Washington and Medford, Oregon reach temperatures above 105 degrees fahrenheit?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-59-54",
+        "url": "https://earthobservatory.nasa.gov/images/150152/a-july-of-extremes",
+        "unique_id": 150
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: \n   - Use ERA5-Land 2-m temperature (hourly, 0.1\u00b0) because it is daily-updated, global, and already in \u00b0C.  \n   - Define two point geometries for Dallasport, WA and Medford, OR.  \n   - Filter the warmest 3-week window around historical heatwaves (15 Jul \u2013 5 Aug) for the most-recent full year (2023) to maximise chance of capturing \u2265105 \u00b0F (\u224840.56 \u00b0C) extremes.  \n   - If ERA5-Land collection is empty, fall back to NOAH-GLDAS; if both fail \u2192 C1.\n\n2. Masking strategy: None needed \u2013 ERA5-Land is model assimilated, cloud-free.\n\n3. Logic: Convert 105 \u00b0F \u2192 40.56 \u00b0C. For each location compute max temperature over the period. If either max \u226540.56 \u00b0C \u2192 \u201cYes\u201d (A), else \u201cNo\u201d (B).  \n   - If collection size ==0 \u2192 C1.  \n   - If reducer returns None/NaN \u2192 C3.  \n   - Zero valid pixels not expected for a global reanalysis, but still count to be safe; if count ==0 \u2192 C2.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\ndallasport = ee.Geometry.Point([-121.16, 46.23])   # roughly Dallasport / Kettle Falls area\nmedford     = ee.Geometry.Point([-122.87, 42.33])   # Medford, OR\n\nera5 = (ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')\n          .select('temperature_2m')\n          .filter(ee.Filter.date('2023-07-15', '2023-08-05')))\n\nif era5.size().getInfo() == 0:\n    print(\"ERA5-Land empty, trying GLDAS...\")\n    era5 = (ee.ImageCollection('NASA/GLDAS/V021/NOAH/G025/T3H')\n              .select('Tair_f_inst')\n              .filter(ee.Filter.date('2023-07-15', '2023-08-05')))\n    if era5.size().getInfo() == 0:\n        print(\"No reanalysis data found.\")\n        print(\"<answer>C1</answer>\")\n        exit()\n\n# convert 105 F -> 40.56 C\nTHRESH = 40.56\n\ndef max_temp_pt(pt):\n    maxK = era5.mean().reduceRegion(\n        reducer=ee.Reducer.max(),\n        geometry=pt,\n        scale=10000,\n        maxPixels=1e9).get(era5.first().bandNames().get(0))\n    return ee.Number(maxK).getInfo()\n\ntry:\n    tmax_DP_K = max_temp_pt(dallasport)\n    tmax_MF_K = max_temp_pt(medford)\nexcept Exception:\n    print(\"<answer>C3</answer>\")\n    exit()\n\n# ERA5-Land is in K; GLDAS also in K\ntmax_DP_C = tmax_DP_K - 273.15\ntmax_MF_C = tmax_MF_K - 273.15\n\nprint(f\"Dallasport max: {tmax_DP_C:.1f}\u00b0C\")\nprint(f\"Medford max: {tmax_MF_C:.1f}\u00b0C\")\nprint(f\"Threshold 105\u00b0F = {THRESH:.1f}\u00b0C\")\n\nif (tmax_DP_C is None) or (tmax_MF_C is None):\n    print(\"<answer>C3</answer>\")\nelif (tmax_DP_C >= THRESH) or (tmax_MF_C >= THRESH):\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\ndallasport = ee.Geometry.Point([-121.16, 46.23])   # roughly Dallasport / Kettle Falls area\nmedford     = ee.Geometry.Point([-122.87, 42.33])   # Medford, OR\n\nera5 = (ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')\n          .select('temperature_2m')\n          .filter(ee.Filter.date('2023-07-15', '2023-08-05')))\n\nif era5.size().getInfo() == 0:\n    print(\"ERA5-Land empty, trying GLDAS...\")\n    era5 = (ee.ImageCollection('NASA/GLDAS/V021/NOAH/G025/T3H')\n              .select('Tair_f_inst')\n              .filter(ee.Filter.date('2023-07-15', '2023-08-05')))\n    if era5.size().getInfo() == 0:\n        print(\"No reanalysis data found.\")\n        print(\"<answer>C1</answer>\")\n        exit()\n\n# convert 105 F -> 40.56 C\nTHRESH = 40.56\n\ndef max_temp_pt(pt):\n    maxK = era5.mean().reduceRegion(\n        reducer=ee.Reducer.max(),\n        geometry=pt,\n        scale=10000,\n        maxPixels=1e9).get(era5.first().bandNames().get(0))\n    return ee.Number(maxK).getInfo()\n\ntry:\n    tmax_DP_K = max_temp_pt(dallasport)\n    tmax_MF_K = max_temp_pt(medford)\nexcept Exception:\n    print(\"<answer>C3</answer>\")\n    exit()\n\n# ERA5-Land is in K; GLDAS also in K\ntmax_DP_C = tmax_DP_K - 273.15\ntmax_MF_C = tmax_MF_K - 273.15\n\nprint(f\"Dallasport max: {tmax_DP_C:.1f}\u00b0C\")\nprint(f\"Medford max: {tmax_MF_C:.1f}\u00b0C\")\nprint(f\"Threshold 105\u00b0F = {THRESH:.1f}\u00b0C\")\n\nif (tmax_DP_C is None) or (tmax_MF_C is None):\n    print(\"<answer>C3</answer>\")\nelif (tmax_DP_C >= THRESH) or (tmax_MF_C >= THRESH):\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Dallasport max: 21.0\u00b0C\nMedford max: 22.6\u00b0C\nThreshold 105\u00b0F = 40.6\u00b0C\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nB\n</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

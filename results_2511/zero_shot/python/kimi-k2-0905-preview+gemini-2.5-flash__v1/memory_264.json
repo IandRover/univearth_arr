@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "From August 3 to 9, 2009, did Southern Taiwan experience more rainfall than Northern Taiwan?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_00-19-37",
+        "url": "https://earthobservatory.nasa.gov/images/39747/slow-moving-typhoon-morakot-inundates-taiwan",
+        "unique_id": 264
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\nQuestion: \u2018From August 3 to 9, 2009, did Southern Taiwan experience more rainfall than Northern Taiwan?\u2019\n\n1. Search strategy  \n   - Collection: TRMM/3B42 or TMPA daily (or IMERG if TRMM not available back to 2009).  \n   - Date: 2009-08-03 to 2009-08-09 (inclusive).  \n   - Location: Two simple rectangles\u2014one over southern Taiwan, one over northern Taiwan (Point collections too small for rainfall totals).\n\n2. Masking strategy  \n   - Rain-rate product has no clouds; just mask out ocean if needed (land mask via JRC).  \n   - Sum all valid pixels inside each region to get total rainfall volume for the week.\n\n3. Logic  \n   - If either collection size is 0 \u2192 C1.  \n   - If after masking either region has 0 pixels \u2192 C2.  \n   - If any summed result is None/NaN \u2192 C3.  \n   - Otherwise compare totals: south > north \u2192 A, else \u2192 B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Regions\nsouth = ee.Geometry.Rectangle([120.0, 22.4, 121.2, 21.8])  # southern Taiwan\nnorth = ee.Geometry.Rectangle([120.8, 25.3, 122.0, 24.8])  # northern Taiwan\n\n# 2. Data\ncol = (ee.ImageCollection('TRMM/3B42')\n         .select('precipitation')\n         .filterDate('2009-08-03', '2009-08-10'))\nif col.size().getInfo() == 0:\n    print(\"No TRMM images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Weekly total\nweekly = col.sum()\n\n# 4. Rainfall totals\nsumS = (weekly.reduceRegion(reducer=ee.Reducer.sum(),\n                            geometry=south, scale=1000, maxPixels=1e9)\n               .get('precipitation').getInfo())\nsumN = (weekly.reduceRegion(reducer=ee.Reducer.sum(),\n                            geometry=north, scale=1000, maxPixels=1e9)\n               .get('precipitation').getInfo())\n\n# 5. Validation\nif sumS is None or sumN is None:\n    print(\"Calculation returned None.\")\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"South total: {sumS:.1f} mm, North total: {sumN:.1f} mm\")\n    if sumS > sumN:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Regions\nsouth = ee.Geometry.Rectangle([120.0, 22.4, 121.2, 21.8])  # southern Taiwan\nnorth = ee.Geometry.Rectangle([120.8, 25.3, 122.0, 24.8])  # northern Taiwan\n\n# 2. Data\ncol = (ee.ImageCollection('TRMM/3B42')\n         .select('precipitation')\n         .filterDate('2009-08-03', '2009-08-10'))\nif col.size().getInfo() == 0:\n    print(\"No TRMM images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Weekly total\nweekly = col.sum()\n\n# 4. Rainfall totals\nsumS = (weekly.reduceRegion(reducer=ee.Reducer.sum(),\n                            geometry=south, scale=1000, maxPixels=1e9)\n               .get('precipitation').getInfo())\nsumN = (weekly.reduceRegion(reducer=ee.Reducer.sum(),\n                            geometry=north, scale=1000, maxPixels=1e9)\n               .get('precipitation').getInfo())\n\n# 5. Validation\nif sumS is None or sumN is None:\n    print(\"Calculation returned None.\")\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"South total: {sumS:.1f} mm, North total: {sumN:.1f} mm\")\n    if sumS > sumN:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "South total: 1848757.3 mm, North total: 447534.6 mm\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nA\n</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the surface water extent increase in the area between the Elkhorn and Platte Rivers near Omaha in March 16, 2019 compared to March 2018?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-17-19",
+        "url": "https://earthobservatory.nasa.gov/images/144691/historic-floods-inundate-nebraska",
+        "unique_id": 20
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy (Collection, Date, Location):\n   - Collection: JRC Global Surface Water (Monthly History \"JRC/GSW1_4/MonthlyHistory\") gives monthly water occurrence layers (water = 2, land = 1)\n   - Dates: March 2018 and 16 March 2019 (use the 2019-03-01 layer for the day since Monthly product)\n   - Location: small box over the Elkhorn\u2013Platte confluence prairie just west of Omaha\n\n2. Masking strategy: GSW has quality flags built-in; no clouds to mask for surface-water product.\n\n3. Logic to distinguish Valid Zero (A/B) from Null/Error (C3):\n   - Sum of water pixels per year = proxy for total open-surface-water area\n   - If either year returns None, NaN, or negative \u2192 C3\n   - If layer does not exist \u2192 C1\n   - If layer exists but reducer returns pixel count = 0 \u2192 C2\n   - Otherwise compare: increase in 2019 sum \u21d2 print A, else B\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define study area (Elkhorn/Platte confluence near Omaha)\ngeom = ee.Geometry.Rectangle([-96.35, 41.20, -95.95, 41.45])   # ~NW Omaha\n\n# 2. Get JRC MonthlyHistory surface water layers\ncol18 = ee.ImageCollection(\"JRC/GSW1_4/MonthlyHistory\")\\\n         .filter(ee.Filter.calendarRange(2018,2018,'year'))\\\n         .filter(ee.Filter.calendarRange(3,3,'month'))\ncol19 = ee.ImageCollection(\"JRC/GSW1_4/MonthlyHistory\")\\\n         .filter(ee.Filter.calendarRange(2019,2019,'year'))\\\n         .filter(ee.Filter.calendarRange(3,3,'month'))\n\nsize18 = col18.size().getInfo()\nsize19 = col19.size().getInfo()\n\nif size18 == 0 or size19 == 0:\n    print(\"Missing layer: 2018:\", size18, \" 2019:\", size19)\n    print(\"<answer>C1</answer>\")\n    exit()\n\nimg18 = col18.first()\nimg19 = col19.first()\n\n# 3. Compute water-pixel totals (water class == 2)\nsum18 = img18.eq(2).reduceRegion(reducer=ee.Reducer.sum(),\n        geometry=geom, scale=1000, maxPixels=1e9).get('water').getInfo()\nsum19 = img19.eq(2).reduceRegion(reducer=ee.Reducer.sum(),\n        geometry=geom, scale=1000, maxPixels=1e9).get('water').getInfo()\n\nif sum18 is None or sum19 is None:\n    print(\"Sum invalid:\", sum18, sum19)\n    print(\"<answer>C3</answer>\")\n    exit()\n\ncount = img18.eq(2).reduceRegion(reducer=ee.Reducer.count(),\n        geometry=geom, scale=1000, maxPixels=1e9).get('water').getInfo()\nif count == 0 and sum18 == 0 and sum19 == 0:\n    print(\"No valid pixels\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\nprint(f\"Mar 2018 water pixels: {int(sum18)}\")\nprint(f\"Mar 2019 water pixels: {int(sum19)}\")\n\nif sum19 > sum18:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define study area (Elkhorn/Platte confluence near Omaha)\ngeom = ee.Geometry.Rectangle([-96.35, 41.20, -95.95, 41.45])   # ~NW Omaha\n\n# 2. Get JRC MonthlyHistory surface water layers\ncol18 = ee.ImageCollection(\"JRC/GSW1_4/MonthlyHistory\")\\\n         .filter(ee.Filter.calendarRange(2018,2018,'year'))\\\n         .filter(ee.Filter.calendarRange(3,3,'month'))\ncol19 = ee.ImageCollection(\"JRC/GSW1_4/MonthlyHistory\")\\\n         .filter(ee.Filter.calendarRange(2019,2019,'year'))\\\n         .filter(ee.Filter.calendarRange(3,3,'month'))\n\nsize18 = col18.size().getInfo()\nsize19 = col19.size().getInfo()\n\nif size18 == 0 or size19 == 0:\n    print(\"Missing layer: 2018:\", size18, \" 2019:\", size19)\n    print(\"<answer>C1</answer>\")\n    exit()\n\nimg18 = col18.first()\nimg19 = col19.first()\n\n# 3. Compute water-pixel totals (water class == 2)\nsum18 = img18.eq(2).reduceRegion(reducer=ee.Reducer.sum(),\n        geometry=geom, scale=1000, maxPixels=1e9).get('water').getInfo()\nsum19 = img19.eq(2).reduceRegion(reducer=ee.Reducer.sum(),\n        geometry=geom, scale=1000, maxPixels=1e9).get('water').getInfo()\n\nif sum18 is None or sum19 is None:\n    print(\"Sum invalid:\", sum18, sum19)\n    print(\"<answer>C3</answer>\")\n    exit()\n\ncount = img18.eq(2).reduceRegion(reducer=ee.Reducer.count(),\n        geometry=geom, scale=1000, maxPixels=1e9).get('water').getInfo()\nif count == 0 and sum18 == 0 and sum19 == 0:\n    print(\"No valid pixels\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\nprint(f\"Mar 2018 water pixels: {int(sum18)}\")\nprint(f\"Mar 2019 water pixels: {int(sum19)}\")\n\nif sum19 > sum18:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "Mar 2018 water pixels: 18\nMar 2019 water pixels: 12\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

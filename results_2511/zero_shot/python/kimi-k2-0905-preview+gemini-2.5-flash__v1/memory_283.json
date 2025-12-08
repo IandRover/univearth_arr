@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Were there two isolated islands within a 2 km radius of (27.245974, 140.878144) on December 8, 2013?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-21-36",
+        "url": "https://earthobservatory.nasa.gov/images/82607/new-island-in-the-ring-of-fire",
+        "unique_id": 283
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use a high-resolution image around the requested date (as close to 2013-12-08 as possible). Since this is a small feature, Landsat 8's 30m pixels are acceptable, and Sentinel data from 2013 is unavailable in GEE. Cloud masking is irrelevant because we're interested in land/water separation, not spectral reflectance of clouds. If Landsat is missing for that exact date, I can relax the date window (e.g., \u00b115 days). If still no images, output C1.\n\n2. Masking strategy: Create a binary mask of land vs. water using QA/TOA bands. Keep pixels with reflectance > 0 (in SWIR band) and perhaps a manual threshold to separate land from ocean. No clouds need to be masked, just on/off landmask.\n\n3. Logic: Focus on connected contiguous land patches (islands) within a 2 km radius. After thresholding land, extract connected components (patches), and count how many patches > minimal size (e.g., at least 2 pixels, 3600 m\u00b2) appear. If those connected components \u2265 2, then A. Otherwise B. If no valid land pixels remain (water everywhere), this means 0 islands, answer B but must detect C2 (no pixels/valid land). If reducer results are all None or NaN -> C3.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry\nloc = ee.Geometry.Point([140.878144, 27.245974])\nroi = loc.buffer(2000)\n\n# 2. Landsat 8 TOA acquisition close to 2013-12-08\ncol = (ee.ImageCollection('LANDSAT/LC08/C02/T1_TOA')\n          .filterBounds(roi)\n          .filterDate('2013-12-01','2013-12-15'))\nif col.size().getInfo() == 0:\n    print(\"No images near target date.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Pre-process\nimg = col.first().select(['B5']).float()  # NIR useful for land/water\n# Normalised 0\u20131, threshold 0.1: above likely land\nmask = img.gt(0.1)   # crude water mask: 1 = land, 0 = water\nmask = mask.updateMask(mask)  # keep only land pixels\n\n# 4. Count how many connected patches > 2 pixels\ntargets = mask.connectedPixelCount(256).gte(2)\nnIslands = (targets.reduceRegion(reducer=ee.Reducer.sum(),\n                                geometry=roi,\n                                scale=30,\n                                maxPixels=1e9)\n                   .get('B5').getInfo())\n\n# Validation\npixelsRemaining = (mask.reduceRegion(reducer=ee.Reducer.count(),\n                                    geometry=roi,\n                                    scale=30,\n                                    maxPixels=1e9)\n                        .get('B5').getInfo())\nprint(f\"Land pixels: {int(pixelsRemaining if pixelsRemaining else 0)}, Islands \u22652px: {int(nIslands if nIslands else 0)}\")\n\nif nIslands is None or pixelsRemaining is None:\n    print(\"<answer>C3</answer>\")\nelif pixelsRemaining == 0:\n    print(\"<answer>C2</answer>\")\nelif nIslands >= 2:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry\nloc = ee.Geometry.Point([140.878144, 27.245974])\nroi = loc.buffer(2000)\n\n# 2. Landsat 8 TOA acquisition close to 2013-12-08\ncol = (ee.ImageCollection('LANDSAT/LC08/C02/T1_TOA')\n          .filterBounds(roi)\n          .filterDate('2013-12-01','2013-12-15'))\nif col.size().getInfo() == 0:\n    print(\"No images near target date.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Pre-process\nimg = col.first().select(['B5']).float()  # NIR useful for land/water\n# Normalised 0\u20131, threshold 0.1: above likely land\nmask = img.gt(0.1)   # crude water mask: 1 = land, 0 = water\nmask = mask.updateMask(mask)  # keep only land pixels\n\n# 4. Count how many connected patches > 2 pixels\ntargets = mask.connectedPixelCount(256).gte(2)\nnIslands = (targets.reduceRegion(reducer=ee.Reducer.sum(),\n                                geometry=roi,\n                                scale=30,\n                                maxPixels=1e9)\n                   .get('B5').getInfo())\n\n# Validation\npixelsRemaining = (mask.reduceRegion(reducer=ee.Reducer.count(),\n                                    geometry=roi,\n                                    scale=30,\n                                    maxPixels=1e9)\n                        .get('B5').getInfo())\nprint(f\"Land pixels: {int(pixelsRemaining if pixelsRemaining else 0)}, Islands \u22652px: {int(nIslands if nIslands else 0)}\")\n\nif nIslands is None or pixelsRemaining is None:\n    print(\"<answer>C3</answer>\")\nelif pixelsRemaining == 0:\n    print(\"<answer>C2</answer>\")\nelif nIslands >= 2:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "No images near target date.\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

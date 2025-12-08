@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does the burned area extent in Acre, Brazil increase in late September 2005 compared to late July 2005?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "javascript",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_10-22-06",
+        "url": "https://www.earthobservatory.nasa.gov/images/5930/",
+        "unique_id": 391
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "const ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function runAnalysis() {\n  try {\n    // 1. Geometry & Time Definitions\n    const gaul = ee.FeatureCollection('FAO/GAUL/2015/level1');\n    const acreFC = gaul.filter(ee.Filter.and(\n      ee.Filter.eq('ADM0_NAME', 'Brazil'),\n      ee.Filter.eq('ADM1_NAME', 'Acre')\n    ));\n    const acreCount = await acreFC.size().getInfo();\n    if (!acreCount || acreCount === 0) {\n      console.log('Region not found: Acre, Brazil');\n      console.log('C1');\n      return;\n    }\n    const acre = ee.Feature(acreFC.first()).geometry();\n\n    const julyStart = '2005-07-01';\n    const julyEnd = '2005-08-01';\n    const sepStart = '2005-09-01';\n    const sepEnd = '2005-10-01';\n\n    const DOY_JULY_LATE = {min: 201, max: 212};  // 20\u201331 July 2005\n    const DOY_SEP_LATE = {min: 263, max: 273};   // 20\u201330 September 2005\n\n    // 2. Data Acquisition & Check with fallback\n    async function getMonthlyImage(start, end) {\n      let used = 'MODIS/061/MCD64A1';\n      let col = ee.ImageCollection(used).filterDate(start, end).select('BurnDate');\n      let size = await col.size().getInfo();\n      if (!size || size === 0) {\n        used = 'MODIS/006/MCD64A1';\n        col = ee.ImageCollection(used).filterDate(start, end).select('BurnDate');\n        size = await col.size().getInfo();\n      }\n      return {size, used, img: col.first()};\n    }\n\n    const julyData = await getMonthlyImage(julyStart, julyEnd);\n    const sepData = await getMonthlyImage(sepStart, sepEnd);\n\n    console.log(`July images: ${julyData.size} (${julyData.used})`);\n    console.log(`September images: ${sepData.size} (${sepData.used})`);\n\n    if (!julyData.size || !sepData.size) {\n      console.log('C1');\n      return;\n    }\n\n    // 3. Processing: mask by late-window DOY and compute counts/area\n    function maskByDoy(img, range) {\n      const bd = img.select('BurnDate');\n      const mask = bd.gte(range.min).and(bd.lte(range.max));\n      return bd.updateMask(mask).rename('BurnDate');\n    }\n\n    async function burnStats(img, geom, range) {\n      const maskedBD = maskByDoy(img, range);\n      const count = await maskedBD.reduceRegion({\n        reducer: ee.Reducer.count(),\n        geometry: geom,\n        scale: 1000,\n        maxPixels: 1e13\n      }).get('BurnDate').getInfo();\n\n      const areaKm2 = await ee.Image.pixelArea()\n        .updateMask(maskedBD.mask())\n        .divide(1e6)  // m\u00b2 to km\u00b2\n        .reduceRegion({\n          reducer: ee.Reducer.sum(),\n          geometry: geom,\n          scale: 1000,\n          maxPixels: 1e13\n        }).get('area').getInfo();\n\n      return {count, areaKm2};\n    }\n\n    const julStats = await burnStats(julyData.img, acre, DOY_JULY_LATE);\n    const sepStats = await burnStats(sepData.img, acre, DOY_SEP_LATE);\n\n    // 4. Validation & Final Answer logic\n    const invalid = (v) => v === null || v === undefined || (typeof v === 'number' && !isFinite(v));\n    if (invalid(julStats.count) || invalid(julStats.areaKm2) ||\n        invalid(sepStats.count) || invalid(sepStats.areaKm2)) {\n      console.log('C3');\n      return;\n    }\n\n    const julArea = Math.max(0, julStats.areaKm2 || 0);\n    const sepArea = Math.max(0, sepStats.areaKm2 || 0);\n    const diff = sepArea - julArea;\n\n    console.log(`July late burned px: ${Math.round(julStats.count || 0)}`);\n    console.log(`July late burned area (km\u00b2): ${julArea.toFixed(2)}`);\n    console.log(`Sep late burned px: ${Math.round(sepStats.count || 0)}`);\n    console.log(`Sep late burned area (km\u00b2): ${sepArea.toFixed(2)}`);\n    console.log(`Increase (Sep - Jul) km\u00b2: ${diff.toFixed(2)}`);\n\n    if (diff > 0) {\n      console.log('A');\n    } else {\n      console.log('B');\n    }\n  } catch (err) {\n    console.log(`Error: ${err}`);\n    console.log('D');\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();",
+            "code": "'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'",
+            "exec_msg": "",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<thinking>\nThe `Code` section explicitly states that no code was found. Therefore, no GEE code was actually executed. The execution output and error log are empty, as expected when no code is run. Since the question asks to classify the *execution*, and there was no execution due to missing code, the most fitting category is 'D: Execution Error', as the process of executing the provided (missing) code failed.\n</thinking>\n\n<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": "The `Code` section explicitly states that no code was found. Therefore, no GEE code was actually executed. The execution output and error log are empty, as expected when no code is run. Since the question asks to classify the *execution*, and there was no execution due to missing code, the most fitting category is 'D: Execution Error', as the process of executing the provided (missing) code failed.",
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

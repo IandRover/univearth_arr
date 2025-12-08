@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Between June 15-21, 2017, did temperatures in Needles, California reach 115 degrees fahrenheit?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "javascript",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_10-58-55",
+        "url": "https://earthobservatory.nasa.gov/images/90443/heat-broils-the-american-southwest",
+        "unique_id": 313
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "const ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function runAnalysis() {\n  try {\n    // 1. Geometry & Time Definitions\n    const point = ee.Geometry.Point([-114.614, 34.848]); // Needles, CA\n    const region = point.buffer(10000); // 10 km buffer to capture grid cell(s)\n    const start = ee.Date('2017-06-15');\n    const end = ee.Date('2017-06-22'); // exclusive, covers 15\u201321\n    const band = 'temperature_2m';\n    let datasetId = 'ECMWF/ERA5_LAND/HOURLY';\n\n    // 2. Data Acquisition & Check\n    let col = ee.ImageCollection(datasetId).filterDate(start, end).select(band);\n    let size;\n    try {\n      size = await col.size().getInfo();\n    } catch (e) {\n      console.log('Dataset error on primary:', e.toString());\n      console.log('D');\n      return;\n    }\n    if (size === 0) {\n      // Fallback to full ERA5 if LAND has no images (unlikely)\n      datasetId = 'ECMWF/ERA5/HOURLY';\n      col = ee.ImageCollection(datasetId).filterDate(start, end).select(band);\n      try {\n        size = await col.size().getInfo();\n      } catch (e2) {\n        console.log('Dataset error on fallback:', e2.toString());\n        console.log('D');\n        return;\n      }\n      if (size === 0) {\n        console.log('Images (hrs): 0');\n        console.log('C1');\n        return;\n      }\n    }\n\n    console.log(`Location: Needles, CA (-114.614, 34.848), radius 10 km`);\n    console.log(`Date range: 2017-06-15 to 2017-06-21 (inclusive)`);\n    console.log(`Dataset: ${datasetId}`);\n    console.log(`Images (hrs): ${size}`);\n\n    // 3. Processing & Pixel Validation\n    const imgMaxTime = col.max(); // per-pixel max across time window\n    const count = await ee.Number(\n      imgMaxTime.reduceRegion({\n        reducer: ee.Reducer.count(),\n        geometry: region,\n        scale: 3000,\n        maxPixels: 1e9\n      }).get(band)\n    ).getInfo();\n\n    if (!count || count === 0) {\n      console.log('Valid pixels (count@3km): 0');\n      console.log('C2');\n      return;\n    }\n    console.log(`Valid pixels (count@3km): ${count}`);\n\n    // 4. Calculation: Max temperature over the window\n    const maxK = await ee.Number(\n      imgMaxTime.reduceRegion({\n        reducer: ee.Reducer.max(),\n        geometry: region,\n        scale: 3000,\n        maxPixels: 1e9\n      }).get(band)\n    ).getInfo();\n\n    if (maxK === null || isNaN(maxK)) {\n      console.log('Max T2m: null');\n      console.log('C3');\n      return;\n    }\n    const maxF = (maxK - 273.15) * 9 / 5 + 32;\n    if (maxF < -100 || maxF > 150) {\n      console.log(`Max T2m (F): ${maxF.toFixed(1)} (out of plausible range)`);\n      console.log('C3');\n      return;\n    }\n    console.log(`Period Max T2m: ${maxF.toFixed(1)} \u00b0F (${maxK.toFixed(2)} K)`);\n\n    // 5. Daily maxima for evidence\n    const nDays = await end.difference(start, 'day').getInfo();\n    for (let d = 0; d < nDays; d++) {\n      const dStart = start.advance(d, 'day');\n      const dEnd = dStart.advance(1, 'day');\n      const label = await dStart.format('YYYY-MM-dd').getInfo();\n      const dayCol = col.filterDate(dStart, dEnd);\n      const daySize = await dayCol.size().getInfo();\n      let dayMaxFStr = 'null';\n      if (daySize > 0) {\n        const dayMaxImg = dayCol.max();\n        const dayMaxK = await ee.Number(\n          dayMaxImg.reduceRegion({\n            reducer: ee.Reducer.max(),\n            geometry: region,\n            scale: 3000,\n            maxPixels: 1e9\n          }).get(band)\n        ).getInfo();\n        if (dayMaxK !== null && !isNaN(dayMaxK)) {\n          const dayMaxF = (dayMaxK - 273.15) * 9 / 5 + 32;\n          dayMaxFStr = `${dayMaxF.toFixed(1)}`;\n        }\n      }\n      console.log(`${label}: max ${dayMaxFStr} \u00b0F (hrs: ${daySize})`);\n    }\n\n    // 6. Final Answer\n    const reached115 = maxF >= 115.0;\n    console.log(reached115 ? 'A' : 'B');\n  } catch (err) {\n    console.log('Error:', err.toString());\n    console.log('D');\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();",
+            "code": "'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'",
+            "exec_msg": "",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

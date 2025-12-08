@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did Arrachart in Madagascar recieve more than 22 inches of rainfall during the month of January 2020?",
+        "answer": "no",
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-43-10",
+        "url": "https://earthobservatory.nasa.gov/images/146225/flood-waters-overwhelm-northern-madagascar",
+        "unique_id": 44
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use CHIRPS Daily precipitation dataset (UCSB-CHG/CHIRPS/DAILY) for the point Arrachart (14.3\u00b0S, 49.3\u00b0E) in Madagascar, January 2020. CHIRPS provides daily rainfall in mm.\n2. Masking/clouds: Not needed \u2013 rainfall product, no clouds.\n3. Logic: Sum daily rainfall over January 2020 \u2192 convert mm \u2192 inches. Test if > 22 in. If CHIRPS has no images (unlikely) \u2192 C1. If sum ends up exactly zero (still valid) \u2192 A/B based on threshold. Only None/NaN \u2192 C3.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\npt = ee.Geometry.Point([49.3, -14.3])  # Arrachart, Madagascar\nstart = '2020-01-01'\nend   = '2020-01-31'\n\n# 2. Data Acquisition & Check\nrain = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\\\n          .filterDate(start, end)\nif rain.size().getInfo() == 0:\n    print(\"No CHIRPS images found for January 2020.\")\n    print(\"<answer>C1</answer>\")\n    exit()  # Ends script in case of shared env\n\n# 3. Processing\ntotal_mm = rain.sum().clip(pt)\ncount = int(total_mm.reduceRegion(ee.Reducer.count(), pt, 1000, maxPixels=1e9).get('precipitation').getInfo())\nif count == 0:\n    print(\"No valid pixels.\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\n# 4. Calculation\njan_mm = total_mm.reduceRegion(ee.Reducer.sum(), pt, 1000, maxPixels=1e9).get('precipitation').getInfo()\nif jan_mm is None:\n    print(\"<answer>C3</answer>\")\n    exit()\n\njan_in = jan_mm / 25.4  # mm \u2192 inches\nprint(f\"January 2020 rainfall: {jan_mm:.1f} mm / {jan_in:.1f} in, Pixels: {count}\")\n\n# 5. Decision\nprint(\"<answer>A</answer>\" if jan_in > 22 else \"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\npt = ee.Geometry.Point([49.3, -14.3])  # Arrachart, Madagascar\nstart = '2020-01-01'\nend   = '2020-01-31'\n\n# 2. Data Acquisition & Check\nrain = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\\\n          .filterDate(start, end)\nif rain.size().getInfo() == 0:\n    print(\"No CHIRPS images found for January 2020.\")\n    print(\"<answer>C1</answer>\")\n    exit()  # Ends script in case of shared env\n\n# 3. Processing\ntotal_mm = rain.sum().clip(pt)\ncount = int(total_mm.reduceRegion(ee.Reducer.count(), pt, 1000, maxPixels=1e9).get('precipitation').getInfo())\nif count == 0:\n    print(\"No valid pixels.\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\n# 4. Calculation\njan_mm = total_mm.reduceRegion(ee.Reducer.sum(), pt, 1000, maxPixels=1e9).get('precipitation').getInfo()\nif jan_mm is None:\n    print(\"<answer>C3</answer>\")\n    exit()\n\njan_in = jan_mm / 25.4  # mm \u2192 inches\nprint(f\"January 2020 rainfall: {jan_mm:.1f} mm / {jan_in:.1f} in, Pixels: {count}\")\n\n# 5. Decision\nprint(\"<answer>A</answer>\" if jan_in > 22 else \"<answer>B</answer>\")",
+            "exec_msg": "January 2020 rainfall: 306.0 mm / 12.0 in, Pixels: 1\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

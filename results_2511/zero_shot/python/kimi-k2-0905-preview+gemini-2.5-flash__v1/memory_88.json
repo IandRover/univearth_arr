@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was the aerosol optical depth higher over the Takalaman Desert in February 2020 than in February 2019?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-03-37",
+        "url": "https://earthobservatory.nasa.gov/images/148477/covid-19-lockdowns-cut-pollution-but-not-all-of-it",
+        "unique_id": 88
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy (Collection, Date, Location):\n   - Collection: we want aerosol optical depth (AOD).  \n     Primary: MCD19A2.006 (daily Terra+Aqua MODIS Aerosol Optical Depth, 1 km) via \u201cOptical_Depth_055\u201d.  \n     Fallback: If MCD19A2 is empty, try MODIS/006/MOD08_M3 (monthly level-3 product, \u201cAerosol_Optical_Depth_Land_Mean\u201d), but date is monthly so hard to test Feb only; stay with MCD19A2 if possible.  \n   - Date: Feb 2019 vs Feb 2020 (filter months 2).  \n   - Location: Taklamakan Desert \u2248 Polygon around southern Xinjiang (manually drawn bounding box to ensure we cover the sandy core). Use scale \u22651 km (MCD19A2 native).\n\n2. Masking strategy:\n   - MCD19A2 already flags cloud/poor quality via Quality_Assurance_Optical_Depth_055. Keep QA = 0 (best). We are not measuring clouds themselves, so we apply QA mask.\n\n3. Logic to distinguish Valid Zero (A/B) from Null/Error (C3):\n   - Mean AOD can legitimately be ~0 (clear). We only reject if the result is None or NaN (e.g., entire region masked out).  \n   - If collection size = 0 \u2192 C1.  \n   - After QA mask, count of valid 1-km pixels over region is 0 \u2192 C2.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\nroi = ee.Geometry.Rectangle([77, 37, 88, 43])  # Taklamakan Desert bounds\ndates = {'2019': ['2019-02-01', '2019-03-01'],\n         '2020': ['2020-02-01', '2020-03-01']}\n\ndef get_annual_aod(year_key):\n    col = (ee.ImageCollection('MODIS/006/MCD19A2')\n             .filterBounds(roi)\n             .filterDate(*dates[year_key])\n             .select(['Optical_Depth_055', 'QA_Optical_Depth_055']))\n    n = col.size().getInfo()\n    if n == 0:\n        return None, 0, 0\n    mask_qa = lambda img: img.updateMask(img.select('QA_Optical_Depth_055').eq(0))\n    col_clean = col.map(mask_qa)\n    img = col_clean.mean()\n    count = img.select('Optical_Depth_055').reduceRegion(\n        reducer=ee.Reducer.count(), geometry=roi, scale=1000, maxPixels=1e9).get('Optical_Depth_055')\n    mean = img.select('Optical_Depth_055').reduceRegion(\n        reducer=ee.Reducer.mean(), geometry=roi, scale=1000, maxPixels=1e9).get('Optical_Depth_055')\n    return mean.getInfo(), count.getInfo(), n\n\nmean19, c19, n19 = get_annual_aod('2019')\nmean20, c20, n20 = get_annual_aod('2020')\n\nprint(f\"2019: Images={n19}, Pixels={int(c19)}, Mean AOD={mean19}\")\nprint(f\"2020: Images={n20}, Pixels={int(c20)}, Mean AOD={mean20}\")\n\nif n19 == 0 or n20 == 0:\n    print(\"<answer>C1</answer>\")\nelif c19 == 0 or c20 == 0:\n    print(\"<answer>C2</answer>\")\nelif mean19 is None or mean20 is None:\n    print(\"<answer>C3</answer>\")\nelif mean20 > mean19:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\nroi = ee.Geometry.Rectangle([77, 37, 88, 43])  # Taklamakan Desert bounds\ndates = {'2019': ['2019-02-01', '2019-03-01'],\n         '2020': ['2020-02-01', '2020-03-01']}\n\ndef get_annual_aod(year_key):\n    col = (ee.ImageCollection('MODIS/006/MCD19A2')\n             .filterBounds(roi)\n             .filterDate(*dates[year_key])\n             .select(['Optical_Depth_055', 'QA_Optical_Depth_055']))\n    n = col.size().getInfo()\n    if n == 0:\n        return None, 0, 0\n    mask_qa = lambda img: img.updateMask(img.select('QA_Optical_Depth_055').eq(0))\n    col_clean = col.map(mask_qa)\n    img = col_clean.mean()\n    count = img.select('Optical_Depth_055').reduceRegion(\n        reducer=ee.Reducer.count(), geometry=roi, scale=1000, maxPixels=1e9).get('Optical_Depth_055')\n    mean = img.select('Optical_Depth_055').reduceRegion(\n        reducer=ee.Reducer.mean(), geometry=roi, scale=1000, maxPixels=1e9).get('Optical_Depth_055')\n    return mean.getInfo(), count.getInfo(), n\n\nmean19, c19, n19 = get_annual_aod('2019')\nmean20, c20, n20 = get_annual_aod('2020')\n\nprint(f\"2019: Images={n19}, Pixels={int(c19)}, Mean AOD={mean19}\")\nprint(f\"2020: Images={n20}, Pixels={int(c20)}, Mean AOD={mean20}\")\n\nif n19 == 0 or n20 == 0:\n    print(\"<answer>C1</answer>\")\nelif c19 == 0 or c20 == 0:\n    print(\"<answer>C2</answer>\")\nelif mean19 is None or mean20 is None:\n    print(\"<answer>C3</answer>\")\nelif mean20 > mean19:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "2019: Images=0, Pixels=0, Mean AOD=None\n2020: Images=0, Pixels=0, Mean AOD=None\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

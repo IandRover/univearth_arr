@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was the water extent around the location (11.184384, 35.114837) greater on February 14, 2022 than on February 6, 2019?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_00-24-54",
+        "url": "https://earthobservatory.nasa.gov/images/149699/keeping-a-satellite-eye-on-gerd",
+        "unique_id": 137
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:\n   - Collection: Use JRC Yearly Water Classification History v1.3 (`JRC/GSW1_3/YearlyHistory`)\n   - Location: Point at longitude 11.184384, latitude 35.114837\n   - Dates: 2019-02-06 and 2022-02-14 (use the corresponding yearly layers: 2019 and 2022)\n\n2. Masking strategy:\n   - No cloud masking needed, water classification layers are static annual composites\n   - Use the \"waterClass\" band: values 0 (no data), 1 (not water), 2 (seasonal water), 3 (permanent water)\n\n3. Logic for answer:\n   - Compare total water pixel counts (seasonal + permanent) within a small buffer around the point for both dates.\n   - If either collection fails or results are None/NaN \u2192 C3\n   - If any of the yearly images has zero valid pixels \u2192 C2\n   - If 2022 count > 2019 count \u2192 A (Yes), else \u2192 B (No)\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\nloc = ee.Geometry.Point([11.184384, 35.114837]).buffer(1000)\n\n# Fetch the yearly water history\ncol_2019 = ee.ImageCollection(\"JRC/GSW1_3/YearlyHistory\").filter(ee.Filter.eq('year', 2019))\ncol_2022 = ee.ImageCollection(\"JRC/GSW1_3/YearlyHistory\").filter(ee.Filter.eq('year', 2022))\n\nif col_2019.size().getInfo() == 0 or col_2022.size().getInfo() == 0:\n    print(\"Missing water layers for one date.\")\n    print(\"<answer>C1</answer>\")\n    quit()\n\n# Extract water class (2 = seasonal, 3 = permanent)\nimg19 = col_2019.first().select('waterClass')\nimg22 = col_2022.first().select('waterClass')\n\n# Count water pixels (value >=2) within buffer\nsum19 = img19.gte(2).reduceRegion(reducer=ee.Reducer.sum(), geometry=loc, scale=30, maxPixels=1e9).getInfo()['waterClass']\nsum22 = img22.gte(2).reduceRegion(reducer=ee.Reducer.sum(), geometry=loc, scale=30, maxPixels=1e9).getInfo()['waterClass']\n\nif sum19 is None or sum22 is None:\n    print(\"<answer>C3</answer>\")\nelif sum19 + sum22 == 0 and sum19 == 0:\n    print(\"Zero water pixels both dates.\")\n    print(\"<answer>C2</answer>\")\nelse:\n    print(f\"Water pixels 2019: {int(sum19)}, 2022: {int(sum22)}\")\n    print(\"<answer>A</answer>\" if sum22 > sum19 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\nloc = ee.Geometry.Point([11.184384, 35.114837]).buffer(1000)\n\n# Fetch the yearly water history\ncol_2019 = ee.ImageCollection(\"JRC/GSW1_3/YearlyHistory\").filter(ee.Filter.eq('year', 2019))\ncol_2022 = ee.ImageCollection(\"JRC/GSW1_3/YearlyHistory\").filter(ee.Filter.eq('year', 2022))\n\nif col_2019.size().getInfo() == 0 or col_2022.size().getInfo() == 0:\n    print(\"Missing water layers for one date.\")\n    print(\"<answer>C1</answer>\")\n    quit()\n\n# Extract water class (2 = seasonal, 3 = permanent)\nimg19 = col_2019.first().select('waterClass')\nimg22 = col_2022.first().select('waterClass')\n\n# Count water pixels (value >=2) within buffer\nsum19 = img19.gte(2).reduceRegion(reducer=ee.Reducer.sum(), geometry=loc, scale=30, maxPixels=1e9).getInfo()['waterClass']\nsum22 = img22.gte(2).reduceRegion(reducer=ee.Reducer.sum(), geometry=loc, scale=30, maxPixels=1e9).getInfo()['waterClass']\n\nif sum19 is None or sum22 is None:\n    print(\"<answer>C3</answer>\")\nelif sum19 + sum22 == 0 and sum19 == 0:\n    print(\"Zero water pixels both dates.\")\n    print(\"<answer>C2</answer>\")\nelse:\n    print(f\"Water pixels 2019: {int(sum19)}, 2022: {int(sum22)}\")\n    print(\"<answer>A</answer>\" if sum22 > sum19 else \"<answer>B</answer>\")",
+            "exec_msg": "Missing water layers for one date.\n<answer>C1</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for JRC/GSW1_3/YearlyHistory! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by JRC/GSW1_4/YearlyHistory\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/JRC_GSW1_3_YearlyHistory\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

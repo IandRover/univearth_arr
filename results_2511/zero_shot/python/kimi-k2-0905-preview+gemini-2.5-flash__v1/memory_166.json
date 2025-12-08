@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the aerosol optical depth over the Sichuan Basin in southwestern China decrease between 2006 and 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-22-05",
+        "url": "https://earthobservatory.nasa.gov/images/150918/sichuans-smoggy-basin",
+        "unique_id": 166
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy (Collection, Date, Location).\n   - Collection: MCD19A2 (MODIS Terra + Aqua Aerosol Optical Depth at 550 nm, 1 km, daily; band \u2018Optical_Depth_055\u2019) \u2013 available 2000-present.\n   - Dates: 2006-01-01 \u2192 2006-12-31 and 2020-01-01 \u2192 2020-12-31 (full calendar years).\n   - Location: Sichuan Basin (rough bounding box ~28\u201332\u00b0 N, 103\u2013109\u00b0 E). Use a small 200 km buffer polygon to keep computation light.\n\n2. Masking strategy.\n   - QA flag: MCD19A2 has QA; keep only best\u2010quality pixels (QA = 0) plus basic cloud mask (cf_aerosol_qa != 3).\n   - Mask fill values (AOD = \u20139999 \u2192 set to null).\n\n3. Logic to distinguish Valid Zero (A/B) from Null/Error (C3).\n   - Compute annual\u2010mean AOD for both years (mean of daily composites after QA mask).\n   - Check collection size immediately (C1).\n   - After masking, count valid pixels with ee.Reducer.count(); if 0 \u2192 C2.\n   - Ensure mean is a finite number; if None/NaN \u2192 C3.\n   - Compare 2020 vs 2006: if (2020 < 2006) \u2192 A \u201cYes\u201d; else \u2192 B \u201cNo\u201d.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nbasin = ee.Geometry.Rectangle([103, 28, 109, 32])  # SW China Sichuan Basin\nyr0, yr1 = 2006, 2020\n\ndef yearly_aod(year):\n    col = (ee.ImageCollection('MODIS/061/MCD19A2')\n             .filterDate(f'{year}-01-01', f'{year}-12-31')\n             .filterBounds(basin)\n             .select(['Optical_Depth_055', 'QA_Value']))\n    if col.size().getInfo() == 0:\n        return None\n    # QA & fill mask\n    aod = col.map(lambda img: img.select('Optical_Depth_055')\n                               .updateMask(img.select('QA_Value').eq(0))\n                               .updateMask(img.select('Optical_Depth_055').gt(0)))\n    cnt = aod.reduceRegions(collection=ee.FeatureCollection([ee.Feature(basin)]),\n                             reducer=ee.Reducer.count(), scale=3000).first().get('count')\n    mean = aod.mean().reduceRegion(reducer=ee.Reducer.mean(),\n                                   geometry=basin, scale=3000, maxPixels=1e9).get('Optical_Depth_055')\n    return {'cnt': cnt.getInfo(), 'mean': mean.getInfo()}\n\nres0 = yearly_aod(yr0)\nres1 = yearly_aod(yr1)\n\nif res0 is None or res1 is None:\n    print(\"No data for at least one year.\")\n    print(\"<answer>C1</answer>\")\nelif res0['cnt'] == 0 or res1['cnt'] == 0:\n    print(\"No valid pixels after masking.\")\n    print(\"<answer>C2</answer>\")\nelif res0['mean'] is None or res1['mean'] is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"AOD 2006: {res0['mean']:.3f} (pix {res0['cnt']})\")\n    print(f\"AOD 2020: {res1['mean']:.3f} (pix {res1['cnt']})\")\n    if res1['mean'] < res0['mean']:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nbasin = ee.Geometry.Rectangle([103, 28, 109, 32])  # SW China Sichuan Basin\nyr0, yr1 = 2006, 2020\n\ndef yearly_aod(year):\n    col = (ee.ImageCollection('MODIS/061/MCD19A2')\n             .filterDate(f'{year}-01-01', f'{year}-12-31')\n             .filterBounds(basin)\n             .select(['Optical_Depth_055', 'QA_Value']))\n    if col.size().getInfo() == 0:\n        return None\n    # QA & fill mask\n    aod = col.map(lambda img: img.select('Optical_Depth_055')\n                               .updateMask(img.select('QA_Value').eq(0))\n                               .updateMask(img.select('Optical_Depth_055').gt(0)))\n    cnt = aod.reduceRegions(collection=ee.FeatureCollection([ee.Feature(basin)]),\n                             reducer=ee.Reducer.count(), scale=3000).first().get('count')\n    mean = aod.mean().reduceRegion(reducer=ee.Reducer.mean(),\n                                   geometry=basin, scale=3000, maxPixels=1e9).get('Optical_Depth_055')\n    return {'cnt': cnt.getInfo(), 'mean': mean.getInfo()}\n\nres0 = yearly_aod(yr0)\nres1 = yearly_aod(yr1)\n\nif res0 is None or res1 is None:\n    print(\"No data for at least one year.\")\n    print(\"<answer>C1</answer>\")\nelif res0['cnt'] == 0 or res1['cnt'] == 0:\n    print(\"No valid pixels after masking.\")\n    print(\"<answer>C2</answer>\")\nelif res0['mean'] is None or res1['mean'] is None:\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"AOD 2006: {res0['mean']:.3f} (pix {res0['cnt']})\")\n    print(f\"AOD 2020: {res1['mean']:.3f} (pix {res1['cnt']})\")\n    if res1['mean'] < res0['mean']:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "No data for at least one year.\n<answer>C1</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

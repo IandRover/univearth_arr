@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did nighttime lights in Obolon, Ukraine, decrease in May 2022 compared to March 2022?",
+        "answer": "No",
+        "strategy": "zero_shot",
+        "code_llm": "deepseek-reasoner",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_00-31-51",
+        "url": "https://earthobservatory.nasa.gov/images/150002/tracking-night-lights-in-ukraine",
+        "unique_id": 142
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nobolon = ee.Geometry.Point(30.4989, 50.5164).buffer(1000)  # 1km buffer around Obolon, Kyiv\nmarch_2022 = ('2022-03-01', '2022-03-31')\nmay_2022 = ('2022-05-01', '2022-05-31')\n\n# 2. Data Acquisition - VIIRS Nighttime Monthly Composites\nviirs = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')\nmarch_col = viirs.filterDate(*march_2022).filterBounds(obolon)\nmay_col = viirs.filterDate(*may_2022).filterBounds(obolon)\n\n# Check for empty collections\nif march_col.size().getInfo() == 0:\n    print(\"March 2022: No VIIRS monthly images\")\n    print(\"C1\")\n    exit()\nif may_col.size().getInfo() == 0:\n    print(\"May 2022: No VIIRS monthly images\")\n    print(\"C1\")\n    exit()\n\n# Get median composites\nmarch_img = march_col.select('avg_rad').median()\nmay_img = may_col.select('avg_rad').median()\n\n# 3. Processing & Pixel Counts\ndef get_stats(img, label):\n    count = img.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=obolon,\n        scale=1000,\n        maxPixels=1e9\n    ).get('avg_rad').getInfo()\n    mean = img.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=obolon,\n        scale=1000,\n        maxPixels=1e9\n    ).get('avg_rad').getInfo()\n    return count, mean\n\nmarch_count, march_mean = get_stats(march_img, \"March\")\nmay_count, may_mean = get_stats(may_img, \"May\")\n\n# 4. Validation\nprint(f\"March 2022: Mean Radiance = {march_mean:.4f}, Pixels = {march_count}\")\nprint(f\"May 2022: Mean Radiance = {may_mean:.4f}, Pixels = {may_count}\")\n\nif march_count == 0 or may_count == 0:\n    print(\"C2\")\nelif march_mean is None or may_mean is None:\n    print(\"C3\")\nelif may_mean < march_mean:\n    print(\"A\")\nelse:\n    print(\"B\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\nobolon = ee.Geometry.Point(30.4989, 50.5164).buffer(1000)  # 1km buffer around Obolon, Kyiv\nmarch_2022 = ('2022-03-01', '2022-03-31')\nmay_2022 = ('2022-05-01', '2022-05-31')\n\n# 2. Data Acquisition - VIIRS Nighttime Monthly Composites\nviirs = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG')\nmarch_col = viirs.filterDate(*march_2022).filterBounds(obolon)\nmay_col = viirs.filterDate(*may_2022).filterBounds(obolon)\n\n# Check for empty collections\nif march_col.size().getInfo() == 0:\n    print(\"March 2022: No VIIRS monthly images\")\n    print(\"C1\")\n    exit()\nif may_col.size().getInfo() == 0:\n    print(\"May 2022: No VIIRS monthly images\")\n    print(\"C1\")\n    exit()\n\n# Get median composites\nmarch_img = march_col.select('avg_rad').median()\nmay_img = may_col.select('avg_rad').median()\n\n# 3. Processing & Pixel Counts\ndef get_stats(img, label):\n    count = img.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=obolon,\n        scale=1000,\n        maxPixels=1e9\n    ).get('avg_rad').getInfo()\n    mean = img.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=obolon,\n        scale=1000,\n        maxPixels=1e9\n    ).get('avg_rad').getInfo()\n    return count, mean\n\nmarch_count, march_mean = get_stats(march_img, \"March\")\nmay_count, may_mean = get_stats(may_img, \"May\")\n\n# 4. Validation\nprint(f\"March 2022: Mean Radiance = {march_mean:.4f}, Pixels = {march_count}\")\nprint(f\"May 2022: Mean Radiance = {may_mean:.4f}, Pixels = {may_count}\")\n\nif march_count == 0 or may_count == 0:\n    print(\"C2\")\nelif march_mean is None or may_mean is None:\n    print(\"C3\")\nelif may_mean < march_mean:\n    print(\"A\")\nelse:\n    print(\"B\")",
+            "exec_msg": "March 2022: Mean Radiance = 8.9449, Pixels = 4\nMay 2022: Mean Radiance = 19.1333, Pixels = 4\nB\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nB\n</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

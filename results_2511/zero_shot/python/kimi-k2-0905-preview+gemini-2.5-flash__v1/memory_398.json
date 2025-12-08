@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Does Asir, Saudi Arabia show higher NDVI in June 2016 and  2017, compared with the long-term average for that period from 2003\u20132011?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_00-20-55",
+        "url": "https://www.earthobservatory.nasa.gov/images/88125/arabian-peninsula-primed-for-rift-valley-fever",
+        "unique_id": 398
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use MODIS NDVI (MOD13Q1) which spans 2000-present at 250m, 16-day composite, ideal for long-term NDVI comparison.No cloud mask needed (pre-composited). Location: Asir province, SW Saudi (approx. geom provided).\n\n2. Masking: Not required\u2014MOD13Q1 is cloud-screened composite.\n\n3. Logic: Compute mean NDVI for June (day-of-year 153\u2013181 inclusive) for 2003-2011 baseline and for June 2016 & 2017 separately. If any of these collections is empty \u2192 C1. After masking/extraction, if pixel count == 0 \u2192 C2. If extracted means are None/NaN \u2192 C3. Answer A if both 2016 and 2017 June means are strictly greater than the 2003-2011 June mean, else B.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\ngeom = ee.Geometry.Rectangle([42, 17.5, 44, 19.5])  # Asir rough bounds\njune = ee.Filter.calendarRange(153, 181, 'day_of_year')\n\n# 2. Baseline 2003-2011\nbase = ee.ImageCollection('MODIS/006/MOD13Q1').filterBounds(geom).filter(june).filterDate('2003-01-01', '2011-12-31')\nif base.size().getInfo() == 0:\n    print(\"No baseline images.\")\n    print(\"<answer>C1</answer>\")\nbase = base.select('NDVI')\ncnt_base = base.first().reduceRegion(reducer=ee.Reducer.count(), geometry=geom, scale=250, maxPixels=1e9).get('NDVI').getInfo()\nif cnt_base == 0:\n    print(\"No valid baseline pixels.\")\n    print(\"<answer>C2</answer>\")\nmean_base = base.mean().reduceRegion(reducer=ee.Reducer.mean(), geometry=geom, scale=250, maxPixels=1e9).get('NDVI').getInfo()\nif mean_base is None:\n    print(\"<answer>C3</answer>\")\n\n# 3. Target years 2016, 2017\ncol16 = ee.ImageCollection('MODIS/006/MOD13Q1').filterBounds(geom).filter(june).filterDate('2016-06-01', '2016-06-30')\ncol17 = ee.ImageCollection('MODIS/006/MOD13Q1').filterBounds(geom).filter(june).filterDate('2017-06-01', '2017-06-30')\ns16, s17 = col16.size().getInfo(), col17.size().getInfo()\nif s16 == 0 or s17 == 0:\n    print(\"Missing 2016 or 2017 images.\")\n    print(\"<answer>C1</answer>\")\nmean16 = col16.select('NDVI').mean().reduceRegion(reducer=ee.Reducer.mean(), geometry=geom, scale=250, maxPixels=1e9).get('NDVI').getInfo()\nmean17 = col17.select('NDVI').mean().reduceRegion(reducer=ee.Reducer.mean(), geometry=geom, scale=250, maxPixels=1e9).get('NDVI').getInfo()\nif mean16 is None or mean17 is None:\n    print(\"<answer>C3</answer>\")\n\nprint(f\"2003-11 mean: {mean_base/1e4:.3f}, 2016: {mean16/1e4:.3f}, 2017: {mean17/1e4:.3f}\")\nif mean16 > mean_base and mean17 > mean_base:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\ngeom = ee.Geometry.Rectangle([42, 17.5, 44, 19.5])  # Asir rough bounds\njune = ee.Filter.calendarRange(153, 181, 'day_of_year')\n\n# 2. Baseline 2003-2011\nbase = ee.ImageCollection('MODIS/006/MOD13Q1').filterBounds(geom).filter(june).filterDate('2003-01-01', '2011-12-31')\nif base.size().getInfo() == 0:\n    print(\"No baseline images.\")\n    print(\"<answer>C1</answer>\")\nbase = base.select('NDVI')\ncnt_base = base.first().reduceRegion(reducer=ee.Reducer.count(), geometry=geom, scale=250, maxPixels=1e9).get('NDVI').getInfo()\nif cnt_base == 0:\n    print(\"No valid baseline pixels.\")\n    print(\"<answer>C2</answer>\")\nmean_base = base.mean().reduceRegion(reducer=ee.Reducer.mean(), geometry=geom, scale=250, maxPixels=1e9).get('NDVI').getInfo()\nif mean_base is None:\n    print(\"<answer>C3</answer>\")\n\n# 3. Target years 2016, 2017\ncol16 = ee.ImageCollection('MODIS/006/MOD13Q1').filterBounds(geom).filter(june).filterDate('2016-06-01', '2016-06-30')\ncol17 = ee.ImageCollection('MODIS/006/MOD13Q1').filterBounds(geom).filter(june).filterDate('2017-06-01', '2017-06-30')\ns16, s17 = col16.size().getInfo(), col17.size().getInfo()\nif s16 == 0 or s17 == 0:\n    print(\"Missing 2016 or 2017 images.\")\n    print(\"<answer>C1</answer>\")\nmean16 = col16.select('NDVI').mean().reduceRegion(reducer=ee.Reducer.mean(), geometry=geom, scale=250, maxPixels=1e9).get('NDVI').getInfo()\nmean17 = col17.select('NDVI').mean().reduceRegion(reducer=ee.Reducer.mean(), geometry=geom, scale=250, maxPixels=1e9).get('NDVI').getInfo()\nif mean16 is None or mean17 is None:\n    print(\"<answer>C3</answer>\")\n\nprint(f\"2003-11 mean: {mean_base/1e4:.3f}, 2016: {mean16/1e4:.3f}, 2017: {mean17/1e4:.3f}\")\nif mean16 > mean_base and mean17 > mean_base:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "2003-11 mean: 0.103, 2016: 0.118, 2017: 0.125\n<answer>A</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for MODIS/006/MOD13Q1! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by MODIS/061/MOD13Q1\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MOD13Q1\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did did the total rainfall exceed 6 inches in Grafton, New South Wales during January 14, 2020 to January 22, 2020?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-16-13",
+        "url": "https://earthobservatory.nasa.gov/images/146201/rain-brought-brief-relief-to-australia",
+        "unique_id": 40
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: I will use the CHIRPS Daily dataset (UCSB-CHG/CHIRPS/DAILY) which provides daily rainfall in mm. This covers Australia and has data for 2020. I will filter for the exact date range and the location of Grafton, NSW.  \n2. Masking strategy: No cloud masking is needed since CHIRPS is a gauge-satellite merged product with daily precipitation estimates, not optical imagery.  \n3. Logic: Sum all daily rainfall over the 9-day window (14\u201322 Jan 2020). 6 inches \u2248 152.4 mm. Check the summed value: if None/NaN \u2192 C3; if sum > 152.4 mm \u2192 A; else \u2192 B. Also guard against empty collection (C1) or zero valid pixels (C2).\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\ngrafton = ee.Geometry.Point([152.9353, -29.6906])  # Grafton, NSW\nstart = '2020-01-14'\nend   = '2020-01-23'  # inclusive upper bound\n\n# 2. Data Acquisition & Check\ncol = (ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n       .filterDate(start, end)\n       .filterBounds(grafton))\nn = col.size().getInfo()\nif n == 0:\n    print(\"No rainfall images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Processing: sum rainfall over interval\ntotal_rain = col.sum().select('precipitation')\ncount = total_rain.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=grafton,\n    scale=5000,\n    maxPixels=1e9).get('precipitation').getInfo()\nif count == 0:\n    print(\"No valid pixels.\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\n# 4. Calculation\ntotal_mm = total_rain.reduceRegion(\n    reducer=ee.Reducer.first(),\n    geometry=grafton,\n    scale=5000,\n    maxPixels=1e9).get('precipitation').getInfo()\n\n# 5. Validation & Final Answer\nif total_mm is None or str(total_mm)=='nan':\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Sum: {total_mm:.2f} mm, Pixels: {int(count)}\")\n    if total_mm > 152.4:  # 6 inches\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time Definitions\ngrafton = ee.Geometry.Point([152.9353, -29.6906])  # Grafton, NSW\nstart = '2020-01-14'\nend   = '2020-01-23'  # inclusive upper bound\n\n# 2. Data Acquisition & Check\ncol = (ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')\n       .filterDate(start, end)\n       .filterBounds(grafton))\nn = col.size().getInfo()\nif n == 0:\n    print(\"No rainfall images found.\")\n    print(\"<answer>C1</answer>\")\n    exit()\n\n# 3. Processing: sum rainfall over interval\ntotal_rain = col.sum().select('precipitation')\ncount = total_rain.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=grafton,\n    scale=5000,\n    maxPixels=1e9).get('precipitation').getInfo()\nif count == 0:\n    print(\"No valid pixels.\")\n    print(\"<answer>C2</answer>\")\n    exit()\n\n# 4. Calculation\ntotal_mm = total_rain.reduceRegion(\n    reducer=ee.Reducer.first(),\n    geometry=grafton,\n    scale=5000,\n    maxPixels=1e9).get('precipitation').getInfo()\n\n# 5. Validation & Final Answer\nif total_mm is None or str(total_mm)=='nan':\n    print(\"<answer>C3</answer>\")\nelse:\n    print(f\"Sum: {total_mm:.2f} mm, Pixels: {int(count)}\")\n    if total_mm > 152.4:  # 6 inches\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "Sum: 185.60 mm, Pixels: 1\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

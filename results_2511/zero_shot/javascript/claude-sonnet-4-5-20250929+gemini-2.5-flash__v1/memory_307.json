@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did Cambodia experience forest loss between 2001 and 2014?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-sonnet-4-5-20250929",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "javascript",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_23-17-58",
+        "url": "https://earthobservatory.nasa.gov/images/89413/cambodias-forests-are-disappearing",
+        "unique_id": 307
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:\n   - Use Hansen Global Forest Change dataset which has annual forest loss data\n   - Focus on Cambodia boundary\n   - Compare forest loss between 2001 and 2014\n\n2. Masking strategy:\n   - No cloud masking needed (Hansen dataset is a composite product)\n   - Use the 'lossyear' band which indicates the year of forest loss (1-23 for 2001-2023)\n   - Filter for loss years between 1 and 14 (representing 2001-2014)\n\n3. Logic to distinguish Valid Zero (A/B) from Null/Error (C3):\n   - Valid Zero (B): If total forest loss pixels = 0, means no forest loss\n   - Non-zero (A): If forest loss pixels > 0, means forest loss occurred\n   - C2: If no valid pixels after processing (unlikely with Hansen dataset)\n   - C3: If calculation returns None/NaN/invalid value\n</thinking>\n\n<code>\n```javascript\nconst ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function runAnalysis() {\n  // 1. Geometry Definition - Cambodia\n  const cambodia = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\n    .filter(ee.Filter.eq('country_na', 'Cambodia'))\n    .geometry();\n\n  // 2. Data Acquisition - Hansen Global Forest Change\n  const hansen = ee.Image('UMD/hansen/global_forest_change_2023_v1_11');\n  \n  // Get the loss year band (1-23 represents years 2001-2023)\n  const lossYear = hansen.select('lossyear');\n  \n  // 3. Filter for forest loss between 2001 and 2014 (years 1-14)\n  const loss2001_2014 = lossYear.gte(1).and(lossYear.lte(14));\n  \n  // 4. Calculate total forest loss pixels\n  const lossStats = loss2001_2014.reduceRegion({\n    reducer: ee.Reducer.sum(),\n    geometry: cambodia,\n    scale: 3000,\n    maxPixels: 1e9\n  });\n  \n  const totalLossPixels = lossStats.get('lossyear').getInfo();\n  \n  // Also get count of valid pixels to check for C2\n  const pixelCount = loss2001_2014.reduceRegion({\n    reducer: ee.Reducer.count(),\n    geometry: cambodia,\n    scale: 3000,\n    maxPixels: 1e9\n  });\n  \n  const validPixels = pixelCount.get('lossyear').getInfo();\n  \n  // 5. Validation & Output\n  console.log(`Valid pixels analyzed: ${validPixels}`);\n  console.log(`Forest loss pixels (2001-2014): ${totalLossPixels}`);\n  \n  if (totalLossPixels === null || totalLossPixels === undefined || isNaN(totalLossPixels)) {\n    console.log(\"<answer>C3</answer>\");\n  } else if (validPixels === 0) {\n    console.log(\"<answer>C2</answer>\");\n  } else if (totalLossPixels > 0) {\n    console.log(\"<answer>A</answer>\");\n  } else {\n    console.log(\"<answer>B</answer>\");\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();\n```\n</code>",
+            "code": "const ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function runAnalysis() {\n  // 1. Geometry Definition - Cambodia\n  const cambodia = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\n    .filter(ee.Filter.eq('country_na', 'Cambodia'))\n    .geometry();\n\n  // 2. Data Acquisition - Hansen Global Forest Change\n  const hansen = ee.Image('UMD/hansen/global_forest_change_2023_v1_11');\n  \n  // Get the loss year band (1-23 represents years 2001-2023)\n  const lossYear = hansen.select('lossyear');\n  \n  // 3. Filter for forest loss between 2001 and 2014 (years 1-14)\n  const loss2001_2014 = lossYear.gte(1).and(lossYear.lte(14));\n  \n  // 4. Calculate total forest loss pixels\n  const lossStats = loss2001_2014.reduceRegion({\n    reducer: ee.Reducer.sum(),\n    geometry: cambodia,\n    scale: 3000,\n    maxPixels: 1e9\n  });\n  \n  const totalLossPixels = lossStats.get('lossyear').getInfo();\n  \n  // Also get count of valid pixels to check for C2\n  const pixelCount = loss2001_2014.reduceRegion({\n    reducer: ee.Reducer.count(),\n    geometry: cambodia,\n    scale: 3000,\n    maxPixels: 1e9\n  });\n  \n  const validPixels = pixelCount.get('lossyear').getInfo();\n  \n  // 5. Validation & Output\n  console.log(`Valid pixels analyzed: ${validPixels}`);\n  console.log(`Forest loss pixels (2001-2014): ${totalLossPixels}`);\n  \n  if (totalLossPixels === null || totalLossPixels === undefined || isNaN(totalLossPixels)) {\n    console.log(\"<answer>C3</answer>\");\n  } else if (validPixels === 0) {\n    console.log(\"<answer>C2</answer>\");\n  } else if (totalLossPixels > 0) {\n    console.log(\"<answer>A</answer>\");\n  } else {\n    console.log(\"<answer>B</answer>\");\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();",
+            "exec_msg": "Valid pixels analyzed: 17618\nForest loss pixels (2001-2014): 2176.3607843136833\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

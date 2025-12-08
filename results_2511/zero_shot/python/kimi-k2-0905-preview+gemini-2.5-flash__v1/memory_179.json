@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "In 2023, was there over 160,000 hectares of fires burning in Quebec?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-18-35",
+        "url": "https://earthobservatory.nasa.gov/images/151430/fires-burn-across-quebec",
+        "unique_id": 179
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: MODIS Burned Area (MCD64A1) \u2013 500 m annual burn date \u2013 is the standard global product. We filter 2023 (the product labels the image by the first year of the compositing period, so we take the \u201c2023\u201d image). If missing, we fall back to VIIRS 375 m Fire Locations and convert counts to hectares, but the MODIS burned-area layer is preferred.\n\n2. No cloud mask needed (burned area is a yearly composite of detection, no clouds).\n\n3. Region of interest: Quebec, Canada. Use a hand-made bounding box that covers ~1.2 million km\u00b2 (roughly the province): roughly LON -80..-57 and LAT 45..63.\n\n4. Logic: sum pixels that are burned (burn-date \u2265 1 and \u2264 366) in 2023, multiply by pixel area (500 m \u21d2 0.25 ha) and convert to hectares. If 0 images (C1) or 0 valid pixels after the fixed mask (C2), report those; if sum is None/NaN (C3). Otherwise, A/B depending on \u2265160 000 ha.\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. ROI \u2013 Quebec bounding box\nroi = ee.Geometry.Rectangle([-80.0, 45.0, -57.0, 63.0])\n\n# 2. MCD64A1 annual burn date layer for 2023\nburn = ee.ImageCollection('MODIS/006/MCD64A1')\\\n           .filter(ee.Filter.date('2023-01-01', '2024-01-01')).select('BurnDate')\n\nif burn.size().getInfo() == 0:\n    print(\"C1: No 2023 MODIS burned-area images.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    img = burn.first()  # one image per year\n    # mask valid: BurnDate 1\u2013366\n    burntMask = img.gt(0).And(img.lte(366))\n    burnt = ee.Image.pixelArea().divide(10000).updateMask(burntMask)  # m\u00b2 -> ha\n\n    # 3. stats\n    ha_tot = burnt.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=roi,\n        scale=500,\n        maxPixels=1e9\n    ).get('area').getInfo()\n\n    pix_cnt = burntMask.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=roi,\n        scale=500,\n        maxPixels=1e9\n    ).get('BurnDate').getInfo()\n\n    if ha_tot is None:\n        print(\"Ha total is None.\")\n        print(\"<answer>C3</answer>\")\n    elif pix_cnt == 0:\n        print(\"No valid fire pixels.\")\n        print(\"<answer>C2</answer>\")\n    else:\n        print(f\"2023 burnt: {ha_tot/1e4:.0f} ha\")\n        print(\"<answer>A</answer>\" if ha_tot/1e4 > 160000 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. ROI \u2013 Quebec bounding box\nroi = ee.Geometry.Rectangle([-80.0, 45.0, -57.0, 63.0])\n\n# 2. MCD64A1 annual burn date layer for 2023\nburn = ee.ImageCollection('MODIS/006/MCD64A1')\\\n           .filter(ee.Filter.date('2023-01-01', '2024-01-01')).select('BurnDate')\n\nif burn.size().getInfo() == 0:\n    print(\"C1: No 2023 MODIS burned-area images.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    img = burn.first()  # one image per year\n    # mask valid: BurnDate 1\u2013366\n    burntMask = img.gt(0).And(img.lte(366))\n    burnt = ee.Image.pixelArea().divide(10000).updateMask(burntMask)  # m\u00b2 -> ha\n\n    # 3. stats\n    ha_tot = burnt.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=roi,\n        scale=500,\n        maxPixels=1e9\n    ).get('area').getInfo()\n\n    pix_cnt = burntMask.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=roi,\n        scale=500,\n        maxPixels=1e9\n    ).get('BurnDate').getInfo()\n\n    if ha_tot is None:\n        print(\"Ha total is None.\")\n        print(\"<answer>C3</answer>\")\n    elif pix_cnt == 0:\n        print(\"No valid fire pixels.\")\n        print(\"<answer>C2</answer>\")\n    else:\n        print(f\"2023 burnt: {ha_tot/1e4:.0f} ha\")\n        print(\"<answer>A</answer>\" if ha_tot/1e4 > 160000 else \"<answer>B</answer>\")",
+            "exec_msg": "C1: No 2023 MODIS burned-area images.\n<answer>C1</answer>\n",
+            "exec_stderr": "/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/deprecation.py:215: DeprecationWarning: \n\nAttention required for MODIS/006/MCD64A1! You are using a deprecated asset.\nTo make sure your code keeps working, please update it.\nThis dataset has been superseded by MODIS/061/MCD64A1\n\nLearn more: https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MCD64A1\n\n  warnings.warn(warning, category=DeprecationWarning)\n",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

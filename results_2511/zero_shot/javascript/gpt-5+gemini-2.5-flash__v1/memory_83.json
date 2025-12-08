@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was the area of aritifical land built off the coast of Jakarata Bay greater than 800 hectares as of 2021? ",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "gpt-5",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "javascript",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-07_05-39-54",
+        "url": "https://earthobservatory.nasa.gov/images/148303/as-jakarta-grows-so-do-the-water-issues",
+        "unique_id": 83
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "const ee = require('@google/earthengine');\nconst privateKey = require('../auth_keys/test-project-473922-29f05d49bed7');\n\nasync function runAnalysis() {\n  try {\n    // 1. Geometry & Time Definitions (Jakarta Bay AOI - offshore region)\n    const aoi = ee.Geometry.Polygon([\n      [106.70, -5.95],\n      [107.05, -5.95],\n      [107.05, -6.20],\n      [106.70, -6.20],\n      [106.70, -5.95]\n    ]);\n\n    // 2. Data Acquisition & Check\n    // JRC Yearly water classification for 2021 (fallback to 2020 if missing)\n    function getYearlyImage(preferredYear, fallbackYear) {\n      const col = ee.ImageCollection('JRC/GSW1_4/YearlyClassification');\n      let colY = col.filter(ee.Filter.eq('year', preferredYear));\n      let year = preferredYear;\n      return ee.Dictionary(ee.Algorithms.If(\n        colY.size().gt(0),\n        ee.Dictionary({img: colY.first(), year: year}),\n        ee.Dictionary(ee.Algorithms.If(\n          ee.ImageCollection(col.filter(ee.Filter.eq('year', fallbackYear))).size().gt(0),\n          {img: col.filter(ee.Filter.eq('year', fallbackYear)).first(), year: fallbackYear},\n          {img: null, year: -1}\n        ))\n      ));\n    }\n\n    const yearInfo = getYearlyImage(2021, 2020);\n    const usedYear = await yearInfo.get('year').getInfo();\n    const yearlyImg = ee.Image(await yearInfo.get('img').getInfo() ? yearInfo.get('img') : null);\n\n    if (usedYear === -1 || yearlyImg === null) {\n      console.log('Yearly water classification images: 0');\n      console.log('C1: Empty Collection (No images found in date/location)');\n      console.log('C1');\n      return;\n    }\n\n    // Determine band name robustly\n    const yBandNames = await ee.Image(yearlyImg).bandNames().getInfo();\n    let yBand = 'classification';\n    if (!yBandNames || yBandNames.indexOf('classification') === -1) {\n      if (yBandNames && yBandNames.length > 0) {\n        yBand = yBandNames[0];\n      } else {\n        console.log('Band name detection failed for YearlyClassification.');\n        console.log('D');\n        return;\n      }\n    }\n\n    // JRC baseline water occurrence (1984-2020); threshold for historical water\n    const occurrence = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence');\n    const baselineWater = occurrence.gte(50); // historically water (>=50% occurrence)\n\n    // 3. Processing\n    const yearClass = ee.Image(yearlyImg).select(yBand);\n    // Not water in usedYear (class == 1). 0 is nodata, 2 water, 3 seasonal water.\n    const notWaterYear = yearClass.eq(1).rename('nw');\n\n    // New land (reclaimed/infilling): historically water AND not water in usedYear\n    const newLandMask = notWaterYear.and(baselineWater).selfMask().clip(aoi);\n\n    // Baseline water pixels in AOI (sanity check)\n    const baseCount = await baselineWater.updateMask(baselineWater).clip(aoi)\n      .reduceRegion({\n        reducer: ee.Reducer.count(),\n        geometry: aoi,\n        scale: 1000,\n        maxPixels: 1e9\n      }).get('occurrence').getInfo();\n\n    if (baseCount === null || baseCount === 0) {\n      console.log(`Using JRC yearly classification year: ${usedYear}`);\n      console.log('Baseline water pixels in AOI (1km): 0');\n      console.log('C2: No Valid Pixels (AOI lacks baseline water)');\n      console.log('C2');\n      return;\n    }\n\n    // New land pixel count (approx at 1km scale)\n    const newLandCount = await newLandMask\n      .reduceRegion({\n        reducer: ee.Reducer.count(),\n        geometry: aoi,\n        scale: 1000,\n        maxPixels: 1e9\n      }).get('nw').getInfo();\n\n    // Area computation (ha) using pixelArea, coarse scale for performance\n    const areaHa = await ee.Image.pixelArea().divide(10000).updateMask(newLandMask)\n      .reduceRegion({\n        reducer: ee.Reducer.sum(),\n        geometry: aoi,\n        scale: 1000,\n        maxPixels: 1e9\n      }).get('area').getInfo();\n\n    // 4. Validation & Final Answer\n    if (areaHa === null || isNaN(areaHa)) {\n      console.log(`Using JRC yearly classification year: ${usedYear}`);\n      console.log(`Baseline water pixels in AOI (1km): ${baseCount}`);\n      console.log(`New land pixels (1km): ${newLandCount || 0}`);\n      console.log('C3: Calculation Failure (Area is null/NaN)');\n      console.log('C3');\n      return;\n    }\n\n    // Print concise evidence\n    console.log(`Using JRC yearly classification year: ${usedYear}`);\n    console.log(`Baseline water pixels in AOI (1km): ${baseCount}`);\n    console.log(`New land pixels (1km): ${newLandCount || 0}`);\n    console.log(`New land area (ha): ${areaHa.toFixed(1)}`);\n\n    // Threshold: 800 ha\n    const answer = areaHa > 800 ? 'A: Yes' : 'B: No';\n    console.log(answer);\n  } catch (err) {\n    console.log('D');\n  }\n}\n\nasync function initEE() {\n  await new Promise((resolve, reject) => {\n    ee.data.authenticateViaPrivateKey(privateKey, resolve, reject);\n  });\n  await new Promise((resolve, reject) => {\n    ee.initialize(null, null, resolve, reject);\n  });\n  await runAnalysis();\n}\n\ninitEE();",
+            "code": "'No <code> is found in the response. Please try again. The exception error is: No <code> is found in the response.'",
+            "exec_msg": "",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>\nD\n</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

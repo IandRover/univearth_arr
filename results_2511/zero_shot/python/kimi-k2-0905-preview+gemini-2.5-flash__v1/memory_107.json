@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Was the vegetation cover near the Rosetta branch of the Nile mouth greater in 1984 than in 2021? ",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-48-51",
+        "url": "https://earthobservatory.nasa.gov/images/149183/the-nile-deltas-disappearing-farmland",
+        "unique_id": 107
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Collection: Landsat 5 for 1984; Landsat 8 for 2021 (they overlap spectrally).  \n   - Date windows:  \n     1984-01-01 \u2192 1984-12-31 (LT05)  \n     2021-01-01 \u2192 2021-12-31 (LC08)  \n   - Location: single point on the Rosetta branch mouth (\u2248 31.48\u00b0 N, 30.25\u00b0 E).  \n2. Masking strategy:  \n   - Use QA pixel bit-mask for both collections (cloud bits 3+5, plus cloud-shadow bit 6).  \n   - Compute NDVI for green vegetation proxy \u2192 NDVI = (NIR - RED)/(NIR + RED).  \n3. Logic to decide:  \n   - If either collection size == 0 \u2192 C1.  \n   - After masking, if valid-pixel count == 0 \u2192 C2.  \n   - If meanNDVI is None/NaN \u2192 C3.  \n   - Otherwise compare mean NDVI 1984 vs 2021 \u2192 A (greater) / B (not greater).\n</thinking>\n\n<code>\n```python\nimport ee, datetime\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point(30.25, 31.48)  # Rosetta mouth\n\ndef ndvi_lta(col):\n    qa = col.select('QA_PIXEL')\n    mask = qa.bitwiseAnd(1 << 3).Or(qa.bitwiseAnd(1 << 5)).Or(qa.bitwiseAnd(1 << 6)).Not()\n    ndvi = col.normalizedDifference(['B4','B3']).rename('NDVI').updateMask(mask)\n    return ndvi\n\ncol84 = ee.ImageCollection('LANDSAT/LT05/C02/T1_L2').filterBounds(pt).filterDate('1984-01-01','1984-12-31')\ncol21 = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2').filterBounds(pt).filterDate('2021-01-01','2021-12-31')\n\nn84,n21 = [c.size().getInfo() for c in [col84,col21]]\nif n84==0 or n21==0:\n    print(\"C1\"); print(\"<answer>C1</answer>\"); exit()\n\nmed84 = ndvi_lta(col84).mean()\nmed21 = ndvi_lta(col21).mean()\n\nv84,p84 = ee.Reducer.mean().combine(ee.Reducer.count(), sharedInputs=True).reduceRegion(\n            image=med84, geometry=pt, scale=1000, maxPixels=1e9).get('NDVI').getInfo()\nv21,p21 = ee.Reducer.mean().combine(ee.Reducer.count(), sharedInputs=True).reduceRegion(\n            image=med21, geometry=pt, scale=1000, maxPixels=1e9).get('NDVI').getInfo()\n\nprint(f\"1984 NDVI: {v84:.3f} (pixels {int(p84)})  2021 NDVI: {v21:.3f} (pixels {int(p21)})\")\nif p84==0 or p21==0: print(\"<answer>C2</answer>\")\nelif v84 is None or v21 is None or v84!=v84 or v21!=v21: print(\"<answer>C3</answer>\")\nelse: print(\"<answer>A</answer>\" if v84>v21 else \"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee, datetime\nee.Initialize(project='earthsense-436113')\n\npt = ee.Geometry.Point(30.25, 31.48)  # Rosetta mouth\n\ndef ndvi_lta(col):\n    qa = col.select('QA_PIXEL')\n    mask = qa.bitwiseAnd(1 << 3).Or(qa.bitwiseAnd(1 << 5)).Or(qa.bitwiseAnd(1 << 6)).Not()\n    ndvi = col.normalizedDifference(['B4','B3']).rename('NDVI').updateMask(mask)\n    return ndvi\n\ncol84 = ee.ImageCollection('LANDSAT/LT05/C02/T1_L2').filterBounds(pt).filterDate('1984-01-01','1984-12-31')\ncol21 = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2').filterBounds(pt).filterDate('2021-01-01','2021-12-31')\n\nn84,n21 = [c.size().getInfo() for c in [col84,col21]]\nif n84==0 or n21==0:\n    print(\"C1\"); print(\"<answer>C1</answer>\"); exit()\n\nmed84 = ndvi_lta(col84).mean()\nmed21 = ndvi_lta(col21).mean()\n\nv84,p84 = ee.Reducer.mean().combine(ee.Reducer.count(), sharedInputs=True).reduceRegion(\n            image=med84, geometry=pt, scale=1000, maxPixels=1e9).get('NDVI').getInfo()\nv21,p21 = ee.Reducer.mean().combine(ee.Reducer.count(), sharedInputs=True).reduceRegion(\n            image=med21, geometry=pt, scale=1000, maxPixels=1e9).get('NDVI').getInfo()\n\nprint(f\"1984 NDVI: {v84:.3f} (pixels {int(p84)})  2021 NDVI: {v21:.3f} (pixels {int(p21)})\")\nif p84==0 or p21==0: print(\"<answer>C2</answer>\")\nelif v84 is None or v21 is None or v84!=v84 or v21!=v21: print(\"<answer>C3</answer>\")\nelse: print(\"<answer>A</answer>\" if v84>v21 else \"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765079373572598.py\", line 19, in <module>\n    med84 = ndvi_lta(col84).mean()\n            ~~~~~~~~^^^^^^^\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765079373572598.py\", line 8, in ndvi_lta\n    mask = qa.bitwiseAnd(1 << 3).Or(qa.bitwiseAnd(1 << 5)).Or(qa.bitwiseAnd(1 << 6)).Not()\n           ^^^^^^^^^^^^^\nAttributeError: 'ImageCollection' object has no attribute 'bitwiseAnd'\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

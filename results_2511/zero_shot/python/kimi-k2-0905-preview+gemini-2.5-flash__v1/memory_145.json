@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the coastal city of La Serena experience at least 6cm of rainfall in July 2022?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-45-09",
+        "url": "https://earthobservatory.nasa.gov/images/150100/snow-blanket-for-the-andes",
+        "unique_id": 145
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use CHIRPS daily (or pentad) precipitation, already in mm, to measure rainfall over the city boundary (La Serena, Chile).  Set date filter 1\u201331 July 2022; then spatially sum all pixels inside the urban polygon and convert to cm.\n2. Masking: CHIRPS is a modeled rainfall product\u2014no clouds to mask.\n3. Logic: If total July rainfall \u2265 60 mm (6 cm) \u21d2 A, else B.  If imageCollection is empty \u21d2 C1; if after summing we get 0 valid pixels \u21d2 C2; if result is None/NaN \u21d2 C3.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nla_serena = ee.Geometry.Point([-71.25, -29.9]).buffer(8000)  # 8 km city buffer\njuly2022 = ee.Filter.date('2022-07-01', '2022-07-31')\n\n# 2. Data Acquisition & Check\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filter(july2022).filterBounds(la_serena)\nn_img = chirps.size().getInfo()\nif n_img == 0:\n    print(\"No CHIRPS images for July 2022.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing \u2013 sum rainfall over city\n    total = chirps.select('precipitation').sum()\n    count = total.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=la_serena,\n        scale=5500,\n        maxPixels=1e9).get('precipitation').getInfo()\n    if count == 0:\n        print(\"No valid pixels.\")\n        print(\"<answer>C2</answer>\")\n    else:\n        # 4. Calculation\n        val = total.reduceRegion(\n            reducer=ee.Reducer.sum(),\n            geometry=la_serena,\n            scale=5500,\n            maxPixels=1e9).get('precipitation').getInfo()\n        if val is None:\n            print(\"Calculation failed.\")\n            print(\"<answer>C3</answer>\")\n        else:\n            val_cm = val/10.0  # mm \u2192 cm\n            print(f\"July 2022 rainfall: {val_cm:.2f} cm, Pixels: {int(count)}\")\n            print(\"<answer>A</answer>\" if val_cm >= 6 else \"<answer>B</answer>\")\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nla_serena = ee.Geometry.Point([-71.25, -29.9]).buffer(8000)  # 8 km city buffer\njuly2022 = ee.Filter.date('2022-07-01', '2022-07-31')\n\n# 2. Data Acquisition & Check\nchirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filter(july2022).filterBounds(la_serena)\nn_img = chirps.size().getInfo()\nif n_img == 0:\n    print(\"No CHIRPS images for July 2022.\")\n    print(\"<answer>C1</answer>\")\nelse:\n    # 3. Processing \u2013 sum rainfall over city\n    total = chirps.select('precipitation').sum()\n    count = total.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=la_serena,\n        scale=5500,\n        maxPixels=1e9).get('precipitation').getInfo()\n    if count == 0:\n        print(\"No valid pixels.\")\n        print(\"<answer>C2</answer>\")\n    else:\n        # 4. Calculation\n        val = total.reduceRegion(\n            reducer=ee.Reducer.sum(),\n            geometry=la_serena,\n            scale=5500,\n            maxPixels=1e9).get('precipitation').getInfo()\n        if val is None:\n            print(\"Calculation failed.\")\n            print(\"<answer>C3</answer>\")\n        else:\n            val_cm = val/10.0  # mm \u2192 cm\n            print(f\"July 2022 rainfall: {val_cm:.2f} cm, Pixels: {int(count)}\")\n            print(\"<answer>A</answer>\" if val_cm >= 6 else \"<answer>B</answer>\")",
+            "exec_msg": "July 2022 rainfall: 19.70 cm, Pixels: 8\n<answer>A</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>A</answer>",
+            "answer": "A",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

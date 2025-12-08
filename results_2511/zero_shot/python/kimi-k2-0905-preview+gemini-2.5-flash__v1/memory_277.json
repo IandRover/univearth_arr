@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did the air temperature reach over 50 degrees Celsius at the Furnace Creek Visitor's Center on June 30, 2013?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-06_22-39-45",
+        "url": "https://earthobservatory.nasa.gov/images/81562/death-valley-claims-a-heat-title-again",
+        "unique_id": 277
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Use ERA5-Land hourly 2-metre temperature reanalysis, subset to a 1-day window around 30 Jun 2013 over the Furnace Creek Visitor Center (Death Valley), and extract the maximum temperature reached on that day.\n2. Masking strategy: ERA5-Land is a reanalysis product and requires no cloud mask.\n3. Logic: If max temperature is None/NaN or outside physically plausible range (-50,70 \u00b0C) \u2192 C3. Otherwise, if max temp > 50 \u00b0C \u2192 A, else \u2192 B.\n</thinking>\n\n<code>\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1) Geometry & Time\npt = ee.Geometry.Point(-116.875, 36.462)  # Furnace Creek VC\ndate = '2013-06-30'\n\n# 2) ERA5-Land hourly 2-metre temperature (Kelvin)\nic = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY') \\\n        .filterDate(date, date).select('temperature_2m')\n\n# 2b) Check collection\nif ic.size().getInfo() == 0:\n    print('No ERA5-Land data for 2013-06-30.')\n    print('<answer>C1</answer>')\nelse:\n    # 3) Daily max temp (K)\n    tmax_img = ic.max()\n    max_k = tmax_img.reduceRegion(\n        reducer=ee.Reducer.first(), geometry=pt, scale=10000, maxPixels=1e9\n    ).get('temperature_2m').getInfo()\n\n    # 3b) Null check\n    if max_k is None:\n        print('ERA5-Land returned None')\n        print('<answer>C3</answer>')\n    else:\n        max_c = max_k - 273.15\n        print(f'ERA5-Land max 2m temperature: {max_c:.1f} \u00b0C')\n        print(f'Pixels sampled: 1')\n\n        # 4) Validate range\n        if abs(max_c) > 150:\n            print('<answer>C3</answer>')\n        elif max_c > 50.0:\n            print('<answer>A</answer>')\n        else:\n            print('<answer>B</answer>')\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1) Geometry & Time\npt = ee.Geometry.Point(-116.875, 36.462)  # Furnace Creek VC\ndate = '2013-06-30'\n\n# 2) ERA5-Land hourly 2-metre temperature (Kelvin)\nic = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY') \\\n        .filterDate(date, date).select('temperature_2m')\n\n# 2b) Check collection\nif ic.size().getInfo() == 0:\n    print('No ERA5-Land data for 2013-06-30.')\n    print('<answer>C1</answer>')\nelse:\n    # 3) Daily max temp (K)\n    tmax_img = ic.max()\n    max_k = tmax_img.reduceRegion(\n        reducer=ee.Reducer.first(), geometry=pt, scale=10000, maxPixels=1e9\n    ).get('temperature_2m').getInfo()\n\n    # 3b) Null check\n    if max_k is None:\n        print('ERA5-Land returned None')\n        print('<answer>C3</answer>')\n    else:\n        max_c = max_k - 273.15\n        print(f'ERA5-Land max 2m temperature: {max_c:.1f} \u00b0C')\n        print(f'Pixels sampled: 1')\n\n        # 4) Validate range\n        if abs(max_c) > 150:\n            print('<answer>C3</answer>')\n        elif max_c > 50.0:\n            print('<answer>A</answer>')\n        else:\n            print('<answer>B</answer>')",
+            "exec_msg": "",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 349, in _execute_cloud_call\n    return call.execute(num_retries=num_retries)\n           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/googleapiclient/_helpers.py\", line 130, in positional_wrapper\n    return wrapped(*args, **kwargs)\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/googleapiclient/http.py\", line 938, in execute\n    raise HttpError(resp, content, uri=self.uri)\ngoogleapiclient.errors.HttpError: <HttpError 400 when requesting https://earthengine.googleapis.com/v1/projects/earthsense-436113/value:compute?prettyPrint=false&alt=json returned \"Collection.reduceColumns: Empty date ranges not supported for the current operation.\". Details: \"Collection.reduceColumns: Empty date ranges not supported for the current operation.\">\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/1765078811655244.py\", line 13, in <module>\n    if ic.size().getInfo() == 0:\n       ~~~~~~~~~~~~~~~~~^^\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/computedobject.py\", line 108, in getInfo\n    return data.computeValue(self)\n           ~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 1064, in computeValue\n    return _execute_cloud_call(\n           ~~~~~~~~~~~~~~~~~~~^\n        _get_cloud_projects()\n        ^^^^^^^^^^^^^^^^^^^^^\n        .value()\n        ^^^^^^^^\n        .compute(body=body, project=_get_projects_path(), prettyPrint=False)\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )['result']\n    ^\n  File \"/Users/ck696/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 351, in _execute_cloud_call\n    raise _translate_cloud_exception(e)  # pylint: disable=raise-missing-from\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nee.ee_exception.EEException: Collection.reduceColumns: Empty date ranges not supported for the current operation.\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>C1</answer>",
+            "answer": "C1",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}
