@@ -300,7 +300,7 @@ class ChatLLM:
         self.temp_response = ""
         self.temp_code = ""
         try:
-            self.temp_response = self._make_api_call(self.temp_code_system_prompt, self.temp_code_user_prompts, info)
+            self.temp_response = self._make_api_call(self.temp_code_system_prompt, self.temp_code_user_prompts)
             self.temp_code = self._parse(self.temp_response, ["code"])["code"]
             if not self.temp_code:
                 assert False, "No <code> is found in the response."

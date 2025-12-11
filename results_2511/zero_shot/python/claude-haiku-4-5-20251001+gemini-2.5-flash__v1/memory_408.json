@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did Pittsburgh have its warmest February in 2018 (surface temperatures at 2 meters) compared to 2010 to 2017?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "claude-haiku-4-5-20251001",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-10_23-05-55",
+        "url": "https://www.nesdis.noaa.gov/news/record-february-warmth-the-eastern-united-states",
+        "unique_id": 408
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. **Search strategy**: \n   - Use ERA5 reanalysis data for monthly mean 2m temperature (not surface temperature, which is typically from thermal bands)\n   - Filter for February in years 2010-2018 over Pittsburgh, PA\n   - Compare February 2018 temperature to the February means from 2010-2017\n\n2. **Masking strategy**: \n   - ERA5 is a reanalysis product with no clouds, so no masking needed\n   - Just extract monthly aggregated 2m temperature values\n\n3. **Logic to distinguish Valid Zero from Null**:\n   - Check if data exists for each year's February\n   - Extract mean 2m temperature for each February period\n   - Compare 2018 to max of 2010-2017\n   - If any year has no data or result is None/NaN, output C3\n   - If 2018 > max(2010-2017), answer A; otherwise B\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Pittsburgh geometry\npittsburgh = ee.Geometry.Point([-80.0155, 40.4406])\nroi = pittsburgh.buffer(50000)  # 50km buffer\n\n# 2. Extract ERA5 monthly mean 2m temperature for February 2010-2018\nera5_monthly = ee.ImageCollection('ECMWF/ERA5/MONTHLY').select('mean_2m_air_temperature')\n\n# Collect February means for each year\nfeb_temps = {}\nyears = list(range(2010, 2019))\n\nfor year in years:\n    start_date = f'{year}-02-01'\n    end_date = f'{year}-02-28'\n    \n    col = era5_monthly.filter(ee.Filter.date(start_date, end_date))\n    \n    if col.size().getInfo() == 0:\n        print(f\"Feb {year}: No data\")\n        feb_temps[year] = None\n        continue\n    \n    # Convert from Kelvin to Celsius\n    img = col.first().clip(roi)\n    temp_c = img.subtract(273.15)\n    \n    mean_temp = temp_c.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=roi,\n        scale=11000,\n        maxPixels=1e9\n    ).get('mean_2m_air_temperature').getInfo()\n    \n    feb_temps[year] = mean_temp\n    print(f\"Feb {year}: {mean_temp:.2f}\u00b0C\")\n\n# 3. Validate data completeness\nif any(v is None for v in feb_temps.values()):\n    print(\"Missing data in some years.\")\n    print(\"<answer>C3</answer>\")\nelse:\n    # 4. Compare 2018 to 2010-2017\n    temp_2018 = feb_temps[2018]\n    temps_2010_2017 = [feb_temps[y] for y in range(2010, 2018)]\n    max_prev = max(temps_2010_2017)\n    \n    print(f\"Feb 2018: {temp_2018:.2f}\u00b0C\")\n    print(f\"Max (2010-2017): {max_prev:.2f}\u00b0C\")\n    \n    if temp_2018 > max_prev:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Define Pittsburgh geometry\npittsburgh = ee.Geometry.Point([-80.0155, 40.4406])\nroi = pittsburgh.buffer(50000)  # 50km buffer\n\n# 2. Extract ERA5 monthly mean 2m temperature for February 2010-2018\nera5_monthly = ee.ImageCollection('ECMWF/ERA5/MONTHLY').select('mean_2m_air_temperature')\n\n# Collect February means for each year\nfeb_temps = {}\nyears = list(range(2010, 2019))\n\nfor year in years:\n    start_date = f'{year}-02-01'\n    end_date = f'{year}-02-28'\n    \n    col = era5_monthly.filter(ee.Filter.date(start_date, end_date))\n    \n    if col.size().getInfo() == 0:\n        print(f\"Feb {year}: No data\")\n        feb_temps[year] = None\n        continue\n    \n    # Convert from Kelvin to Celsius\n    img = col.first().clip(roi)\n    temp_c = img.subtract(273.15)\n    \n    mean_temp = temp_c.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=roi,\n        scale=11000,\n        maxPixels=1e9\n    ).get('mean_2m_air_temperature').getInfo()\n    \n    feb_temps[year] = mean_temp\n    print(f\"Feb {year}: {mean_temp:.2f}\u00b0C\")\n\n# 3. Validate data completeness\nif any(v is None for v in feb_temps.values()):\n    print(\"Missing data in some years.\")\n    print(\"<answer>C3</answer>\")\nelse:\n    # 4. Compare 2018 to 2010-2017\n    temp_2018 = feb_temps[2018]\n    temps_2010_2017 = [feb_temps[y] for y in range(2010, 2018)]\n    max_prev = max(temps_2010_2017)\n    \n    print(f\"Feb 2018: {temp_2018:.2f}\u00b0C\")\n    print(f\"Max (2010-2017): {max_prev:.2f}\u00b0C\")\n    \n    if temp_2018 > max_prev:\n        print(\"<answer>A</answer>\")\n    else:\n        print(\"<answer>B</answer>\")",
+            "exec_msg": "Feb 2010: -2.41\u00b0C\nFeb 2011: 0.11\u00b0C\nFeb 2012: 1.94\u00b0C\nFeb 2013: -1.34\u00b0C\nFeb 2014: -3.50\u00b0C\nFeb 2015: -7.61\u00b0C\nFeb 2016: 0.96\u00b0C\nFeb 2017: 4.75\u00b0C\nFeb 2018: 3.60\u00b0C\nFeb 2018: 3.60\u00b0C\nMax (2010-2017): 4.75\u00b0C\n<answer>B</answer>\n",
+            "exec_stderr": "",
+            "exec_returncode": 0,
+            "raw_answer": "<answer>B</answer>",
+            "answer": "B",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

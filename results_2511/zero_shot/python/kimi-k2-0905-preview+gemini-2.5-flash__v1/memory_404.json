@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "Did Sierra Estrella show higher land surface temperature than PHX Airport in July 19, 2023?",
+        "answer": NaN,
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-10_23-05-51",
+        "url": "https://www.nasa.gov/centers-and-facilities/jpl/nasa-data-shows-fierce-surface-temperatures-during-phoenix-heat-wave/",
+        "unique_id": 404
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy:  \n   - Use MODIS 1 km LST day product (MODIS/061/MOD11A1) for single\u2010day 2023-07-19 (DOY 200).  \n   - Location 1: Sierra Estrella core (lat 33.3, lon -112.2).  \n   - Location 2: Phoenix Sky Harbor runway polygon (small box around 33.434, -112.008).  \n2. Masking strategy:  \n   - Apply the QC_day band to retain only \u201cgood/good\u201d pixels (bits 0\u20131 = 0).  \n3. Logic:  \n   - If either collection is empty \u2192 C1.  \n   - After masking, count valid pixels; 0 \u2192 C2.  \n   - Compute mean LST for each site.  \n   - If any result is None/NaN \u2192 C3.  \n   - Compare: if Sierra Estrella mean > PHX mean \u2192 A, else B.\n</thinking>\n\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\ndate = '2023-07-19'\nsierra = ee.Geometry.Point([-112.20, 33.30])\nphx = ee.Geometry.Polygon([[-112.015,33.42],[-112.015,33.45],[-112.00,33.45],[-112.00,33.42]])\n\n# 2. Data acquisition & check\ncol = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(date).select('LST_Day_1km','QC_Day')\nif col.size().getInfo() == 0:\n    print(\"No MODIS images for 2023-07-19.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Masking & processing\ndef mask_qc(img):\n    qa = img.select('QC_Day')\n    mask = qa.bitwiseAnd(3).eq(0)  # keep only good quality\n    return img.select('LST_Day_1km').updateMask(mask).multiply(0.02).subtract(273.15)  # scale to \u00b0C\nlst = col.map(mask_qc)\n\n# 4. Count valid pixels\nc_sierra = lst.first().reduceRegion(reducer=ee.Reducer.count(), geometry=sierra, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\nc_phx = lst.first().reduceRegion(reducer=ee.Reducer.count(), geometry=phx, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\nif c_sierra==0 or c_phx==0:\n    print(\"No valid pixels after masking.\")\n    print(\"<answer>C2</answer>\")\n\n# 5. Calculation\nt_sierra = lst.first().reduceRegion(reducer=ee.Reducer.mean(), geometry=sierra, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\nt_phx = lst.first().reduceRegion(reducer=ee.Reducer.mean(), geometry=phx, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\nif t_sierra is None or t_phx is None:\n    print(\"<answer>C3</answer>\")\n\nprint(f\"Sierra: {t_sierra:.2f} \u00b0C, Pixels: {int(c_sierra)}\")\nprint(f\"PHX: {t_phx:.2f} \u00b0C, Pixels: {int(c_phx)}\")\n\nif t_sierra > t_phx:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n```",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\ndate = '2023-07-19'\nsierra = ee.Geometry.Point([-112.20, 33.30])\nphx = ee.Geometry.Polygon([[-112.015,33.42],[-112.015,33.45],[-112.00,33.45],[-112.00,33.42]])\n\n# 2. Data acquisition & check\ncol = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(date).select('LST_Day_1km','QC_Day')\nif col.size().getInfo() == 0:\n    print(\"No MODIS images for 2023-07-19.\")\n    print(\"<answer>C1</answer>\")\n\n# 3. Masking & processing\ndef mask_qc(img):\n    qa = img.select('QC_Day')\n    mask = qa.bitwiseAnd(3).eq(0)  # keep only good quality\n    return img.select('LST_Day_1km').updateMask(mask).multiply(0.02).subtract(273.15)  # scale to \u00b0C\nlst = col.map(mask_qc)\n\n# 4. Count valid pixels\nc_sierra = lst.first().reduceRegion(reducer=ee.Reducer.count(), geometry=sierra, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\nc_phx = lst.first().reduceRegion(reducer=ee.Reducer.count(), geometry=phx, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\nif c_sierra==0 or c_phx==0:\n    print(\"No valid pixels after masking.\")\n    print(\"<answer>C2</answer>\")\n\n# 5. Calculation\nt_sierra = lst.first().reduceRegion(reducer=ee.Reducer.mean(), geometry=sierra, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\nt_phx = lst.first().reduceRegion(reducer=ee.Reducer.mean(), geometry=phx, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\nif t_sierra is None or t_phx is None:\n    print(\"<answer>C3</answer>\")\n\nprint(f\"Sierra: {t_sierra:.2f} \u00b0C, Pixels: {int(c_sierra)}\")\nprint(f\"PHX: {t_phx:.2f} \u00b0C, Pixels: {int(c_phx)}\")\n\nif t_sierra > t_phx:\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "No valid pixels after masking.\n<answer>C2</answer>\n<answer>C3</answer>\n",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/17654260041999.py\", line 35, in <module>\n    print(f\"Sierra: {t_sierra:.2f} \u00b0C, Pixels: {int(c_sierra)}\")\n                    ^^^^^^^^^^^^^^\nTypeError: unsupported format string passed to NoneType.__format__\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>C2</answer>",
+            "answer": "C2",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}

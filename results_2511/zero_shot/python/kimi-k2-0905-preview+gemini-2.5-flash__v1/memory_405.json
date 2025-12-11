@@ -1,0 +1,30 @@
+{
+    "metadata": {
+        "question": "\nDid the smoke plumes originating from fires in Siskiyou County on August 18, 2021, travel northward for at least 20 miles?",
+        "answer": "No",
+        "strategy": "zero_shot",
+        "code_llm": "kimi-k2-0905-preview",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_iters": "1",
+        "suffix": "v1",
+        "timestamp": "2025-12-10_23-06-59",
+        "url": "https://www.nasa.gov/centers-and-facilities/jpl/nasas-misr-instrument-sees-california-wildfire-smoke-plumes-from-space/",
+        "unique_id": 405
+    },
+    "data": [
+        {
+            "iter": 1,
+            "raw_code": "<thinking>\n1. Search strategy: Need to detect smoke plumes on 2021-08-18 in Siskiyou County, CA. Use MODIS Terra/Aqua combined Level-2 aerosol product (MCDTCLD) or MODIS active-fire plus true-color to visualize plume direction. If not enough pixels, fallback to VIIRS or Sentinel-2 band2/band3 true-color to trace plume.\n\n2. Masking strategy: Smoke shows up as high AOD or bright haze in true-color. If using aerosol band (Optical_Depth_055), no cloud mask needed (question is about smoke). If using true-color, apply a light cloud mask but keep thin smoke.\n\n3. Logic: Define a small polygon at the main fire spot in Siskiyou County, then sample mean AOD (or reflectance) along a 20-mile northward buffer. Compare mean AOD inside the origin fire zone vs. the northern 20-mile zone. If both have valid (non-null) means and the northern zone mean is >0.25\u00d7 origin mean, consider smoke transported. Validate pixel counts\u2014zero in either zone \u21d2 C2; null \u21d2 C3; otherwise return A (Yes) or B (No).\n</thinking>\n\n<code>\n```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nfire = ee.Geometry.Point([-122.4, 41.6])  # approximate center Siskiyou County\ndate = '2021-08-18'\nstart = ee.Date(date)\nend = start.advance(1, 'day')\nbuf = 5000  # 5 km origin mask\nzone0 = fire.buffer(buf)  # origin\nzoneN = fire.buffer(buf).transform('EPSG:4326').centroid() \\\n         .buffer(buf).transform('EPSG:4326', 1000) \\\n         .translate(0, 32186)  # 20 miles \u2248 32.2 km north\n\n# 2. Data Acquisition\ncol = ee.ImageCollection('MODIS/061/MCD19A2') \\\n        .filterDate(start, end) \\\n        .select('Optical_Depth_055')\nif col.size().getInfo() == 0:\n    print(\"No aerosol images on 2021-08-18.\")\n    print(\"<answer>C1</answer>\")\n\nimg = col.mean()  # composite if >1 granule\n\n# 3. Pixel counts\nc0 = img.reduceRegion(ee.Reducer.count(), zone0, 3000, maxPixels=1e9).get('Optical_Depth_055').getInfo()\ncN = img.reduceRegion(ee.Reducer.count(), zoneN, 3000, maxPixels=1e9).get('Optical_Depth_055').getInfo()\nif c0 == 0 or cN == 0:\n    print(\"No valid pixels in origin or north zone.\")\n    print(\"<answer>C2</answer>\")\n\n# 4. Calculation\nm0 = img.reduceRegion(ee.Reducer.mean(), zone0, 3000, maxPixels=1e9).get('Optical_Depth_055').getInfo()\nmN = img.reduceRegion(ee.Reducer.mean(), zoneN, 3000, maxPixels=1e9).get('Optical_Depth_055').getInfo()\nprint(f\"Origin AOD: {m0:.2f}, North20mi AOD: {mN:.2f}, PixelsO:{int(c0)}, PixelsN:{int(cN)}\")\n\nif m0 is None or mN is None:\n    print(\"<answer>C3</answer>\")\n\n# 5. Decision\nif mN >= 0.25 * m0 and mN > 0.2:  # thresholded smoke signal\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")\n```\n</code>",
+            "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# 1. Geometry & Time\nfire = ee.Geometry.Point([-122.4, 41.6])  # approximate center Siskiyou County\ndate = '2021-08-18'\nstart = ee.Date(date)\nend = start.advance(1, 'day')\nbuf = 5000  # 5 km origin mask\nzone0 = fire.buffer(buf)  # origin\nzoneN = fire.buffer(buf).transform('EPSG:4326').centroid() \\\n         .buffer(buf).transform('EPSG:4326', 1000) \\\n         .translate(0, 32186)  # 20 miles \u2248 32.2 km north\n\n# 2. Data Acquisition\ncol = ee.ImageCollection('MODIS/061/MCD19A2') \\\n        .filterDate(start, end) \\\n        .select('Optical_Depth_055')\nif col.size().getInfo() == 0:\n    print(\"No aerosol images on 2021-08-18.\")\n    print(\"<answer>C1</answer>\")\n\nimg = col.mean()  # composite if >1 granule\n\n# 3. Pixel counts\nc0 = img.reduceRegion(ee.Reducer.count(), zone0, 3000, maxPixels=1e9).get('Optical_Depth_055').getInfo()\ncN = img.reduceRegion(ee.Reducer.count(), zoneN, 3000, maxPixels=1e9).get('Optical_Depth_055').getInfo()\nif c0 == 0 or cN == 0:\n    print(\"No valid pixels in origin or north zone.\")\n    print(\"<answer>C2</answer>\")\n\n# 4. Calculation\nm0 = img.reduceRegion(ee.Reducer.mean(), zone0, 3000, maxPixels=1e9).get('Optical_Depth_055').getInfo()\nmN = img.reduceRegion(ee.Reducer.mean(), zoneN, 3000, maxPixels=1e9).get('Optical_Depth_055').getInfo()\nprint(f\"Origin AOD: {m0:.2f}, North20mi AOD: {mN:.2f}, PixelsO:{int(c0)}, PixelsN:{int(cN)}\")\n\nif m0 is None or mN is None:\n    print(\"<answer>C3</answer>\")\n\n# 5. Decision\nif mN >= 0.25 * m0 and mN > 0.2:  # thresholded smoke signal\n    print(\"<answer>A</answer>\")\nelse:\n    print(\"<answer>B</answer>\")",
+            "exec_msg": "",
+            "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/ck696/Documents/GitHub/univearth_acl/./temp/17654260706146638.py\", line 13, in <module>\n    .translate(0, 32186)  # 20 miles \u2248 32.2 km north\n     ^^^^^^^^^\nAttributeError: 'Geometry' object has no attribute 'translate'\n",
+            "exec_returncode": 1,
+            "raw_answer": "<answer>D</answer>",
+            "answer": "D",
+            "answer_thinking": null,
+            "system_prompt": null,
+            "dataset_choice": null
+        }
+    ]
+}
