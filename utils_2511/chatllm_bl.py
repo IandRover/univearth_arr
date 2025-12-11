@@ -57,6 +57,9 @@ class ChatLLM:
         self.prompt_system_answer = open("./prompts_2511/2323_ANS_SYSTEM.txt").read()
         self.prompt_user_answer = open("./prompts_2511/2323_ANS_USER.txt").read()
 
+        self.prompt_system_reflexion = open("./prompts_2511/2323_RFX_SYSTEM.txt").read()
+        self.prompt_user_reflexion = open("./prompts_2511/2323_RFX_USER.txt").read()
+
         self.spec_for_landsat = open("./prompts_2511/document_spec/landsat.txt").read()
         self.spec_for_modis = open("./prompts_2511/document_spec/modis.txt").read()
         self.spec_for_viirs = open("./prompts_2511/document_spec/viirs.txt").read()
@@ -66,7 +69,7 @@ class ChatLLM:
         self.should_clean_utf8 = False
         self.documentation = args.documentation
         
-    def _make_api_call(self, system_prompt, user_prompts, info=None) -> str:
+    def _make_api_call(self, system_prompt, user_prompts) -> str:
 
         if self.request_type == "openai":
             messages = [{ "role": "system", "content": system_prompt}]
@@ -298,6 +301,32 @@ class ChatLLM:
         self.temp_code = ""
         try:
             self.temp_response = self._make_api_call(self.temp_code_system_prompt, self.temp_code_user_prompts, info)
+            self.temp_code = self._parse(self.temp_response, ["code"])["code"]
+            if not self.temp_code:
+                assert False, "No <code> is found in the response."
+        except Exception as e:
+            if "The model is overloaded. Please try again later." in str(e):
+                return {}
+            if "initEE is not defined" in str(e):
+                return {}
+            print(f"error: {e}")
+            self.temp_code = f"""'No <code> is found in the response. Please try again. The exception error is: {e}'"""
+        return {"raw_code": self.temp_response, "code": self.temp_code}
+    
+    def reflect_and_code(self, info: dict):
+
+        if self.language == "javascript": assert False, "Reflexion is only supported for Python in this version."
+        if self.documentation != "no": assert False, "Reflexion + documentation is not supported in this version."
+        if self.strategy != "reflexion_1": assert False, "Only reflexion_1 strategy is supported in this version."
+
+        self.temp_code_system_prompt = deepcopy(self.prompt_system_reflexion)
+        self.temp_code_user_prompts = [self.prompt_user_reflexion.format_map(info)]
+        
+        self._get_client(self.text_generator)
+        self.temp_response = ""
+        self.temp_code = ""
+        try:
+            self.temp_response = self._make_api_call(self.temp_code_system_prompt, self.temp_code_user_prompts)
             self.temp_code = self._parse(self.temp_response, ["code"])["code"]
             if not self.temp_code:
                 assert False, "No <code> is found in the response."
