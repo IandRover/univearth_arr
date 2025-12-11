@@ -317,11 +317,11 @@ class ChatLLM:
 
         if self.language == "javascript": assert False, "Reflexion is only supported for Python in this version."
         if self.documentation != "no": assert False, "Reflexion + documentation is not supported in this version."
-        if self.strategy != "reflexion_1": assert False, "Only reflexion_1 strategy is supported in this version."
+        if self.strategy != "reflexion_1" and self.strategy != "reflexion_2": assert False, "Only reflexion_1 and reflexion_2 strategies are supported in this version."
 
         self.temp_code_system_prompt = deepcopy(self.prompt_system_reflexion)
         self.temp_code_user_prompts = [self.prompt_user_reflexion.format_map(info)]
-        
+
         self._get_client(self.text_generator)
         self.temp_response = ""
         self.temp_code = ""

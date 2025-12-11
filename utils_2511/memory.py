@@ -139,3 +139,72 @@ class Memory_Reflexion:
         self.metadata = data["metadata"]
         self.data = data["data"]
         self.reflexion_1_data = data.get("reflexion_1", [])
+
+class Memory_Reflexion_2:
+    """Structured storage for execution history"""
+    
+    def __init__(self, args, item: dict):
+
+        self.load_dir = args.load_dir
+        self.save_dir = args.save_dir
+        self.unique_id = item["UID"]
+        self.save_path = self.get_save_filepath()
+        self.load_path = self.get_load_filepath()
+        self.load(file_path=self.load_path)
+
+    def get_save_filepath(self) -> str:
+        """Get the filepath for this memory instance"""
+        return os.path.join(self.save_dir, f"memory_{self.unique_id}.json")
+    
+    def get_load_filepath(self) -> str:
+        """Get the filepath for this memory instance"""
+        return os.path.join(self.load_dir, f"memory_{self.unique_id}.json")
+    
+    def exists(self) -> bool:
+        if os.path.exists(self.save_path):
+            return True
+        else:
+            return False
+
+    def log_reflexion_2(self, iter_idx, info: dict):
+
+        temp = {
+            "iter": iter_idx,
+            "raw_code": info.get("raw_code"),
+            "code": info.get("code"),
+            "exec_msg": info.get("exec_msg"),
+            "exec_stderr": info.get("exec_stderr"),
+            "exec_returncode": info.get("exec_returncode"),
+            "raw_answer": info.get("raw_answer"),
+            "answer": info.get("answer"),
+            "answer_thinking": info.get("answer_thinking"),
+            "system_prompt": info.get("system_prompt"),
+            "dataset_choice": info.get("dataset_choice"),
+        }
+        self.reflexion_2_data.append(temp)
+
+    def save(self):
+        result = {"metadata": self.metadata, 
+                  "data": self.data, 
+                  "reflexion_1": self.reflexion_1_data,
+                  "reflexion_2": self.reflexion_2_data
+                  }
+        with open(self.save_path, "w") as f:
+            json.dump(result, f, indent=4)
+
+    def load(self, file_path):
+        if os.path.exists(file_path) == False:
+            self.metadata = {}
+            self.data = []
+            self.reflexion_1_data = []
+            self.reflexion_2_data = []
+            return 
+        print("Loading memory from:", file_path)
+        with open(file_path, "r") as f:
+            data = json.load(f)
+        self.metadata = data["metadata"]
+        self.data = data["data"]
+        self.reflexion_1_data = data.get("reflexion_1", [])
+        if self.reflexion_1_data == []:
+            raise ValueError(f"Reflexion 1 data is empty for file {file_path}. Cannot proceed to Reflexion 2.")
+        self.reflexion_2_data = data.get("reflexion_2", [])
