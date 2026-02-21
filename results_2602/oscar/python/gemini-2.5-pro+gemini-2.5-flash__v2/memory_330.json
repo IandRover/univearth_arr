@@ -1,0 +1,89 @@
+{
+    "metadata": {
+        "question": "Does the land surface temperature in Afghanistan increase in February 2018 compared to February 2017?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_14-22-23",
+        "url": "https://earthobservatory.nasa.gov/images/91851",
+        "unique_id": 330
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_14-22-33",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MOD11A1\"\n- fallback_collection: \"LANDSAT/LC08/C02/T1_L2\"\n- date_range: \"2017-02-01 to 2017-02-28 and 2018-02-01 to 2018-02-28\"\n- region: \"Country border of Afghanistan (e.g., from USDOS LSIB dataset)\"\n- bands: \"LST_Day_1km (Land Surface Temperature)\"\n- risks: \"MODIS has coarse resolution (1km). Cloud cover can obscure LST measurements, leading to data gaps. Persistent snow cover in mountainous regions during February will also affect LST readings.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MOD11A1\"\n- fallback_collection: \"LANDSAT/LC08/C02/T1_L2\"\n- date_range: \"2017-02-01 to 2017-02-28 and 2018-02-01 to 2018-02-28\"\n- region: \"Country border of Afghanistan (e.g., from USDOS LSIB dataset)\"\n- bands: \"LST_Day_1km (Land Surface Temperature)\"\n- risks: \"MODIS has coarse resolution (1km). Cloud cover can obscure LST measurements, leading to data gaps. Persistent snow cover in mountainous regions during February will also affect LST readings.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_14-22-45",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Import the `ee` library and initialize it. Define the area of interest (AOI) using the country code for Afghanistan ('AF') from the `USDOS/LSIB_SIMPLE/2017` feature collection. Define two distinct time periods: `t1` for February 2017 ('2017-02-01' to '2017-02-28') and `t2` for February 2018 ('2018-02-01' to '2018-02-28').\n\nStep 2: [Acquire data and check collection size]\n  - Details: Create two image collections from \"MODIS/061/MOD11A1\" by filtering for the AOI and the respective time periods (`t1`, `t2`). Select the 'LST_Day_1km' band.\n  - Validation: For each collection, call `.size().getInfo()`. If either size is 0, halt and report answer `C1: Empty Collection`, indicating which year failed.\n\nStep 3: [Apply scaling, masking, and check valid pixels]\n  - Details: For each collection, map a function to scale the 'LST_Day_1km' band by its factor (0.02) to convert DN to Kelvin. No explicit cloud masking is needed as the MODIS LST product quality bands are pre-applied, but we must account for no-data values. Create a mean composite image for each collection.\n  - Validation: For each mean composite image, use `reduceRegion` with a `count` reducer over the AOI. If the pixel count for either year is 0, halt and report answer `C2: No Valid Pixels`.\n\nStep 4: [Perform calculation]\n  - Details: For each mean composite image, calculate the mean LST value over the AOI using `ee.Reducer.mean()` in a `reduceRegion` call. The scale should be set to 1000 meters to match the MODIS resolution. Extract the numerical results using `.getInfo()`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Convert the calculated mean LST values from Kelvin to Celsius by subtracting 273.15. Compare the 2018 Celsius temperature (`lst_2018_c`) with the 2017 value (`lst_2017_c`). If `lst_2018_c > lst_2017_c`, the answer is 'A: Yes'. Otherwise, the answer is 'B: No'. Print both values for context.\n  - Guard: Before comparison, check if either calculated mean is None. If so, report answer `C3: Calculation Failure`.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Import the `ee` library and initialize it. Define the area of interest (AOI) using the country code for Afghanistan ('AF') from the `USDOS/LSIB_SIMPLE/2017` feature collection. Define two distinct time periods: `t1` for February 2017 ('2017-02-01' to '2017-02-28') and `t2` for February 2018 ('2018-02-01' to '2018-02-28').\n\nStep 2: [Acquire data and check collection size]\n  - Details: Create two image collections from \"MODIS/061/MOD11A1\" by filtering for the AOI and the respective time periods (`t1`, `t2`). Select the 'LST_Day_1km' band.\n  - Validation: For each collection, call `.size().getInfo()`. If either size is 0, halt and report answer `C1: Empty Collection`, indicating which year failed.\n\nStep 3: [Apply scaling, masking, and check valid pixels]\n  - Details: For each collection, map a function to scale the 'LST_Day_1km' band by its factor (0.02) to convert DN to Kelvin. No explicit cloud masking is needed as the MODIS LST product quality bands are pre-applied, but we must account for no-data values. Create a mean composite image for each collection.\n  - Validation: For each mean composite image, use `reduceRegion` with a `count` reducer over the AOI. If the pixel count for either year is 0, halt and report answer `C2: No Valid Pixels`.\n\nStep 4: [Perform calculation]\n  - Details: For each mean composite image, calculate the mean LST value over the AOI using `ee.Reducer.mean()` in a `reduceRegion` call. The scale should be set to 1000 meters to match the MODIS resolution. Extract the numerical results using `.getInfo()`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Convert the calculated mean LST values from Kelvin to Celsius by subtracting 273.15. Compare the 2018 Celsius temperature (`lst_2018_c`) with the 2017 value (`lst_2017_c`). If `lst_2018_c > lst_2017_c`, the answer is 'A: Yes'. Otherwise, the answer is 'B: No'. Print both values for context.\n  - Guard: Before comparison, check if either calculated mean is None. If so, report answer `C3: Calculation Failure`."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_14-22-59",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    aoi = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017').filter(ee.Filter.eq('country_co', 'AF')).geometry()\n    t1_start, t1_end = '2017-02-01', '2017-02-28'\n    t2_start, t2_end = '2018-02-01', '2018-02-28'\n    \n    # Step 2: Acquire data and check collection size\n    def get_collection(start_date, end_date):\n        return ee.ImageCollection(\"MODIS/061/MOD11A1\") \\\n                 .filterDate(start_date, end_date) \\\n                 .filterBounds(aoi) \\\n                 .select('LST_Day_1km')\n\n    collection_2017 = get_collection(t1_start, t1_end)\n    collection_2018 = get_collection(t2_start, t2_end)\n\n    size_2017 = collection_2017.size().getInfo()\n    size_2018 = collection_2018.size().getInfo()\n\n    if size_2017 == 0 or size_2018 == 0:\n        print(f\"2017 Images: {size_2017}, 2018 Images: {size_2018}\")\n        print(\"C1: Empty Collection\")\n        sys.exit()\n\n    # Step 3: Apply scaling, masking, and check valid pixels\n    def scale_lst(image):\n        return image.multiply(0.02).copyProperties(image, ['system:time_start'])\n\n    mean_2017 = collection_2017.map(scale_lst).mean()\n    mean_2018 = collection_2018.map(scale_lst).mean()\n    \n    count_2017 = mean_2017.reduceRegion(reducer=ee.Reducer.count(), geometry=aoi, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\n    count_2018 = mean_2018.reduceRegion(reducer=ee.Reducer.count(), geometry=aoi, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\n    \n    if count_2017 == 0 or count_2018 == 0:\n        print(f\"2017 Valid Pixels: {count_2017}, 2018 Valid Pixels: {count_2018}\")\n        print(\"C2: No Valid Pixels\")\n        sys.exit()\n\n    # Step 4: Perform calculation\n    lst_2017_k_dict = mean_2017.reduceRegion(reducer=ee.Reducer.mean(), geometry=aoi, scale=1000, maxPixels=1e9)\n    lst_2018_k_dict = mean_2018.reduceRegion(reducer=ee.Reducer.mean(), geometry=aoi, scale=1000, maxPixels=1e9)\n\n    lst_2017_k = lst_2017_k_dict.get('LST_Day_1km').getInfo()\n    lst_2018_k = lst_2018_k_dict.get('LST_Day_1km').getInfo()\n\n    # Step 5: Validate result and determine answer\n    if lst_2017_k is None or lst_2018_k is None:\n        print(f\"2017 LST (K): {lst_2017_k}, 2018 LST (K): {lst_2018_k}\")\n        print(\"C3: Calculation Failure\")\n        sys.exit()\n\n    lst_2017_c = lst_2017_k - 273.15\n    lst_2018_c = lst_2018_k - 273.15\n\n    print(f\"2017 Mean LST: {lst_2017_c:.2f} C\")\n    print(f\"2018 Mean LST: {lst_2018_c:.2f} C\")\n\n    if lst_2018_c > lst_2017_c:\n        print(\"A: Yes\")\n    else:\n        print(\"B: No\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An error occurred: {e}\")\n    print(\"D\")\n```",
+                "code": "import ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    aoi = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017').filter(ee.Filter.eq('country_co', 'AF')).geometry()\n    t1_start, t1_end = '2017-02-01', '2017-02-28'\n    t2_start, t2_end = '2018-02-01', '2018-02-28'\n    \n    # Step 2: Acquire data and check collection size\n    def get_collection(start_date, end_date):\n        return ee.ImageCollection(\"MODIS/061/MOD11A1\") \\\n                 .filterDate(start_date, end_date) \\\n                 .filterBounds(aoi) \\\n                 .select('LST_Day_1km')\n\n    collection_2017 = get_collection(t1_start, t1_end)\n    collection_2018 = get_collection(t2_start, t2_end)\n\n    size_2017 = collection_2017.size().getInfo()\n    size_2018 = collection_2018.size().getInfo()\n\n    if size_2017 == 0 or size_2018 == 0:\n        print(f\"2017 Images: {size_2017}, 2018 Images: {size_2018}\")\n        print(\"C1: Empty Collection\")\n        sys.exit()\n\n    # Step 3: Apply scaling, masking, and check valid pixels\n    def scale_lst(image):\n        return image.multiply(0.02).copyProperties(image, ['system:time_start'])\n\n    mean_2017 = collection_2017.map(scale_lst).mean()\n    mean_2018 = collection_2018.map(scale_lst).mean()\n    \n    count_2017 = mean_2017.reduceRegion(reducer=ee.Reducer.count(), geometry=aoi, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\n    count_2018 = mean_2018.reduceRegion(reducer=ee.Reducer.count(), geometry=aoi, scale=1000, maxPixels=1e9).get('LST_Day_1km').getInfo()\n    \n    if count_2017 == 0 or count_2018 == 0:\n        print(f\"2017 Valid Pixels: {count_2017}, 2018 Valid Pixels: {count_2018}\")\n        print(\"C2: No Valid Pixels\")\n        sys.exit()\n\n    # Step 4: Perform calculation\n    lst_2017_k_dict = mean_2017.reduceRegion(reducer=ee.Reducer.mean(), geometry=aoi, scale=1000, maxPixels=1e9)\n    lst_2018_k_dict = mean_2018.reduceRegion(reducer=ee.Reducer.mean(), geometry=aoi, scale=1000, maxPixels=1e9)\n\n    lst_2017_k = lst_2017_k_dict.get('LST_Day_1km').getInfo()\n    lst_2018_k = lst_2018_k_dict.get('LST_Day_1km').getInfo()\n\n    # Step 5: Validate result and determine answer\n    if lst_2017_k is None or lst_2018_k is None:\n        print(f\"2017 LST (K): {lst_2017_k}, 2018 LST (K): {lst_2018_k}\")\n        print(\"C3: Calculation Failure\")\n        sys.exit()\n\n    lst_2017_c = lst_2017_k - 273.15\n    lst_2018_c = lst_2018_k - 273.15\n\n    print(f\"2017 Mean LST: {lst_2017_c:.2f} C\")\n    print(f\"2018 Mean LST: {lst_2018_c:.2f} C\")\n\n    if lst_2018_c > lst_2017_c:\n        print(\"A: Yes\")\n    else:\n        print(\"B: No\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An error occurred: {e}\")\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_14-23-30",
+            "data": {
+                "exec_msg": "2017 Mean LST: 7.94 C\n2018 Mean LST: 12.53 C\nA: Yes\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_14-23-30",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "A",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_14-23-31",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_14-23-34",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

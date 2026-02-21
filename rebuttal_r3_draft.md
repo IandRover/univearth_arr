@@ -14,9 +14,9 @@ Second, please refer to **GR2** for the full OSCAR results. We show that **the p
 
 ## W2: Limited root-cause insight and reliability analysis
 
-Please refer to **GR3** for the full error taxonomy and shift analysis. The dominant failure mode is **knowledge-grounding errors** (~40%): the LLM hallucinates plausible but incorrect GEE asset IDs and band names because the GEE data catalog (1K+ datasets, each with unique band schemas) exceeds what LLMs can reliably memorize. After re-planning, knowledge errors drop substantially but syntax/runtime errors surge from 10.0% to 46.0%, revealing a **repair fragility** pattern: each repair cycle increases code complexity, introducing new failure points. This tension between error correction and code stability has been observed in code generation agents broadly and is not specific to EO.
+Please refer to **GR3** for the full error taxonomy and shift analysis. The dominant failure mode is **knowledge-grounding errors** (~40%): the LLM hallucinates plausible but incorrect GEE asset IDs and band names because the GEE data catalog (1K+ datasets, each with unique band schemas) exceeds what LLMs can reliably memorize. After re-planning, knowledge and execution errors drop substantially (e.g., wrong band: 9.6% → 1.5%, syntax/runtime: 10.0% → 2.5%), but the proportion of **wrong answers more than doubles** from 9.6% to 21.3%: as more questions successfully execute, the remaining errors shift from pipeline failures to reasoning errors where the code runs correctly but produces an incorrect conclusion.
 
-These findings point to two concrete directions applicable beyond EO: (1) retrieval-augmented tool grounding, where agents query a structured catalog at inference time rather than relying on memorized schemas, and (2) modular code generation that decomposes complex computations into independently verifiable subroutines to prevent cascading repair errors.
+These findings point to two concrete directions applicable beyond EO: (1) retrieval-augmented tool grounding, where agents query a structured catalog at inference time rather than relying on memorized schemas, and (2) improved domain reasoning through better prompting strategies or domain-specific fine-tuning.
 
 ---
 

@@ -1,0 +1,89 @@
+{
+    "metadata": {
+        "question": "Was the land surface temperature in New Mexico higher on July 20-27, 2016 than the 2001-2010 average for the same period?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_14-02-30",
+        "url": "https://earthobservatory.nasa.gov/images/88547/extreme-heat-for-an-extreme-year",
+        "unique_id": 302
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_14-02-41",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MOD11A1\"\n- fallback_collection: \"none\"\n- date_range: \"Target: 2016-07-20 to 2016-07-27. Baseline: 2001-01-01 to 2010-12-31 (filtering for July 20-27 within each year).\"\n- region: \"US State of New Mexico (obtainable from TIGER/2018/States)\"\n- bands: \"LST_Day_1km (Land Surface Temperature), QC_Day (Quality Assurance)\"\n- risks: \"MODIS LST is not available for cloud-covered pixels. Cloud contamination is a significant risk and requires robust filtering using the QC_Day band. Data gaps may exist even after weekly compositing.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MOD11A1\"\n- fallback_collection: \"none\"\n- date_range: \"Target: 2016-07-20 to 2016-07-27. Baseline: 2001-01-01 to 2010-12-31 (filtering for July 20-27 within each year).\"\n- region: \"US State of New Mexico (obtainable from TIGER/2018/States)\"\n- bands: \"LST_Day_1km (Land Surface Temperature), QC_Day (Quality Assurance)\"\n- risks: \"MODIS LST is not available for cloud-covered pixels. Cloud contamination is a significant risk and requires robust filtering using the QC_Day band. Data gaps may exist even after weekly compositing.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_14-02-53",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Import the ee library and authenticate. Define the region of interest (ROI) by filtering the `TIGER/2018/States` FeatureCollection for \"New Mexico\". Define the target date range as `2016-07-20` to `2016-07-28` (exclusive end date) and the baseline date range as `2001-01-01` to `2011-01-01` (exclusive end date).\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the `MODIS/061/MOD11A1` ImageCollection.\n  - Details: Create a `target_collection` by filtering by the target date range and ROI.\n  - Details: Create a `baseline_collection` by filtering by the baseline date range, the calendar day range (201-208, corresponding to July 20-27), and ROI.\n  - Validation: Check if `target_collection.size()` and `baseline_collection.size()` are both greater than 0. If either is 0, exit and classify as C1 (Empty Collection).\n\nStep 3: [Apply cloud masking and pre-processing]\n  - Details: Define a function `mask_and_scale(image)` that:\n    - Selects the `LST_Day_1km` and `QC_Day` bands.\n    - Uses the `QC_Day` band to create a mask where bits 0-1 are equal to 0 (indicating \"good quality\").\n    - Applies this mask to the `LST_Day_1km` band.\n    - Scales the masked LST band by its factor of 0.02 to get Kelvin, then subtracts 273.15 to convert to Celsius.\n    - Returns the processed image.\n  - Details: Apply this function to both the `target_collection` and `baseline_collection` using `.map()`.\n\nStep 4: [Perform calculation]\n  - Details: Create a single mean image for the target period by applying `.mean()` to the processed `target_collection`.\n  - Details: Create a single mean image for the baseline period by applying `.mean()` to the processed `baseline_collection`.\n  - Details: Calculate the mean LST value for New Mexico for both periods using `image.reduceRegion()` with `reducer=ee.Reducer.mean()`, `geometry=roi`, and `scale=1000`. Extract the 'LST_Day_1km' value from the resulting dictionary.\n\nStep 5: [Validate result and determine answer]\n  - Guard: Check if the results from `reduceRegion` are not None and the extracted LST values are not None. If they are, classify as C3 (Calculation Failure).\n  - Validation: As part of the `reduceRegion` call, also include `ee.Reducer.count()`. Check if the pixel count for both target and baseline reductions is greater than 0. If not, classify as C2 (No Valid Pixels).\n  - Details: Compare the final mean LST value for the target period against the baseline period.\n  - Details: If `target_LST > baseline_LST`, the answer is A (Yes). Otherwise, the answer is B (No).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Import the ee library and authenticate. Define the region of interest (ROI) by filtering the `TIGER/2018/States` FeatureCollection for \"New Mexico\". Define the target date range as `2016-07-20` to `2016-07-28` (exclusive end date) and the baseline date range as `2001-01-01` to `2011-01-01` (exclusive end date).\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the `MODIS/061/MOD11A1` ImageCollection.\n  - Details: Create a `target_collection` by filtering by the target date range and ROI.\n  - Details: Create a `baseline_collection` by filtering by the baseline date range, the calendar day range (201-208, corresponding to July 20-27), and ROI.\n  - Validation: Check if `target_collection.size()` and `baseline_collection.size()` are both greater than 0. If either is 0, exit and classify as C1 (Empty Collection).\n\nStep 3: [Apply cloud masking and pre-processing]\n  - Details: Define a function `mask_and_scale(image)` that:\n    - Selects the `LST_Day_1km` and `QC_Day` bands.\n    - Uses the `QC_Day` band to create a mask where bits 0-1 are equal to 0 (indicating \"good quality\").\n    - Applies this mask to the `LST_Day_1km` band.\n    - Scales the masked LST band by its factor of 0.02 to get Kelvin, then subtracts 273.15 to convert to Celsius.\n    - Returns the processed image.\n  - Details: Apply this function to both the `target_collection` and `baseline_collection` using `.map()`.\n\nStep 4: [Perform calculation]\n  - Details: Create a single mean image for the target period by applying `.mean()` to the processed `target_collection`.\n  - Details: Create a single mean image for the baseline period by applying `.mean()` to the processed `baseline_collection`.\n  - Details: Calculate the mean LST value for New Mexico for both periods using `image.reduceRegion()` with `reducer=ee.Reducer.mean()`, `geometry=roi`, and `scale=1000`. Extract the 'LST_Day_1km' value from the resulting dictionary.\n\nStep 5: [Validate result and determine answer]\n  - Guard: Check if the results from `reduceRegion` are not None and the extracted LST values are not None. If they are, classify as C3 (Calculation Failure).\n  - Validation: As part of the `reduceRegion` call, also include `ee.Reducer.count()`. Check if the pixel count for both target and baseline reductions is greater than 0. If not, classify as C2 (No Valid Pixels).\n  - Details: Compare the final mean LST value for the target period against the baseline period.\n  - Details: If `target_LST > baseline_LST`, the answer is A (Yes). Otherwise, the answer is B (No)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_14-03-10",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    states = ee.FeatureCollection('TIGER/2018/States')\n    roi = states.filter(ee.Filter.eq('NAME', 'New Mexico')).geometry()\n\n    target_date_start = '2016-07-20'\n    target_date_end = '2016-07-28'\n    baseline_year_start = 2001\n    baseline_year_end = 2010\n    day_of_year_start = 201 # Corresponds to July 20\n    day_of_year_end = 208   # Corresponds to July 27\n\n    # Step 2: Acquire data and check collection size\n    modis_collection = ee.ImageCollection('MODIS/061/MOD11A1')\n\n    target_collection = modis_collection.filterBounds(roi).filterDate(target_date_start, target_date_end)\n    baseline_collection = modis_collection.filterBounds(roi).filter(ee.Filter.calendarRange(baseline_year_start, baseline_year_end, 'year')).filter(ee.Filter.calendarRange(day_of_year_start, day_of_year_end, 'day_of_year'))\n\n    target_size = target_collection.size().getInfo()\n    baseline_size = baseline_collection.size().getInfo()\n\n    if target_size == 0 or baseline_size == 0:\n        print(f\"Target images: {target_size}\")\n        print(f\"Baseline images: {baseline_size}\")\n        print(\"C1\")\n        sys.exit()\n\n    # Step 3: Apply cloud masking and pre-processing\n    def mask_and_scale(image):\n        qc = image.select('QC_Day')\n        # Bits 0-1 must be 00 for good quality\n        quality_mask = qc.bitwiseAnd(3).eq(0)\n        lst = image.select('LST_Day_1km')\n        # Scale to Kelvin, then convert to Celsius\n        lst_celsius = lst.multiply(0.02).subtract(273.15)\n        return lst_celsius.updateMask(quality_mask)\n\n    processed_target = target_collection.map(mask_and_scale)\n    processed_baseline = baseline_collection.map(mask_and_scale)\n\n    # Step 4: Perform calculation\n    target_image = processed_target.mean()\n    baseline_image = processed_baseline.mean()\n\n    reducer = ee.Reducer.mean().combine(\n        reducer2=ee.Reducer.count(),\n        sharedInputs=True\n    )\n\n    target_stats = target_image.reduceRegion(\n        reducer=reducer,\n        geometry=roi,\n        scale=1000,\n        maxPixels=1e9\n    ).getInfo()\n\n    baseline_stats = baseline_image.reduceRegion(\n        reducer=reducer,\n        geometry=roi,\n        scale=1000,\n        maxPixels=1e9\n    ).getInfo()\n\n    # Step 5: Validate result and determine answer\n    target_lst = target_stats.get('LST_Day_1km_mean')\n    target_count = target_stats.get('LST_Day_1km_count')\n    baseline_lst = baseline_stats.get('LST_Day_1km_mean')\n    baseline_count = baseline_stats.get('LST_Day_1km_count')\n\n    if target_lst is None or baseline_lst is None:\n        print(f\"Calculation failed: Target LST: {target_lst}, Baseline LST: {baseline_lst}\")\n        print(\"C3\")\n        sys.exit()\n\n    if target_count == 0 or baseline_count == 0:\n        print(f\"Target valid pixels: {target_count}\")\n        print(f\"Baseline valid pixels: {baseline_count}\")\n        print(\"C2\")\n        sys.exit()\n\n    print(f\"Target Images: {target_size} (LST: {target_lst:.2f} C, Pixels: {target_count})\")\n    print(f\"Baseline Images: {baseline_size} (LST: {baseline_lst:.2f} C, Pixels: {baseline_count})\")\n\n    if target_lst > baseline_lst:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An unexpected error occurred: {e}\")\n    print(\"D\")\n```",
+                "code": "import ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    states = ee.FeatureCollection('TIGER/2018/States')\n    roi = states.filter(ee.Filter.eq('NAME', 'New Mexico')).geometry()\n\n    target_date_start = '2016-07-20'\n    target_date_end = '2016-07-28'\n    baseline_year_start = 2001\n    baseline_year_end = 2010\n    day_of_year_start = 201 # Corresponds to July 20\n    day_of_year_end = 208   # Corresponds to July 27\n\n    # Step 2: Acquire data and check collection size\n    modis_collection = ee.ImageCollection('MODIS/061/MOD11A1')\n\n    target_collection = modis_collection.filterBounds(roi).filterDate(target_date_start, target_date_end)\n    baseline_collection = modis_collection.filterBounds(roi).filter(ee.Filter.calendarRange(baseline_year_start, baseline_year_end, 'year')).filter(ee.Filter.calendarRange(day_of_year_start, day_of_year_end, 'day_of_year'))\n\n    target_size = target_collection.size().getInfo()\n    baseline_size = baseline_collection.size().getInfo()\n\n    if target_size == 0 or baseline_size == 0:\n        print(f\"Target images: {target_size}\")\n        print(f\"Baseline images: {baseline_size}\")\n        print(\"C1\")\n        sys.exit()\n\n    # Step 3: Apply cloud masking and pre-processing\n    def mask_and_scale(image):\n        qc = image.select('QC_Day')\n        # Bits 0-1 must be 00 for good quality\n        quality_mask = qc.bitwiseAnd(3).eq(0)\n        lst = image.select('LST_Day_1km')\n        # Scale to Kelvin, then convert to Celsius\n        lst_celsius = lst.multiply(0.02).subtract(273.15)\n        return lst_celsius.updateMask(quality_mask)\n\n    processed_target = target_collection.map(mask_and_scale)\n    processed_baseline = baseline_collection.map(mask_and_scale)\n\n    # Step 4: Perform calculation\n    target_image = processed_target.mean()\n    baseline_image = processed_baseline.mean()\n\n    reducer = ee.Reducer.mean().combine(\n        reducer2=ee.Reducer.count(),\n        sharedInputs=True\n    )\n\n    target_stats = target_image.reduceRegion(\n        reducer=reducer,\n        geometry=roi,\n        scale=1000,\n        maxPixels=1e9\n    ).getInfo()\n\n    baseline_stats = baseline_image.reduceRegion(\n        reducer=reducer,\n        geometry=roi,\n        scale=1000,\n        maxPixels=1e9\n    ).getInfo()\n\n    # Step 5: Validate result and determine answer\n    target_lst = target_stats.get('LST_Day_1km_mean')\n    target_count = target_stats.get('LST_Day_1km_count')\n    baseline_lst = baseline_stats.get('LST_Day_1km_mean')\n    baseline_count = baseline_stats.get('LST_Day_1km_count')\n\n    if target_lst is None or baseline_lst is None:\n        print(f\"Calculation failed: Target LST: {target_lst}, Baseline LST: {baseline_lst}\")\n        print(\"C3\")\n        sys.exit()\n\n    if target_count == 0 or baseline_count == 0:\n        print(f\"Target valid pixels: {target_count}\")\n        print(f\"Baseline valid pixels: {baseline_count}\")\n        print(\"C2\")\n        sys.exit()\n\n    print(f\"Target Images: {target_size} (LST: {target_lst:.2f} C, Pixels: {target_count})\")\n    print(f\"Baseline Images: {baseline_size} (LST: {baseline_lst:.2f} C, Pixels: {baseline_count})\")\n\n    if target_lst > baseline_lst:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An unexpected error occurred: {e}\")\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_14-03-31",
+            "data": {
+                "exec_msg": "Target Images: 8 (LST: 44.05 C, Pixels: 238048)\nBaseline Images: 80 (LST: 40.76 C, Pixels: 259287)\nA\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_14-03-31",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "A",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_14-03-32",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_14-03-37",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

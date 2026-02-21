@@ -1,0 +1,89 @@
+{
+    "metadata": {
+        "question": "Does the number of fire hotspots in the Paran\u00e1 River delta from January through July 22, 2020, exceed those detected during the same period in 2019?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_14-07-22",
+        "url": "https://www.earthobservatory.nasa.gov/images/147031/",
+        "unique_id": 361
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_14-07-32",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"FIRMS\" (Fire Information for Resource Management System)\n- fallback_collection: \"MODIS/061/MCD14ML\"\n- date_range: \"2019-01-01 to 2020-07-22\"\n- region: \"Paran\u00e1 River delta, Argentina\"\n- bands: \"T21 (brightness temperature), confidence\"\n- risks: \"none\"\n- needs_cloud_masking: \"no\"\n</observation>",
+                "observation": "- collection: \"FIRMS\" (Fire Information for Resource Management System)\n- fallback_collection: \"MODIS/061/MCD14ML\"\n- date_range: \"2019-01-01 to 2020-07-22\"\n- region: \"Paran\u00e1 River delta, Argentina\"\n- bands: \"T21 (brightness temperature), confidence\"\n- risks: \"none\"\n- needs_cloud_masking: \"no\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_14-07-44",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define an `ee.Geometry.Rectangle` for the Paran\u00e1 River delta with coordinates `[-60.8, -34.4, -58.4, -32.0]`. Define the two time periods for comparison: `2020-01-01` to `2020-07-22` and `2019-01-01` to `2019-07-22`.\n\nStep 2: [Acquire data and check collection size]\n  - Details: For each of the two time periods, create a function that loads the primary `FeatureCollection` 'FIRMS', filters it by the specified date range and geometry, and gets the total number of features (hotspots) using `.size()`.\n  - Fallback: If the size of the primary collection for a period is 0, the function will attempt the same process with the fallback collection 'MODIS/061/MCD14ML'. If the fallback is also empty, the function will return 0.\n  - Validation: After acquiring data for both periods, check if either count is 0. If one or both are 0, the final answer will be C1 (Empty Collection).\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details: This step is not applicable. The FIRMS and MODIS/MCD14ML datasets are `FeatureCollection`s (points) and do not require cloud masking. The count from Step 2 directly represents the number of valid data points.\n\nStep 4: [Perform calculation]\n  - Details: The calculation is the direct comparison of the two integer counts obtained in Step 2: `count_2020` and `count_2019`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare `count_2020` with `count_2019`. If `count_2020 > count_2019`, the answer is A (Yes). Otherwise, the answer is B (No). Print the counts for both years and the final conclusion.\n  - Guard: Check if the `.size().getInfo()` calls returned valid integers. While unlikely for `.size()`, this implicitly guards against API errors that might return None, which would be caught during the comparison. The Step 2 validation for empty collections handles the case where no data is found.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define an `ee.Geometry.Rectangle` for the Paran\u00e1 River delta with coordinates `[-60.8, -34.4, -58.4, -32.0]`. Define the two time periods for comparison: `2020-01-01` to `2020-07-22` and `2019-01-01` to `2019-07-22`.\n\nStep 2: [Acquire data and check collection size]\n  - Details: For each of the two time periods, create a function that loads the primary `FeatureCollection` 'FIRMS', filters it by the specified date range and geometry, and gets the total number of features (hotspots) using `.size()`.\n  - Fallback: If the size of the primary collection for a period is 0, the function will attempt the same process with the fallback collection 'MODIS/061/MCD14ML'. If the fallback is also empty, the function will return 0.\n  - Validation: After acquiring data for both periods, check if either count is 0. If one or both are 0, the final answer will be C1 (Empty Collection).\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details: This step is not applicable. The FIRMS and MODIS/MCD14ML datasets are `FeatureCollection`s (points) and do not require cloud masking. The count from Step 2 directly represents the number of valid data points.\n\nStep 4: [Perform calculation]\n  - Details: The calculation is the direct comparison of the two integer counts obtained in Step 2: `count_2020` and `count_2019`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare `count_2020` with `count_2019`. If `count_2020 > count_2019`, the answer is A (Yes). Otherwise, the answer is B (No). Print the counts for both years and the final conclusion.\n  - Guard: Check if the `.size().getInfo()` calls returned valid integers. While unlikely for `.size()`, this implicitly guards against API errors that might return None, which would be caught during the comparison. The Step 2 validation for empty collections handles the case where no data is found."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_14-07-55",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport ee.mapclient\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\ngeometry = ee.Geometry.Rectangle([-60.8, -34.4, -58.4, -32.0])\nstart_date_2020 = '2020-01-01'\nend_date_2020 = '2020-07-22'\nstart_date_2019 = '2019-01-01'\nend_date_2019 = '2019-07-22'\n\n# Step 2: Acquire data and check collection size\ndef get_fire_count(start_date, end_date, region):\n    \"\"\"\n    Gets the fire hotspot count for a given period and region.\n    Tries FIRMS first, then MODIS/MCD14ML as a fallback.\n    \"\"\"\n    # Primary collection\n    primary_collection = ee.FeatureCollection('FIRMS')\n    filtered_primary = primary_collection.filterDate(start_date, end_date).filterBounds(region)\n    count = filtered_primary.size()\n\n    # Fallback if primary is empty\n    def get_fallback():\n        fallback_collection = ee.FeatureCollection('MODIS/061/MCD14ML')\n        filtered_fallback = fallback_collection.filterDate(start_date, end_date).filterBounds(region)\n        return filtered_fallback.size()\n\n    final_count = ee.Number(ee.Algorithms.If(count.gt(0), count, get_fallback()))\n    return final_count\n\n# Step 4: Perform calculation (Calculation is embedded in data retrieval)\ntry:\n    count_2020 = get_fire_count(start_date_2020, end_date_2020, geometry).getInfo()\n    count_2019 = get_fire_count(start_date_2019, end_date_2019, geometry).getInfo()\n\n    # Step 3 is not applicable for FeatureCollections.\n\n    print(f\"Fire hotspots in 2019: {count_2019}\")\n    print(f\"Fire hotspots in 2020: {count_2020}\")\n\n    # Step 5: Validate result and determine answer\n    if count_2020 is None or count_2019 is None:\n        print(\"C3\")\n    elif count_2020 == 0 and count_2019 == 0:\n        print(\"C1\")\n    elif count_2020 > count_2019:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"An error occurred: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"A non-GEE error occurred: {e}\")\n    print(\"D\")\n```",
+                "code": "import ee\nimport ee.mapclient\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\ngeometry = ee.Geometry.Rectangle([-60.8, -34.4, -58.4, -32.0])\nstart_date_2020 = '2020-01-01'\nend_date_2020 = '2020-07-22'\nstart_date_2019 = '2019-01-01'\nend_date_2019 = '2019-07-22'\n\n# Step 2: Acquire data and check collection size\ndef get_fire_count(start_date, end_date, region):\n    \"\"\"\n    Gets the fire hotspot count for a given period and region.\n    Tries FIRMS first, then MODIS/MCD14ML as a fallback.\n    \"\"\"\n    # Primary collection\n    primary_collection = ee.FeatureCollection('FIRMS')\n    filtered_primary = primary_collection.filterDate(start_date, end_date).filterBounds(region)\n    count = filtered_primary.size()\n\n    # Fallback if primary is empty\n    def get_fallback():\n        fallback_collection = ee.FeatureCollection('MODIS/061/MCD14ML')\n        filtered_fallback = fallback_collection.filterDate(start_date, end_date).filterBounds(region)\n        return filtered_fallback.size()\n\n    final_count = ee.Number(ee.Algorithms.If(count.gt(0), count, get_fallback()))\n    return final_count\n\n# Step 4: Perform calculation (Calculation is embedded in data retrieval)\ntry:\n    count_2020 = get_fire_count(start_date_2020, end_date_2020, geometry).getInfo()\n    count_2019 = get_fire_count(start_date_2019, end_date_2019, geometry).getInfo()\n\n    # Step 3 is not applicable for FeatureCollections.\n\n    print(f\"Fire hotspots in 2019: {count_2019}\")\n    print(f\"Fire hotspots in 2020: {count_2020}\")\n\n    # Step 5: Validate result and determine answer\n    if count_2020 is None or count_2019 is None:\n        print(\"C3\")\n    elif count_2020 == 0 and count_2019 == 0:\n        print(\"C1\")\n    elif count_2020 > count_2019:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"An error occurred: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"A non-GEE error occurred: {e}\")\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_14-07-57",
+            "data": {
+                "exec_msg": "Fire hotspots in 2019: 202\nFire hotspots in 2020: 203\nA\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_14-07-57",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "A",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_14-09-26",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_14-09-29",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

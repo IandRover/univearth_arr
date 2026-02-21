@@ -1,0 +1,89 @@
+{
+    "metadata": {
+        "question": "Does the vegetation browning in Denmark increase in July 2018 compared to July 2017?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_13-57-52",
+        "url": "https://earthobservatory.nasa.gov/images/92490/heatwave-turns-europe-brown",
+        "unique_id": 338
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_13-58-02",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- fallback_collection: \"LANDSAT/LC08/C02/T1_L2\"\n- date_range: \"2017-07-01 to 2017-07-31 and 2018-07-01 to 2018-07-31\"\n- region: \"Denmark (country boundaries)\"\n- bands: \"B8 (NIR) and B4 (Red) for NDVI calculation. QA60 for cloud masking.\"\n- risks: \"Denmark can have significant cloud cover, even in summer. This may lead to a low number of clear pixels for creating monthly composites.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- fallback_collection: \"LANDSAT/LC08/C02/T1_L2\"\n- date_range: \"2017-07-01 to 2017-07-31 and 2018-07-01 to 2018-07-31\"\n- region: \"Denmark (country boundaries)\"\n- bands: \"B8 (NIR) and B4 (Red) for NDVI calculation. QA60 for cloud masking.\"\n- risks: \"Denmark can have significant cloud cover, even in summer. This may lead to a low number of clear pixels for creating monthly composites.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_13-58-14",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define the area of interest (AOI) as Denmark using the \"FAO/GAUL/2015/level0\" feature collection, filtering for \"ADM0_NAME\" equals \"Denmark\". Define two date ranges: \"2017-07-01\" to \"2017-07-31\" and \"2018-07-01\" to \"2018-07-31\".\n\nStep 2: [Acquire data and check collection size]\n  - Details: For each date range, filter the primary collection \"COPERNICUS/S2_SR_HARMONIZED\" by the Denmark AOI and the respective date.\n  - Validation: After filtering, get the size of the image collection for each period. If the size is 0 for either period, immediately classify the result as C1 (Empty Collection) for that period and stop processing it.\n  - Fallback: No fallback is specified as Sentinel-2 is expected to have sufficient coverage. The primary goal is to robustly handle potential emptiness, which is a more likely scenario than a complete collection failure.\n\nStep 3: [Apply cloud masking and calculate NDVI]\n  - Details: Create a function to process each image. The function will:\n    1. Use the \"QA60\" band to mask clouds and cirrus. Bits 10 and 11 should be set to 0.\n    2. Calculate NDVI using the expression `(B8 - B4) / (B8 + B4)`, where B8 is NIR and B4 is Red. Name the resulting band \"NDVI\".\n    3. Select only the \"NDVI\" band and copy the system:time_start property from the original image.\n  - Apply this function to both the 2017 and 2018 image collections.\n\nStep 4: [Perform calculation]\n  - Details: For each of the two NDVI collections (2017 and 2018), create a single cloud-free composite image by calculating the median value of all pixels across the time series. This will produce one median NDVI image for July 2017 and one for July 2018. Then, calculate the mean NDVI value over the entire Denmark AOI for each of the two median composite images. Use a scale of 500 meters for the reduction to balance precision with computational efficiency.\n\nStep 5: [Validate result and determine answer]\n  - Details: Retrieve the two mean NDVI values from the server.\n  - Guard: Check if either result is None. If so, classify as C3 (Calculation Failure). Check if valid pixel counts can be retrieved for the reduction. A zero count indicates C2 (No Valid Pixels) after masking.\n  - Comparison:\n    - If mean_NDVI_2018 is less than mean_NDVI_2017, vegetation browning has increased. Answer is A: Yes.\n    - Otherwise, answer is B: No.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define the area of interest (AOI) as Denmark using the \"FAO/GAUL/2015/level0\" feature collection, filtering for \"ADM0_NAME\" equals \"Denmark\". Define two date ranges: \"2017-07-01\" to \"2017-07-31\" and \"2018-07-01\" to \"2018-07-31\".\n\nStep 2: [Acquire data and check collection size]\n  - Details: For each date range, filter the primary collection \"COPERNICUS/S2_SR_HARMONIZED\" by the Denmark AOI and the respective date.\n  - Validation: After filtering, get the size of the image collection for each period. If the size is 0 for either period, immediately classify the result as C1 (Empty Collection) for that period and stop processing it.\n  - Fallback: No fallback is specified as Sentinel-2 is expected to have sufficient coverage. The primary goal is to robustly handle potential emptiness, which is a more likely scenario than a complete collection failure.\n\nStep 3: [Apply cloud masking and calculate NDVI]\n  - Details: Create a function to process each image. The function will:\n    1. Use the \"QA60\" band to mask clouds and cirrus. Bits 10 and 11 should be set to 0.\n    2. Calculate NDVI using the expression `(B8 - B4) / (B8 + B4)`, where B8 is NIR and B4 is Red. Name the resulting band \"NDVI\".\n    3. Select only the \"NDVI\" band and copy the system:time_start property from the original image.\n  - Apply this function to both the 2017 and 2018 image collections.\n\nStep 4: [Perform calculation]\n  - Details: For each of the two NDVI collections (2017 and 2018), create a single cloud-free composite image by calculating the median value of all pixels across the time series. This will produce one median NDVI image for July 2017 and one for July 2018. Then, calculate the mean NDVI value over the entire Denmark AOI for each of the two median composite images. Use a scale of 500 meters for the reduction to balance precision with computational efficiency.\n\nStep 5: [Validate result and determine answer]\n  - Details: Retrieve the two mean NDVI values from the server.\n  - Guard: Check if either result is None. If so, classify as C3 (Calculation Failure). Check if valid pixel counts can be retrieved for the reduction. A zero count indicates C2 (No Valid Pixels) after masking.\n  - Comparison:\n    - If mean_NDVI_2018 is less than mean_NDVI_2017, vegetation browning has increased. Answer is A: Yes.\n    - Otherwise, answer is B: No."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_13-58-28",
+            "data": {
+                "raw_code": "```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\n# Using USDOS LSIB as a robust alternative to the deprecated FAO/GAUL dataset.\ncountries = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\naoi = countries.filter(ee.Filter.eq('country_na', 'Denmark')).geometry()\n\nstart_date_2017 = '2017-07-01'\nend_date_2017 = '2017-07-31'\nstart_date_2018 = '2018-07-01'\nend_date_2018 = '2018-07-31'\n\n# Step 2: Acquire data\ndef get_s2_collection(start_date, end_date, geometry):\n    return ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \\\n        .filterBounds(geometry) \\\n        .filterDate(start_date, end_date)\n\ncollection_2017 = get_s2_collection(start_date_2017, end_date_2017, aoi)\ncollection_2018 = get_s2_collection(start_date_2018, end_date_2018, aoi)\n\n# Validation: Check collection sizes\nsize_2017 = collection_2017.size().getInfo()\nsize_2018 = collection_2018.size().getInfo()\n\nprint(f\"Images found for July 2017: {size_2017}\")\nprint(f\"Images found for July 2018: {size_2018}\")\n\nif size_2017 == 0 or size_2018 == 0:\n    print(\"C1\")\nelse:\n    # Step 3: Apply cloud masking and calculate NDVI\n    def process_image(image):\n        qa = image.select('QA60')\n        cloud_bit_mask = 1 << 10\n        cirrus_bit_mask = 1 << 11\n        mask = qa.bitwiseAnd(cloud_bit_mask).eq(0).And(qa.bitwiseAnd(cirrus_bit_mask).eq(0))\n        \n        ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI')\n        \n        return ndvi.updateMask(mask).copyProperties(image, [\"system:time_start\"])\n\n    ndvi_collection_2017 = collection_2017.map(process_image)\n    ndvi_collection_2018 = collection_2018.map(process_image)\n\n    # Step 4: Perform calculation\n    median_ndvi_2017 = ndvi_collection_2017.median()\n    median_ndvi_2018 = ndvi_collection_2018.median()\n\n    def get_mean(image, geometry):\n        stats = image.reduceRegion(\n            reducer=ee.Reducer.mean().combine(ee.Reducer.count(), '', True),\n            geometry=geometry,\n            scale=1000,\n            maxPixels=1e9\n        )\n        return stats.getInfo()\n\n    stats_2017 = get_mean(median_ndvi_2017, aoi)\n    stats_2018 = get_mean(median_ndvi_2018, aoi)\n    \n    mean_ndvi_2017 = stats_2017.get('NDVI_mean')\n    count_2017 = stats_2017.get('NDVI_count')\n    mean_ndvi_2018 = stats_2018.get('NDVI_mean')\n    count_2018 = stats_2018.get('NDVI_count')\n\n    print(f\"2017 Valid Pixels: {count_2017}, Mean NDVI: {mean_ndvi_2017}\")\n    print(f\"2018 Valid Pixels: {count_2018}, Mean NDVI: {mean_ndvi_2018}\")\n\n    # Step 5: Validate result and determine answer\n    if mean_ndvi_2017 is None or mean_ndvi_2018 is None:\n        print(\"C3\")\n    elif count_2017 == 0 or count_2018 == 0:\n        print(\"C2\")\n    elif mean_ndvi_2018 < mean_ndvi_2017:\n        print(\"A\")\n    else:\n        print(\"B\")\n```",
+                "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\n# Using USDOS LSIB as a robust alternative to the deprecated FAO/GAUL dataset.\ncountries = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\naoi = countries.filter(ee.Filter.eq('country_na', 'Denmark')).geometry()\n\nstart_date_2017 = '2017-07-01'\nend_date_2017 = '2017-07-31'\nstart_date_2018 = '2018-07-01'\nend_date_2018 = '2018-07-31'\n\n# Step 2: Acquire data\ndef get_s2_collection(start_date, end_date, geometry):\n    return ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \\\n        .filterBounds(geometry) \\\n        .filterDate(start_date, end_date)\n\ncollection_2017 = get_s2_collection(start_date_2017, end_date_2017, aoi)\ncollection_2018 = get_s2_collection(start_date_2018, end_date_2018, aoi)\n\n# Validation: Check collection sizes\nsize_2017 = collection_2017.size().getInfo()\nsize_2018 = collection_2018.size().getInfo()\n\nprint(f\"Images found for July 2017: {size_2017}\")\nprint(f\"Images found for July 2018: {size_2018}\")\n\nif size_2017 == 0 or size_2018 == 0:\n    print(\"C1\")\nelse:\n    # Step 3: Apply cloud masking and calculate NDVI\n    def process_image(image):\n        qa = image.select('QA60')\n        cloud_bit_mask = 1 << 10\n        cirrus_bit_mask = 1 << 11\n        mask = qa.bitwiseAnd(cloud_bit_mask).eq(0).And(qa.bitwiseAnd(cirrus_bit_mask).eq(0))\n        \n        ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI')\n        \n        return ndvi.updateMask(mask).copyProperties(image, [\"system:time_start\"])\n\n    ndvi_collection_2017 = collection_2017.map(process_image)\n    ndvi_collection_2018 = collection_2018.map(process_image)\n\n    # Step 4: Perform calculation\n    median_ndvi_2017 = ndvi_collection_2017.median()\n    median_ndvi_2018 = ndvi_collection_2018.median()\n\n    def get_mean(image, geometry):\n        stats = image.reduceRegion(\n            reducer=ee.Reducer.mean().combine(ee.Reducer.count(), '', True),\n            geometry=geometry,\n            scale=1000,\n            maxPixels=1e9\n        )\n        return stats.getInfo()\n\n    stats_2017 = get_mean(median_ndvi_2017, aoi)\n    stats_2018 = get_mean(median_ndvi_2018, aoi)\n    \n    mean_ndvi_2017 = stats_2017.get('NDVI_mean')\n    count_2017 = stats_2017.get('NDVI_count')\n    mean_ndvi_2018 = stats_2018.get('NDVI_mean')\n    count_2018 = stats_2018.get('NDVI_count')\n\n    print(f\"2017 Valid Pixels: {count_2017}, Mean NDVI: {mean_ndvi_2017}\")\n    print(f\"2018 Valid Pixels: {count_2018}, Mean NDVI: {mean_ndvi_2018}\")\n\n    # Step 5: Validate result and determine answer\n    if mean_ndvi_2017 is None or mean_ndvi_2018 is None:\n        print(\"C3\")\n    elif count_2017 == 0 or count_2018 == 0:\n        print(\"C2\")\n    elif mean_ndvi_2018 < mean_ndvi_2017:\n        print(\"A\")\n    else:\n        print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_13-59-18",
+            "data": {
+                "exec_msg": "Images found for July 2017: 123\nImages found for July 2018: 276\n2017 Valid Pixels: 76307, Mean NDVI: 0.648346399341607\n2018 Valid Pixels: 80489, Mean NDVI: 0.4997611760089972\nA\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_13-59-18",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "A",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_13-59-20",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_13-59-24",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\n  [OK] ndvi: 0.648346399341607 (expected (-1.0, 1.0), source: 'NDVI: 0.648346399341607')\n  [OK] ndvi: 0.4997611760089972 (expected (-1.0, 1.0), source: 'NDVI: 0.4997611760089972')\n  [OK] ndvi: 0.648346399341607 (expected (-1.0, 1.0), source: 'NDVI: 0.648346399341607')\n  [OK] ndvi: 0.4997611760089972 (expected (-1.0, 1.0), source: 'NDVI: 0.4997611760089972')",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

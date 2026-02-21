@@ -4,7 +4,7 @@ We thank the reviewer for the detailed feedback. We address each concern below.
 
 ## W1: Insufficient error analysis
 
-Please refer to **GR3** for the full process-level error taxonomy. Our analysis reveals that the dominant failure modes are knowledge-related, not code-related: wrong dataset IDs (14.2%), temporal/spatial mismatch (15.7%), and wrong band names (9.6%) together account for ~40% of all failures, while only 10% are pure syntax errors. After iterative re-planning (3 rounds), knowledge errors drop substantially but syntax/runtime errors surge from 10.0% to 46.0%, revealing a **repair fragility** pattern where iterative code fixes increase complexity and introduce new failure points.
+Please refer to **GR3** for the full process-level error taxonomy. Our analysis reveals that the dominant failure modes are knowledge-related, not code-related: wrong dataset IDs (14.2%), temporal/spatial mismatch (15.7%), and wrong band names (9.6%) together account for ~40% of all failures, while only 10% are pure syntax errors. After iterative re-planning (3 rounds), knowledge and execution errors drop substantially (e.g., wrong band: 9.6% → 1.5%, syntax/runtime: 10.0% → 2.5%), but the proportion of wrong answers more than doubles from 9.6% to 21.3%, indicating that the remaining errors shift from pipeline failures to **reasoning errors** where the code runs correctly but produces an incorrect conclusion.
 
 ---
 
@@ -22,7 +22,7 @@ We acknowledge this gap. Existing specialized EO systems (e.g., flood mapping pi
 
 ## W4: Limited concrete suggestions for future directions
 
-Please refer to **GR3** for the full analysis motivating these directions. Building on our error taxonomy, we identify two concrete directions: (1) **retrieval-augmented tool grounding**, since ~40% of failures stem from hallucinated dataset IDs and band names, agents should query a structured GEE catalog at inference time rather than relying on memorized schemas; (2) **modular code generation**, since iterative re-planning reduces knowledge errors but increases code fragility (syntax/runtime errors surge from 10% to 46%), agents should decompose complex computations into independently verifiable subroutines to prevent cascading repair errors. We will expand this discussion in the revised paper.
+Please refer to **GR3** for the full analysis motivating these directions. Building on our error taxonomy, we identify two concrete directions: (1) **retrieval-augmented tool grounding**, since ~40% of baseline failures stem from hallucinated dataset IDs and band names, agents should query a structured GEE catalog at inference time rather than relying on memorized schemas; (2) **improved domain reasoning**, since after re-planning resolves most pipeline errors, the proportion of wrong answers more than doubles (9.6% → 21.3%), indicating that the next frontier is improving the agent's scientific judgment through better prompting strategies or domain-specific fine-tuning. We will expand this discussion in the revised paper.
 
 ---
 

@@ -1,0 +1,119 @@
+{
+    "metadata": {
+        "question": "Did satellite imagery show complete cloud coverage over the Delhi metropolitan area on January 15, 2024?",
+        "answer": "No",
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_14-05-27",
+        "url": "https://earthobservatory.nasa.gov/images/152337/fog-blankets-the-indo-gangetic-plain",
+        "unique_id": 200
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_14-05-36",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- fallback_collection: \"LANDSAT/LC09/C02/T1_L2\"\n- date_range: \"2024-01-15 to 2024-01-16\"\n- region: \"Delhi metropolitan area, India (e.g., ee.Geometry.Point([77.1025, 28.7041]))\"\n- bands: \"QA60 (for cloud mask), B4, B3, B2 (for visualization)\"\n- risks: \"No satellite acquisition on the exact date is possible. Sentinel-2 revisit time is ~5 days. If no Sentinel-2 image is available, a fallback to Landsat 9 may be necessary, but it also might not have an acquisition.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- fallback_collection: \"LANDSAT/LC09/C02/T1_L2\"\n- date_range: \"2024-01-15 to 2024-01-16\"\n- region: \"Delhi metropolitan area, India (e.g., ee.Geometry.Point([77.1025, 28.7041]))\"\n- bands: \"QA60 (for cloud mask), B4, B3, B2 (for visualization)\"\n- risks: \"No satellite acquisition on the exact date is possible. Sentinel-2 revisit time is ~5 days. If no Sentinel-2 image is available, a fallback to Landsat 9 may be necessary, but it also might not have an acquisition.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_14-05-47",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define the area of interest (AOI) for the Delhi metropolitan area using ee.Geometry.Point([77.1025, 28.7041]) and applying a 20km buffer. Define the date range from '2024-01-15' to '2024-01-16'.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Attempt to load and filter the primary collection \"COPERNICUS/S2_SR_HARMONIZED\" by the defined AOI and date range.\n  - Validation: Check if the size of the resulting collection is greater than zero.\n  - Fallback: If the primary collection size is zero, attempt to load and filter the fallback collection \"LANDSAT/LC09/C02/T1_L2\". Check its size. If both collections are empty, the plan will terminate and classify the result as C1 (Empty Collection). If a collection is found, select the first image.\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details: Based on the collection used (Sentinel-2 or Landsat-9), apply the appropriate cloud masking algorithm.\n    - For Sentinel-2: Use the 'QA60' band to create a cloud mask (bits 10 and 11 represent clouds and cirrus).\n    - For Landsat-9: Use the 'QA_PIXEL' band to create a cloud mask (bit 3 represents clouds).\n  - Validation: After masking, determine the total number of pixels within the AOI. If the total pixel count is zero, the plan will terminate and classify the result as C2 (No Valid Pixels).\n\nStep 4: [Perform calculation]\n  - Details: Calculate the number of cloudy pixels within the AOI by summing the cloud mask band. Calculate the cloud coverage fraction by dividing the cloudy pixel count by the total pixel count in the AOI. The result should be a value between 0.0 and 1.0.\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the calculated cloud coverage fraction against a threshold. If the fraction is >= 0.99, the answer is A (Yes, complete cloud coverage). Otherwise, the answer is B (No, not complete cloud coverage).\n  - Guard: Before comparison, check if the calculated fraction is a valid number (not None or NaN). If it is invalid, classify the result as C3 (Calculation Failure).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define the area of interest (AOI) for the Delhi metropolitan area using ee.Geometry.Point([77.1025, 28.7041]) and applying a 20km buffer. Define the date range from '2024-01-15' to '2024-01-16'.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Attempt to load and filter the primary collection \"COPERNICUS/S2_SR_HARMONIZED\" by the defined AOI and date range.\n  - Validation: Check if the size of the resulting collection is greater than zero.\n  - Fallback: If the primary collection size is zero, attempt to load and filter the fallback collection \"LANDSAT/LC09/C02/T1_L2\". Check its size. If both collections are empty, the plan will terminate and classify the result as C1 (Empty Collection). If a collection is found, select the first image.\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details: Based on the collection used (Sentinel-2 or Landsat-9), apply the appropriate cloud masking algorithm.\n    - For Sentinel-2: Use the 'QA60' band to create a cloud mask (bits 10 and 11 represent clouds and cirrus).\n    - For Landsat-9: Use the 'QA_PIXEL' band to create a cloud mask (bit 3 represents clouds).\n  - Validation: After masking, determine the total number of pixels within the AOI. If the total pixel count is zero, the plan will terminate and classify the result as C2 (No Valid Pixels).\n\nStep 4: [Perform calculation]\n  - Details: Calculate the number of cloudy pixels within the AOI by summing the cloud mask band. Calculate the cloud coverage fraction by dividing the cloudy pixel count by the total pixel count in the AOI. The result should be a value between 0.0 and 1.0.\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the calculated cloud coverage fraction against a threshold. If the fraction is >= 0.99, the answer is A (Yes, complete cloud coverage). Otherwise, the answer is B (No, not complete cloud coverage).\n  - Guard: Before comparison, check if the calculated fraction is a valid number (not None or NaN). If it is invalid, classify the result as C3 (Calculation Failure)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_14-06-02",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\n# Authenticate and initialize Earth Engine\ntry:\n    ee.Initialize(project='earthsense-436113')\nexcept Exception as e:\n    # If initialization fails, exit with a specific error message\n    print(f\"Error: Failed to initialize Earth Engine. Please check your credentials. Details: {e}\", file=sys.stderr)\n    print(\"D\")\n    sys.exit(1)\n\n# Step 1: Initialize and define geometry/time\naoi = ee.Geometry.Point([77.1025, 28.7041]).buffer(20000)\nstart_date = '2024-01-15'\nend_date = '2024-01-16'\n\n# Step 2: Acquire data and check collection size\nimage = None\ncollection_name = None\n\n# Primary collection: Sentinel-2\ns2_collection = ee.ImageCollection(\"COPERNICUS/S2_SR_HARMONIZED\") \\\n    .filterBounds(aoi) \\\n    .filterDate(start_date, end_date)\ns2_size = s2_collection.size().getInfo()\nprint(f\"Sentinel-2 images found: {s2_size}\")\n\nif s2_size > 0:\n    image = s2_collection.first()\n    collection_name = \"Sentinel-2\"\nelse:\n    # Fallback collection: Landsat-9\n    l9_collection = ee.ImageCollection(\"LANDSAT/LC09/C02/T1_L2\") \\\n        .filterBounds(aoi) \\\n        .filterDate(start_date, end_date)\n    l9_size = l9_collection.size().getInfo()\n    print(f\"Landsat-9 images found: {l9_size}\")\n    if l9_size > 0:\n        image = l9_collection.first()\n        collection_name = \"Landsat-9\"\n\nif image is None:\n    print(\"C1\")\n    sys.exit()\n\n# Step 3: Apply cloud masking and check valid pixels\ncloud_mask = None\nreference_band = None\nif collection_name == \"Sentinel-2\":\n    qa_band = image.select('QA60')\n    # Bits 10 (clouds) and 11 (cirrus) are set to 1 for cloudy conditions\n    cloud_bit_mask = 1 << 10\n    cirrus_bit_mask = 1 << 11\n    cloud_mask = qa_band.bitwiseAnd(cloud_bit_mask).Or(qa_band.bitwiseAnd(cirrus_bit_mask)).gt(0)\n    reference_band = 'B2'\nelif collection_name == \"Landsat-9\":\n    qa_band = image.select('QA_PIXEL')\n    # Bit 3 (clouds) is set to 1 for cloudy conditions\n    cloud_bit_mask = 1 << 3\n    cloud_mask = qa_band.bitwiseAnd(cloud_bit_mask).gt(0)\n    reference_band = 'SR_B2'\n\n# Validate pixel count\npixel_stats = image.select(reference_band).reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=aoi,\n    scale=1000,\n    maxPixels=1e9\n)\ntotal_pixels = pixel_stats.get(reference_band).getInfo()\n\nif total_pixels is None or total_pixels == 0:\n    print(f\"Total pixels in AOI: {total_pixels}\")\n    print(\"C2\")\n    sys.exit()\n\n# Step 4: Perform calculation\ncloudy_pixel_stats = cloud_mask.reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=aoi,\n    scale=1000,\n    maxPixels=1e9\n)\ncloudy_pixels = cloudy_pixel_stats.get('QA60').getInfo() if collection_name == \"Sentinel-2\" else cloudy_pixel_stats.get('QA_PIXEL').getInfo()\n\n# Step 5: Validate result and determine answer\nif cloudy_pixels is None:\n    print(f\"Cloudy pixel calculation failed. Result: {cloudy_pixels}\")\n    print(\"C3\")\n    sys.exit()\n\ncloud_coverage_fraction = cloudy_pixels / total_pixels\nprint(f\"Cloudy Pixels: {cloudy_pixels}, Total Pixels: {total_pixels}\")\nprint(f\"Cloud Coverage Fraction: {cloud_coverage_fraction:.4f}\")\n\nif cloud_coverage_fraction >= 0.99:\n    print(\"A\")\nelse:\n    print(\"B\")\n```",
+                "code": "import ee\nimport sys\n\n# Authenticate and initialize Earth Engine\ntry:\n    ee.Initialize(project='earthsense-436113')\nexcept Exception as e:\n    # If initialization fails, exit with a specific error message\n    print(f\"Error: Failed to initialize Earth Engine. Please check your credentials. Details: {e}\", file=sys.stderr)\n    print(\"D\")\n    sys.exit(1)\n\n# Step 1: Initialize and define geometry/time\naoi = ee.Geometry.Point([77.1025, 28.7041]).buffer(20000)\nstart_date = '2024-01-15'\nend_date = '2024-01-16'\n\n# Step 2: Acquire data and check collection size\nimage = None\ncollection_name = None\n\n# Primary collection: Sentinel-2\ns2_collection = ee.ImageCollection(\"COPERNICUS/S2_SR_HARMONIZED\") \\\n    .filterBounds(aoi) \\\n    .filterDate(start_date, end_date)\ns2_size = s2_collection.size().getInfo()\nprint(f\"Sentinel-2 images found: {s2_size}\")\n\nif s2_size > 0:\n    image = s2_collection.first()\n    collection_name = \"Sentinel-2\"\nelse:\n    # Fallback collection: Landsat-9\n    l9_collection = ee.ImageCollection(\"LANDSAT/LC09/C02/T1_L2\") \\\n        .filterBounds(aoi) \\\n        .filterDate(start_date, end_date)\n    l9_size = l9_collection.size().getInfo()\n    print(f\"Landsat-9 images found: {l9_size}\")\n    if l9_size > 0:\n        image = l9_collection.first()\n        collection_name = \"Landsat-9\"\n\nif image is None:\n    print(\"C1\")\n    sys.exit()\n\n# Step 3: Apply cloud masking and check valid pixels\ncloud_mask = None\nreference_band = None\nif collection_name == \"Sentinel-2\":\n    qa_band = image.select('QA60')\n    # Bits 10 (clouds) and 11 (cirrus) are set to 1 for cloudy conditions\n    cloud_bit_mask = 1 << 10\n    cirrus_bit_mask = 1 << 11\n    cloud_mask = qa_band.bitwiseAnd(cloud_bit_mask).Or(qa_band.bitwiseAnd(cirrus_bit_mask)).gt(0)\n    reference_band = 'B2'\nelif collection_name == \"Landsat-9\":\n    qa_band = image.select('QA_PIXEL')\n    # Bit 3 (clouds) is set to 1 for cloudy conditions\n    cloud_bit_mask = 1 << 3\n    cloud_mask = qa_band.bitwiseAnd(cloud_bit_mask).gt(0)\n    reference_band = 'SR_B2'\n\n# Validate pixel count\npixel_stats = image.select(reference_band).reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=aoi,\n    scale=1000,\n    maxPixels=1e9\n)\ntotal_pixels = pixel_stats.get(reference_band).getInfo()\n\nif total_pixels is None or total_pixels == 0:\n    print(f\"Total pixels in AOI: {total_pixels}\")\n    print(\"C2\")\n    sys.exit()\n\n# Step 4: Perform calculation\ncloudy_pixel_stats = cloud_mask.reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=aoi,\n    scale=1000,\n    maxPixels=1e9\n)\ncloudy_pixels = cloudy_pixel_stats.get('QA60').getInfo() if collection_name == \"Sentinel-2\" else cloudy_pixel_stats.get('QA_PIXEL').getInfo()\n\n# Step 5: Validate result and determine answer\nif cloudy_pixels is None:\n    print(f\"Cloudy pixel calculation failed. Result: {cloudy_pixels}\")\n    print(\"C3\")\n    sys.exit()\n\ncloud_coverage_fraction = cloudy_pixels / total_pixels\nprint(f\"Cloudy Pixels: {cloudy_pixels}, Total Pixels: {total_pixels}\")\nprint(f\"Cloud Coverage Fraction: {cloud_coverage_fraction:.4f}\")\n\nif cloud_coverage_fraction >= 0.99:\n    print(\"A\")\nelse:\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_14-06-05",
+            "data": {
+                "exec_msg": "Sentinel-2 images found: 0\nLandsat-9 images found: 0\nC1\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_14-06-05",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "C1",
+                "need_replan": true,
+                "replan_reason": "Code self-reported C1 (empty collection) \u2014 try fallback sensor or wider date range.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "replan",
+            "timestamp": "2026-02-21_14-06-21",
+            "data": {
+                "attempt": 1,
+                "diagnosis": "- Failed step: Step 2: Acquire data and check collection size.\n- Root cause: The script successfully determined that no images were available for the exact date of '2024-01-15'. The satellite's revisit cycle meant it did not pass over Delhi on that specific day. The script correctly outputted C1 (Empty Collection) as a result.\n- Fix strategy: To find a relevant image, I will expand the date range to a one-week window around the target date (from '2024-01-12' to '2024-01-19'). Then, I will sort the resulting collection to find the image closest in time to the original target date of January 15, 2024, and use that for the analysis.",
+                "code": "import ee\nimport sys\n\n# Authenticate and initialize Earth Engine\ntry:\n    ee.Initialize(project='earthsense-436113')\nexcept Exception as e:\n    # If initialization fails, exit with a specific error message\n    print(f\"Error: Failed to initialize Earth Engine. Please check your credentials. Details: {e}\", file=sys.stderr)\n    print(\"D\")\n    sys.exit(1)\n\n# Step 1: Initialize and define geometry/time\naoi = ee.Geometry.Point([77.1025, 28.7041]).buffer(20000)\n# FIX: Widen the date range to find the nearest image\ntarget_date = ee.Date('2024-01-15')\nstart_date = target_date.advance(-3, 'day')\nend_date = target_date.advance(4, 'day') # Create a 7 day window\n\n# Step 2: Acquire data and check collection size\nimage = None\ncollection_name = None\n\n# Function to find the closest image to the target date\ndef get_closest_image(collection, target_date):\n    with_diff = collection.map(lambda img: img.set('time_diff', ee.Number(img.get('system:time_start')).subtract(target_date.millis()).abs()))\n    return ee.Image(with_diff.sort('time_diff').first())\n\n# Primary collection: Sentinel-2\ns2_collection = ee.ImageCollection(\"COPERNICUS/S2_SR_HARMONIZED\") \\\n    .filterBounds(aoi) \\\n    .filterDate(start_date, end_date)\ns2_size = s2_collection.size().getInfo()\nprint(f\"Sentinel-2 images found in window: {s2_size}\")\n\nif s2_size > 0:\n    image = get_closest_image(s2_collection, target_date)\n    collection_name = \"Sentinel-2\"\nelse:\n    # Fallback collection: Landsat-9\n    l9_collection = ee.ImageCollection(\"LANDSAT/LC09/C02/T1_L2\") \\\n        .filterBounds(aoi) \\\n        .filterDate(start_date, end_date)\n    l9_size = l9_collection.size().getInfo()\n    print(f\"Landsat-9 images found in window: {l9_size}\")\n    if l9_size > 0:\n        image = get_closest_image(l9_collection, target_date)\n        collection_name = \"Landsat-9\"\n\nif image is None:\n    print(\"C1\")\n    sys.exit()\n\n# Step 3: Apply cloud masking and check valid pixels\ncloud_mask = None\nreference_band = None\nif collection_name == \"Sentinel-2\":\n    qa_band = image.select('QA60')\n    # Bits 10 (clouds) and 11 (cirrus) are set to 1 for cloudy conditions\n    cloud_bit_mask = 1 << 10\n    cirrus_bit_mask = 1 << 11\n    # Create a mask where either cloud or cirrus bit is set\n    cloud_mask = qa_band.bitwiseAnd(cloud_bit_mask).Or(qa_band.bitwiseAnd(cirrus_bit_mask)).gt(0)\n    reference_band = 'B2'\nelif collection_name == \"Landsat-9\":\n    qa_band = image.select('QA_PIXEL')\n    # Bit 3 (clouds) is set to 1 for cloudy conditions\n    cloud_bit_mask = 1 << 3\n    cloud_mask = qa_band.bitwiseAnd(cloud_bit_mask).gt(0)\n    reference_band = 'SR_B2'\n\n# Use the cloud mask itself to represent cloudy pixels (1) and clear pixels (0)\ncloud_image = cloud_mask.rename('cloud')\n\n# Step 4: Perform calculation\n# Calculate total and cloudy pixels in one go\nstats = cloud_image.reduceRegion(\n    reducer=ee.Reducer.sum().combine(\n        reducer2=ee.Reducer.count(),\n        sharedInputs=True\n    ),\n    geometry=aoi,\n    scale=1000,\n    maxPixels=1e9\n)\n\ncloudy_pixels = stats.get('cloud_sum').getInfo()\ntotal_pixels = stats.get('cloud_count').getInfo()\n\n# Step 5: Validate result and determine answer\nif total_pixels is None or total_pixels == 0:\n    print(f\"Total pixels in AOI: {total_pixels}\")\n    print(\"C2\")\n    sys.exit()\n\nif cloudy_pixels is None:\n    print(f\"Cloudy pixel calculation failed. Result: {cloudy_pixels}\")\n    print(\"C3\")\n    sys.exit()\n\ncloud_coverage_fraction = cloudy_pixels / total_pixels\nprint(f\"Cloudy Pixels: {cloudy_pixels}, Total Pixels: {total_pixels}\")\nprint(f\"Cloud Coverage Fraction: {cloud_coverage_fraction:.4f}\")\n\nif cloud_coverage_fraction >= 0.99:\n    print(\"A\")\nelse:\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "replan_execute",
+            "timestamp": "2026-02-21_14-06-25",
+            "data": {
+                "attempt": 1,
+                "exec_msg": "Sentinel-2 images found in window: 4\nCloudy Pixels: 0, Total Pixels: 842\nCloud Coverage Fraction: 0.0000\nB\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_14-06-25",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "B",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 1
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_14-06-26",
+            "data": {
+                "raw_answer": "<answer>\nB\n</answer>",
+                "answer": "B",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_14-06-31",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "B",
+                "verified_answer": "B",
+                "confidence": "high",
+                "final_answer": "B",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "B",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 1,
+        "total_states": 10
+    }
+}

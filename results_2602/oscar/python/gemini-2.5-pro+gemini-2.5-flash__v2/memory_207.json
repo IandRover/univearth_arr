@@ -1,0 +1,119 @@
+{
+    "metadata": {
+        "question": "Does Jabal Qidr have a darker color than Jabal Bayda, as observed in April 2024?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_14-15-40",
+        "url": "https://earthobservatory.nasa.gov/images/152839/white-and-black-volcanoes-of-saudi-arabia",
+        "unique_id": 207
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_14-15-49",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- fallback_collection: \"LANDSAT/LC09/C02/T1_L2\"\n- date_range: \"2024-04-01 to 2024-04-30\"\n- region: \"Two specific points: Jabal Qidr (~25.38\u00b0 N, 39.95\u00b0 E) and Jabal Bayda (~25.26\u00b0 N, 39.88\u00b0 E) in Saudi Arabia.\"\n- bands: \"B4 (Red), B3 (Green), B2 (Blue) for true-color visualization and brightness comparison.\"\n- risks: \"Minimal. The region is arid, so cloud cover is typically low. Using atmospherically corrected Surface Reflectance (SR) data is important to ensure accurate color representation.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- fallback_collection: \"LANDSAT/LC09/C02/T1_L2\"\n- date_range: \"2024-04-01 to 2024-04-30\"\n- region: \"Two specific points: Jabal Qidr (~25.38\u00b0 N, 39.95\u00b0 E) and Jabal Bayda (~25.26\u00b0 N, 39.88\u00b0 E) in Saudi Arabia.\"\n- bands: \"B4 (Red), B3 (Green), B2 (Blue) for true-color visualization and brightness comparison.\"\n- risks: \"Minimal. The region is arid, so cloud cover is typically low. Using atmospherically corrected Surface Reflectance (SR) data is important to ensure accurate color representation.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_14-16-02",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define two `ee.Geometry.Point` objects for Jabal Qidr (25.38, 39.95) and Jabal Bayda (25.26, 39.88). Define the date range from '2024-04-01' to '2024-04-30'. Specify the primary collection ID `COPERNICUS/S2_SR_HARMONIZED` and fallback `LANDSAT/LC09/C02/T1_L2`. Define the RGB band names for each collection.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Filter the primary collection `COPERNICUS/S2_SR_HARMONIZED` by the specified date range and the bounds of the two points. Also, filter for images with `CLOUDY_PIXEL_PERCENTAGE` less than 20.\n  - Validation: Check the size of the resulting image collection. If the size is 0, proceed to the fallback.\n  - Fallback: If the primary collection is empty, repeat the acquisition process using the fallback collection `LANDSAT/LC09/C02/T1_L2`, filtering by `CLOUD_COVER` < 20. If the fallback collection is also empty, conclude with answer category C1 (Empty Collection).\n\nStep 3: [Apply cloud masking and reduce to a single image]\n  - Details: For the chosen collection (primary or fallback), apply a cloud masking function. For Sentinel-2, use the 'SCL' band (values 4, 5, 6, 7 are clear land/water). For Landsat 9, use the 'QA_PIXEL' bitmask. Create a single, cloud-free composite image by taking the median of the collection.\n  - Validation: Check if the resulting composite image has valid bands. This implicitly checks if any images remained after masking.\n\nStep 4: [Perform calculation]\n  - Details: For each of the two points, sample the composite image to extract the pixel values for the RGB bands. Calculate a single brightness value for each point by computing the mean of its R, G, and B band values. This will be a proxy for albedo/darkness.\n  - Validation: Use `.reduceRegion()` with a `ee.Reducer.mean()` and a small buffer (e.g., 30m scale) around each point to get a representative value and avoid single-pixel anomalies.\n\nStep 5: [Validate result and determine answer]\n  - Details: Fetch the two calculated mean brightness values from the server. Compare the brightness value for Jabal Qidr against the value for Jabal Bayda. If Jabal Qidr's value is lower, the answer is 'A: Yes'. Otherwise, the answer is 'B: No'.\n  - Guard: Before comparison, check if either of the retrieved brightness values is None or NaN. If so, it indicates no valid pixels were found under the points after masking; conclude with answer category C2 (No Valid Pixels) or C3 (Calculation Failure).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define two `ee.Geometry.Point` objects for Jabal Qidr (25.38, 39.95) and Jabal Bayda (25.26, 39.88). Define the date range from '2024-04-01' to '2024-04-30'. Specify the primary collection ID `COPERNICUS/S2_SR_HARMONIZED` and fallback `LANDSAT/LC09/C02/T1_L2`. Define the RGB band names for each collection.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Filter the primary collection `COPERNICUS/S2_SR_HARMONIZED` by the specified date range and the bounds of the two points. Also, filter for images with `CLOUDY_PIXEL_PERCENTAGE` less than 20.\n  - Validation: Check the size of the resulting image collection. If the size is 0, proceed to the fallback.\n  - Fallback: If the primary collection is empty, repeat the acquisition process using the fallback collection `LANDSAT/LC09/C02/T1_L2`, filtering by `CLOUD_COVER` < 20. If the fallback collection is also empty, conclude with answer category C1 (Empty Collection).\n\nStep 3: [Apply cloud masking and reduce to a single image]\n  - Details: For the chosen collection (primary or fallback), apply a cloud masking function. For Sentinel-2, use the 'SCL' band (values 4, 5, 6, 7 are clear land/water). For Landsat 9, use the 'QA_PIXEL' bitmask. Create a single, cloud-free composite image by taking the median of the collection.\n  - Validation: Check if the resulting composite image has valid bands. This implicitly checks if any images remained after masking.\n\nStep 4: [Perform calculation]\n  - Details: For each of the two points, sample the composite image to extract the pixel values for the RGB bands. Calculate a single brightness value for each point by computing the mean of its R, G, and B band values. This will be a proxy for albedo/darkness.\n  - Validation: Use `.reduceRegion()` with a `ee.Reducer.mean()` and a small buffer (e.g., 30m scale) around each point to get a representative value and avoid single-pixel anomalies.\n\nStep 5: [Validate result and determine answer]\n  - Details: Fetch the two calculated mean brightness values from the server. Compare the brightness value for Jabal Qidr against the value for Jabal Bayda. If Jabal Qidr's value is lower, the answer is 'A: Yes'. Otherwise, the answer is 'B: No'.\n  - Guard: Before comparison, check if either of the retrieved brightness values is None or NaN. If so, it indicates no valid pixels were found under the points after masking; conclude with answer category C2 (No Valid Pixels) or C3 (Calculation Failure)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_14-16-17",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\n# Initialize the Earth Engine API\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\njabal_qidr_point = ee.Geometry.Point([39.95, 25.38])\njabal_bayda_point = ee.Geometry.Point([39.88, 25.26])\ndate_range = ee.DateRange('2024-04-01', '2024-04-30')\ncombined_bounds = jabal_qidr_point.union(jabal_bayda_point).bounds()\n\n# Collection and band definitions\nS2_ID = 'COPERNICUS/S2_SR_HARMONIZED'\nS2_BANDS = ['B4', 'B3', 'B2'] # Red, Green, Blue\nL9_ID = 'LANDSAT/LC09/C02/T1_L2'\nL9_BANDS = ['SR_B4', 'SR_B3', 'SR_B2'] # Red, Green, Blue\n\n# Step 2: Acquire data and check collection size\n# Primary Collection (Sentinel-2)\ns2_collection = ee.ImageCollection(S2_ID) \\\n    .filterBounds(combined_bounds) \\\n    .filterDate(date_range) \\\n    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\n\ns2_size = s2_collection.size().getInfo()\nprint(f\"Sentinel-2 images found: {s2_size}\")\n\ncollection = None\nrgb_bands = None\nused_landsat = False\n\nif s2_size > 0:\n    collection = s2_collection\n    rgb_bands = S2_BANDS\nelse:\n    # Fallback Collection (Landsat 9)\n    print(\"Fallback to Landsat 9\")\n    l9_collection = ee.ImageCollection(L9_ID) \\\n        .filterBounds(combined_bounds) \\\n        .filterDate(date_range) \\\n        .filter(ee.Filter.lt('CLOUD_COVER', 20))\n    l9_size = l9_collection.size().getInfo()\n    print(f\"Landsat 9 images found: {l9_size}\")\n    if l9_size > 0:\n        collection = l9_collection\n        rgb_bands = L9_BANDS\n        used_landsat = True\n    else:\n        print(\"C1: Empty Collection (No images found in date/location for one or both comparison points).\")\n        sys.exit()\n\n# Step 3: Apply cloud masking and reduce to a single image\ndef mask_s2_clouds(image):\n    scl = image.select('SCL')\n    # Keep vegetation (4), bare soil (5), water (6), unclassified (7)\n    mask = scl.eq(4).Or(scl.eq(5)).Or(scl.eq(6)).Or(scl.eq(7))\n    return image.updateMask(mask)\n\ndef mask_l9_clouds(image):\n    qa = image.select('QA_PIXEL')\n    # Bit 3 is cloud shadow, Bit 5 is cloud\n    cloud_shadow_bit_mask = 1 << 3\n    clouds_bit_mask = 1 << 5\n    mask = qa.bitwiseAnd(cloud_shadow_bit_mask).eq(0) \\\n             .And(qa.bitwiseAnd(clouds_bit_mask).eq(0))\n    return image.updateMask(mask)\n\nif used_landsat:\n    masked_collection = collection.map(mask_l9_clouds)\nelse:\n    masked_collection = collection.map(mask_s2_clouds)\n\n# Create a single composite image\ncomposite = masked_collection.select(rgb_bands).median()\n\n# Step 4: Perform calculation\ndef get_brightness(point, image):\n    # Scale is 30m for Landsat, can be 10m for S2, 30 is safe for both\n    # Buffer is not needed with reduceRegion on a point, scale handles the sample area\n    data = image.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=point,\n        scale=30,\n        maxPixels=1e9\n    )\n    # Calculate average of the RGB bands\n    return data.get(rgb_bands[0]).add(data.get(rgb_bands[1])).add(data.get(rgb_bands[2])).divide(3)\n\nqidr_brightness = get_brightness(jabal_qidr_point, composite)\nbayda_brightness = get_brightness(jabal_bayda_point, composite)\n\n# Step 5: Validate result and determine answer\nqidr_val = qidr_brightness.getInfo()\nbayda_val = bayda_brightness.getInfo()\n\nprint(f\"Jabal Qidr brightness: {qidr_val}\")\nprint(f\"Jabal Bayda brightness: {bayda_val}\")\n\nif qidr_val is None or bayda_val is None:\n    print(\"C2: No Valid Pixels (Images exist, but after cloud masking/processing, 0 pixels remain).\")\nelif qidr_val < bayda_val:\n    print(\"A: Yes\")\nelse:\n    print(\"B: No\")\n```",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine API\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\njabal_qidr_point = ee.Geometry.Point([39.95, 25.38])\njabal_bayda_point = ee.Geometry.Point([39.88, 25.26])\ndate_range = ee.DateRange('2024-04-01', '2024-04-30')\ncombined_bounds = jabal_qidr_point.union(jabal_bayda_point).bounds()\n\n# Collection and band definitions\nS2_ID = 'COPERNICUS/S2_SR_HARMONIZED'\nS2_BANDS = ['B4', 'B3', 'B2'] # Red, Green, Blue\nL9_ID = 'LANDSAT/LC09/C02/T1_L2'\nL9_BANDS = ['SR_B4', 'SR_B3', 'SR_B2'] # Red, Green, Blue\n\n# Step 2: Acquire data and check collection size\n# Primary Collection (Sentinel-2)\ns2_collection = ee.ImageCollection(S2_ID) \\\n    .filterBounds(combined_bounds) \\\n    .filterDate(date_range) \\\n    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\n\ns2_size = s2_collection.size().getInfo()\nprint(f\"Sentinel-2 images found: {s2_size}\")\n\ncollection = None\nrgb_bands = None\nused_landsat = False\n\nif s2_size > 0:\n    collection = s2_collection\n    rgb_bands = S2_BANDS\nelse:\n    # Fallback Collection (Landsat 9)\n    print(\"Fallback to Landsat 9\")\n    l9_collection = ee.ImageCollection(L9_ID) \\\n        .filterBounds(combined_bounds) \\\n        .filterDate(date_range) \\\n        .filter(ee.Filter.lt('CLOUD_COVER', 20))\n    l9_size = l9_collection.size().getInfo()\n    print(f\"Landsat 9 images found: {l9_size}\")\n    if l9_size > 0:\n        collection = l9_collection\n        rgb_bands = L9_BANDS\n        used_landsat = True\n    else:\n        print(\"C1: Empty Collection (No images found in date/location for one or both comparison points).\")\n        sys.exit()\n\n# Step 3: Apply cloud masking and reduce to a single image\ndef mask_s2_clouds(image):\n    scl = image.select('SCL')\n    # Keep vegetation (4), bare soil (5), water (6), unclassified (7)\n    mask = scl.eq(4).Or(scl.eq(5)).Or(scl.eq(6)).Or(scl.eq(7))\n    return image.updateMask(mask)\n\ndef mask_l9_clouds(image):\n    qa = image.select('QA_PIXEL')\n    # Bit 3 is cloud shadow, Bit 5 is cloud\n    cloud_shadow_bit_mask = 1 << 3\n    clouds_bit_mask = 1 << 5\n    mask = qa.bitwiseAnd(cloud_shadow_bit_mask).eq(0) \\\n             .And(qa.bitwiseAnd(clouds_bit_mask).eq(0))\n    return image.updateMask(mask)\n\nif used_landsat:\n    masked_collection = collection.map(mask_l9_clouds)\nelse:\n    masked_collection = collection.map(mask_s2_clouds)\n\n# Create a single composite image\ncomposite = masked_collection.select(rgb_bands).median()\n\n# Step 4: Perform calculation\ndef get_brightness(point, image):\n    # Scale is 30m for Landsat, can be 10m for S2, 30 is safe for both\n    # Buffer is not needed with reduceRegion on a point, scale handles the sample area\n    data = image.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=point,\n        scale=30,\n        maxPixels=1e9\n    )\n    # Calculate average of the RGB bands\n    return data.get(rgb_bands[0]).add(data.get(rgb_bands[1])).add(data.get(rgb_bands[2])).divide(3)\n\nqidr_brightness = get_brightness(jabal_qidr_point, composite)\nbayda_brightness = get_brightness(jabal_bayda_point, composite)\n\n# Step 5: Validate result and determine answer\nqidr_val = qidr_brightness.getInfo()\nbayda_val = bayda_brightness.getInfo()\n\nprint(f\"Jabal Qidr brightness: {qidr_val}\")\nprint(f\"Jabal Bayda brightness: {bayda_val}\")\n\nif qidr_val is None or bayda_val is None:\n    print(\"C2: No Valid Pixels (Images exist, but after cloud masking/processing, 0 pixels remain).\")\nelif qidr_val < bayda_val:\n    print(\"A: Yes\")\nelse:\n    print(\"B: No\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_14-16-18",
+            "data": {
+                "exec_msg": "Sentinel-2 images found: 9\n",
+                "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/chiahsiang1/Documents/univearth_arr/./temp/17717013770956202.py\", line 90, in <module>\n    qidr_brightness = get_brightness(jabal_qidr_point, composite)\n  File \"/Users/chiahsiang1/Documents/univearth_arr/./temp/17717013770956202.py\", line 88, in get_brightness\n    return data.get(rgb_bands[0]).add(data.get(rgb_bands[1])).add(data.get(rgb_bands[2])).divide(3)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'ComputedObject' object has no attribute 'add'\n",
+                "exec_returncode": 1
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_14-16-18",
+            "data": {
+                "exec_returncode": 1,
+                "detected_answer": null,
+                "need_replan": true,
+                "replan_reason": "Attribute error \u2014 fixable.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "replan",
+            "timestamp": "2026-02-21_14-16-35",
+            "data": {
+                "attempt": 1,
+                "diagnosis": "- Failed step: Step 4: [Perform calculation]\n- Root cause: The error `AttributeError: 'ComputedObject' object has no attribute 'add'` occurred. This is because the `reduceRegion` function returns a dictionary (`ee.Dictionary`), and calling `.get(band_name)` on it returns a generic `ee.ComputedObject`. Earth Engine arithmetic methods like `.add()` and `.divide()` are available on specific types like `ee.Number`, not on the generic `ComputedObject`. The script attempted to call `.add()` directly on the object returned by `.get()`.\n- Fix strategy: Explicitly cast the values retrieved from the dictionary to `ee.Number` before performing any arithmetic operations on them. This ensures that the server-side objects have the correct type and associated methods.",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine API\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\njabal_qidr_point = ee.Geometry.Point([39.95, 25.38])\njabal_bayda_point = ee.Geometry.Point([39.88, 25.26])\ndate_range = ee.DateRange('2024-04-01', '2024-04-30')\ncombined_bounds = jabal_qidr_point.union(jabal_bayda_point).bounds()\n\n# Collection and band definitions\nS2_ID = 'COPERNICUS/S2_SR_HARMONIZED'\nS2_BANDS = ['B4', 'B3', 'B2'] # Red, Green, Blue\nL9_ID = 'LANDSAT/LC09/C02/T1_L2'\nL9_BANDS = ['SR_B4', 'SR_B3', 'SR_B2'] # Red, Green, Blue\n\n# Step 2: Acquire data and check collection size\n# Primary Collection (Sentinel-2)\ns2_collection = ee.ImageCollection(S2_ID) \\\n    .filterBounds(combined_bounds) \\\n    .filterDate(date_range) \\\n    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\n\ns2_size = s2_collection.size().getInfo()\nprint(f\"Sentinel-2 images found: {s2_size}\")\n\ncollection = None\nrgb_bands = None\nused_landsat = False\n\nif s2_size > 0:\n    collection = s2_collection\n    rgb_bands = S2_BANDS\nelse:\n    # Fallback Collection (Landsat 9)\n    print(\"Fallback to Landsat 9\")\n    l9_collection = ee.ImageCollection(L9_ID) \\\n        .filterBounds(combined_bounds) \\\n        .filterDate(date_range) \\\n        .filter(ee.Filter.lt('CLOUD_COVER', 20))\n    l9_size = l9_collection.size().getInfo()\n    print(f\"Landsat 9 images found: {l9_size}\")\n    if l9_size > 0:\n        collection = l9_collection\n        rgb_bands = L9_BANDS\n        used_landsat = True\n    else:\n        # If both primary and fallback collections are empty, exit with C1.\n        # This check was slightly incorrect in the original, now corrected to print C1 and exit.\n        print(\"C1: Empty Collection\")\n        sys.exit()\n\n# Step 3: Apply cloud masking and reduce to a single image\ndef mask_s2_clouds(image):\n    scl = image.select('SCL')\n    # Keep vegetation (4), bare soil (5), water (6), unclassified (7)\n    mask = scl.eq(4).Or(scl.eq(5)).Or(scl.eq(6)).Or(scl.eq(7))\n    return image.updateMask(mask)\n\ndef mask_l9_clouds(image):\n    qa = image.select('QA_PIXEL')\n    # Bit 3 is cloud shadow, Bit 5 is cloud\n    cloud_shadow_bit_mask = 1 << 3\n    clouds_bit_mask = 1 << 5\n    mask = qa.bitwiseAnd(cloud_shadow_bit_mask).eq(0) \\\n             .And(qa.bitwiseAnd(clouds_bit_mask).eq(0))\n    return image.updateMask(mask)\n\nif used_landsat:\n    masked_collection = collection.map(mask_l9_clouds)\nelse:\n    masked_collection = collection.map(mask_s2_clouds)\n\n# Create a single composite image\ncomposite = masked_collection.select(rgb_bands).median()\n\n# Step 4: Perform calculation (FIXED)\ndef get_brightness(point, image):\n    data = image.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=point,\n        scale=30,\n        maxPixels=1e9\n    )\n    # FIX: Cast the retrieved ComputedObjects to ee.Number before performing arithmetic.\n    r = ee.Number(data.get(rgb_bands[0]))\n    g = ee.Number(data.get(rgb_bands[1]))\n    b = ee.Number(data.get(rgb_bands[2]))\n    \n    # Calculate average of the RGB bands on the server\n    return r.add(g).add(b).divide(3)\n\nqidr_brightness = get_brightness(jabal_qidr_point, composite)\nbayda_brightness = get_brightness(jabal_bayda_point, composite)\n\n# Step 5: Validate result and determine answer\nqidr_val = qidr_brightness.getInfo()\nbayda_val = bayda_brightness.getInfo()\n\nprint(f\"Jabal Qidr brightness: {qidr_val}\")\nprint(f\"Jabal Bayda brightness: {bayda_val}\")\n\nif qidr_val is None or bayda_val is None:\n    print(\"C2: No Valid Pixels\")\nelif qidr_val < bayda_val:\n    print(\"A: Yes\")\nelse:\n    print(\"B: No\")"
+            }
+        },
+        {
+            "state": "replan_execute",
+            "timestamp": "2026-02-21_14-16-39",
+            "data": {
+                "attempt": 1,
+                "exec_msg": "Sentinel-2 images found: 9\nJabal Qidr brightness: 849\nJabal Bayda brightness: 1031.3333333333333\nA: Yes\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_14-16-39",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "A",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 1
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_14-16-40",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_14-16-44",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 1,
+        "total_states": 10
+    }
+}

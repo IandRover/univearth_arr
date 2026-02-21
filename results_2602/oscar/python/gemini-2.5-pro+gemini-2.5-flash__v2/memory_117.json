@@ -1,0 +1,89 @@
+{
+    "metadata": {
+        "question": "Does the land covered by lava flows increase in the Todoque and El Para\u00edso areas of La Palma between May 21, 2021 and December 15, 2021?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_13-53-27",
+        "url": "https://earthobservatory.nasa.gov/images/149231/a-changed-landscape-on-la-palma",
+        "unique_id": 117
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_13-53-36",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- fallback_collection: \"LANDSAT/LC08/C02/T1_L2\"\n- date_range: \"2021-05-21 to 2021-12-15\"\n- region: \"La Palma, Canary Islands, specifically covering the areas of Todoque and El Para\u00edso. An Area of Interest (AOI) centered around the Cumbre Vieja volcano is needed.\"\n- bands: \"B4 (Red), B8 (NIR), B12 (SWIR2) to calculate indices like NBR or to create false-color composites to highlight the new lava flows.\"\n- risks: \"Significant cloud cover and volcanic ash/gas plumes are highly likely, which can obscure the land surface and interfere with optical sensors. This will require robust cloud and plume masking.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- fallback_collection: \"LANDSAT/LC08/C02/T1_L2\"\n- date_range: \"2021-05-21 to 2021-12-15\"\n- region: \"La Palma, Canary Islands, specifically covering the areas of Todoque and El Para\u00edso. An Area of Interest (AOI) centered around the Cumbre Vieja volcano is needed.\"\n- bands: \"B4 (Red), B8 (NIR), B12 (SWIR2) to calculate indices like NBR or to create false-color composites to highlight the new lava flows.\"\n- risks: \"Significant cloud cover and volcanic ash/gas plumes are highly likely, which can obscure the land surface and interfere with optical sensors. This will require robust cloud and plume masking.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_13-53-49",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details:\n    - Define a point for La Palma's Cumbre Vieja volcano: `ee.Geometry.Point([-17.837, 28.614])`.\n    - Create an Area of Interest (AOI) by buffering this point by 5 kilometers: `point.buffer(5000)`.\n    - Define a \"before\" date range: `2021-05-21` to `2021-09-18`. The eruption started on 2021-09-19.\n    - Define an \"after\" date range: `2021-11-15` to `2021-12-15`. This allows for a clear view after the peak eruptive phase.\n\nStep 2: [Acquire data and check collection size]\n  - Details:\n    - Load the primary collection: `ee.ImageCollection(\"COPERNICUS/S2_SR_HARMONIZED\")`.\n    - Filter this collection for the \"before\" date range and the AOI.\n    - Filter this collection for the \"after\" date range and the AOI.\n  - Validation:\n    - Check the `size()` of both the \"before\" and \"after\" collections. If either is 0, print an error and exit with code C1.\n\nStep 3: [Apply cloud masking and reduce to single images]\n  - Details:\n    - Define a cloud masking function for Sentinel-2 using the 'QA60' band (bits 10 and 11) and the 'SCL' (Scene Classification Layer) band to remove clouds (SCL value 9), shadows (SCL value 3), and cirrus (SCL value 10).\n    - Apply the mask to both \"before\" and \"after\" collections.\n    - Reduce each collection to a single, representative image using `median()` to create `image_before` and `image_after`.\n\nStep 4: [Perform calculation to identify lava]\n  - Details:\n    - Define a function to calculate the Normalized Burn Ratio (NBR): `(B8 - B12) / (B8 + B12)`. Lava has a strong thermal signature similar to burned areas, making NBR effective.\n    - Apply the NBR function to both `image_before` and `image_after`.\n    - Create a binary lava mask for both periods by thresholding the NBR image. A value of NBR < 0.1 is a reasonable threshold for identifying fresh lava.\n    - Use `selfMask()` to retain only the pixels identified as lava in each image.\n    - Calculate the area of lava for each period using `ee.Image.pixelArea()` and `reduceRegion()` with a `sum` reducer and a scale of 20 meters.\n\nStep 5: [Validate result and determine answer]\n  - Details:\n    - Extract the calculated area values for \"before\" (`area_before_m2`) and \"after\" (`area_after_m2`) using `.get()` on the result dictionaries.\n    - Compare the two area values.\n    - If `area_after_m2 > area_before_m2`, the lava flow has increased. The answer is A: Yes.\n    - Otherwise, the answer is B: No.\n  - Guard:\n    - Check if `area_before_m2` or `area_after_m2` are `None`. If so, this indicates no valid pixels remained after masking. The answer is C2: No Valid Pixels.\n    - If the calculation succeeds but the result is `None` or `NaN`, the answer is C3: Calculation Failure.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details:\n    - Define a point for La Palma's Cumbre Vieja volcano: `ee.Geometry.Point([-17.837, 28.614])`.\n    - Create an Area of Interest (AOI) by buffering this point by 5 kilometers: `point.buffer(5000)`.\n    - Define a \"before\" date range: `2021-05-21` to `2021-09-18`. The eruption started on 2021-09-19.\n    - Define an \"after\" date range: `2021-11-15` to `2021-12-15`. This allows for a clear view after the peak eruptive phase.\n\nStep 2: [Acquire data and check collection size]\n  - Details:\n    - Load the primary collection: `ee.ImageCollection(\"COPERNICUS/S2_SR_HARMONIZED\")`.\n    - Filter this collection for the \"before\" date range and the AOI.\n    - Filter this collection for the \"after\" date range and the AOI.\n  - Validation:\n    - Check the `size()` of both the \"before\" and \"after\" collections. If either is 0, print an error and exit with code C1.\n\nStep 3: [Apply cloud masking and reduce to single images]\n  - Details:\n    - Define a cloud masking function for Sentinel-2 using the 'QA60' band (bits 10 and 11) and the 'SCL' (Scene Classification Layer) band to remove clouds (SCL value 9), shadows (SCL value 3), and cirrus (SCL value 10).\n    - Apply the mask to both \"before\" and \"after\" collections.\n    - Reduce each collection to a single, representative image using `median()` to create `image_before` and `image_after`.\n\nStep 4: [Perform calculation to identify lava]\n  - Details:\n    - Define a function to calculate the Normalized Burn Ratio (NBR): `(B8 - B12) / (B8 + B12)`. Lava has a strong thermal signature similar to burned areas, making NBR effective.\n    - Apply the NBR function to both `image_before` and `image_after`.\n    - Create a binary lava mask for both periods by thresholding the NBR image. A value of NBR < 0.1 is a reasonable threshold for identifying fresh lava.\n    - Use `selfMask()` to retain only the pixels identified as lava in each image.\n    - Calculate the area of lava for each period using `ee.Image.pixelArea()` and `reduceRegion()` with a `sum` reducer and a scale of 20 meters.\n\nStep 5: [Validate result and determine answer]\n  - Details:\n    - Extract the calculated area values for \"before\" (`area_before_m2`) and \"after\" (`area_after_m2`) using `.get()` on the result dictionaries.\n    - Compare the two area values.\n    - If `area_after_m2 > area_before_m2`, the lava flow has increased. The answer is A: Yes.\n    - Otherwise, the answer is B: No.\n  - Guard:\n    - Check if `area_before_m2` or `area_after_m2` are `None`. If so, this indicates no valid pixels remained after masking. The answer is C2: No Valid Pixels.\n    - If the calculation succeeds but the result is `None` or `NaN`, the answer is C3: Calculation Failure."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_13-54-03",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\npoint = ee.Geometry.Point([-17.837, 28.614])\naoi = point.buffer(5000)\ndate_before_start = '2021-05-21'\ndate_before_end = '2021-09-18'\ndate_after_start = '2021-11-15'\ndate_after_end = '2021-12-15'\n\n# Step 2: Acquire data and check collection size\ndef get_s2_collection(start_date, end_date, geometry):\n    return ee.ImageCollection(\"COPERNICUS/S2_SR_HARMONIZED\") \\\n        .filterBounds(geometry) \\\n        .filterDate(start_date, end_date) \\\n        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))\n\ncollection_before = get_s2_collection(date_before_start, date_before_end, aoi)\ncollection_after = get_s2_collection(date_after_start, date_after_end, aoi)\n\nsize_before = collection_before.size().getInfo()\nsize_after = collection_after.size().getInfo()\n\nif size_before == 0 or size_after == 0:\n    print(f\"Before images: {size_before}, After images: {size_after}\")\n    print(\"C1\")\n    sys.exit()\n\n# Step 3: Apply cloud masking and reduce to single images\ndef mask_s2_clouds(image):\n    qa = image.select('QA60')\n    scl = image.select('SCL')\n    cloud_bit_mask = 1 << 10\n    cirrus_bit_mask = 1 << 11\n    mask = qa.bitwiseAnd(cloud_bit_mask).eq(0) \\\n        .And(qa.bitwiseAnd(cirrus_bit_mask).eq(0)) \\\n        .And(scl.neq(3)) \\\n        .And(scl.neq(9)) \\\n        .And(scl.neq(10))\n    return image.updateMask(mask).divide(10000)\n\nimage_before = collection_before.map(mask_s2_clouds).median().clip(aoi)\nimage_after = collection_after.map(mask_s2_clouds).median().clip(aoi)\n\n# Step 4: Perform calculation to identify lava\ndef calculate_lava_area(image):\n    nbr = image.normalizedDifference(['B8', 'B12']).rename('NBR')\n    lava_mask = nbr.lt(0.1) # Fresh lava/burn has low NBR\n    area_image = lava_mask.selfMask().multiply(ee.Image.pixelArea())\n    area = area_image.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=aoi,\n        scale=30,\n        maxPixels=1e9\n    )\n    return area.get('NBR')\n\nlava_area_before_m2 = calculate_lava_area(image_before).getInfo()\nlava_area_after_m2 = calculate_lava_area(image_after).getInfo()\n\n# Step 5: Validate result and determine answer\nif lava_area_before_m2 is None or lava_area_after_m2 is None:\n    print(f\"Before lava area (m2): {lava_area_before_m2}\")\n    print(f\"After lava area (m2): {lava_area_after_m2}\")\n    print(\"C2\")\n    sys.exit()\n    \nlava_area_before_km2 = lava_area_before_m2 / 1e6\nlava_area_after_km2 = lava_area_after_m2 / 1e6\n\nprint(f\"Before Period Lava Area (km2): {lava_area_before_km2:.2f}\")\nprint(f\"After Period Lava Area (km2): {lava_area_after_km2:.2f}\")\n\nif lava_area_after_km2 > lava_area_before_km2:\n    print(\"A\")\nelse:\n    print(\"B\")\n```",
+                "code": "import ee\nimport sys\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\npoint = ee.Geometry.Point([-17.837, 28.614])\naoi = point.buffer(5000)\ndate_before_start = '2021-05-21'\ndate_before_end = '2021-09-18'\ndate_after_start = '2021-11-15'\ndate_after_end = '2021-12-15'\n\n# Step 2: Acquire data and check collection size\ndef get_s2_collection(start_date, end_date, geometry):\n    return ee.ImageCollection(\"COPERNICUS/S2_SR_HARMONIZED\") \\\n        .filterBounds(geometry) \\\n        .filterDate(start_date, end_date) \\\n        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30))\n\ncollection_before = get_s2_collection(date_before_start, date_before_end, aoi)\ncollection_after = get_s2_collection(date_after_start, date_after_end, aoi)\n\nsize_before = collection_before.size().getInfo()\nsize_after = collection_after.size().getInfo()\n\nif size_before == 0 or size_after == 0:\n    print(f\"Before images: {size_before}, After images: {size_after}\")\n    print(\"C1\")\n    sys.exit()\n\n# Step 3: Apply cloud masking and reduce to single images\ndef mask_s2_clouds(image):\n    qa = image.select('QA60')\n    scl = image.select('SCL')\n    cloud_bit_mask = 1 << 10\n    cirrus_bit_mask = 1 << 11\n    mask = qa.bitwiseAnd(cloud_bit_mask).eq(0) \\\n        .And(qa.bitwiseAnd(cirrus_bit_mask).eq(0)) \\\n        .And(scl.neq(3)) \\\n        .And(scl.neq(9)) \\\n        .And(scl.neq(10))\n    return image.updateMask(mask).divide(10000)\n\nimage_before = collection_before.map(mask_s2_clouds).median().clip(aoi)\nimage_after = collection_after.map(mask_s2_clouds).median().clip(aoi)\n\n# Step 4: Perform calculation to identify lava\ndef calculate_lava_area(image):\n    nbr = image.normalizedDifference(['B8', 'B12']).rename('NBR')\n    lava_mask = nbr.lt(0.1) # Fresh lava/burn has low NBR\n    area_image = lava_mask.selfMask().multiply(ee.Image.pixelArea())\n    area = area_image.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=aoi,\n        scale=30,\n        maxPixels=1e9\n    )\n    return area.get('NBR')\n\nlava_area_before_m2 = calculate_lava_area(image_before).getInfo()\nlava_area_after_m2 = calculate_lava_area(image_after).getInfo()\n\n# Step 5: Validate result and determine answer\nif lava_area_before_m2 is None or lava_area_after_m2 is None:\n    print(f\"Before lava area (m2): {lava_area_before_m2}\")\n    print(f\"After lava area (m2): {lava_area_after_m2}\")\n    print(\"C2\")\n    sys.exit()\n    \nlava_area_before_km2 = lava_area_before_m2 / 1e6\nlava_area_after_km2 = lava_area_after_m2 / 1e6\n\nprint(f\"Before Period Lava Area (km2): {lava_area_before_km2:.2f}\")\nprint(f\"After Period Lava Area (km2): {lava_area_after_km2:.2f}\")\n\nif lava_area_after_km2 > lava_area_before_km2:\n    print(\"A\")\nelse:\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_13-54-11",
+            "data": {
+                "exec_msg": "Before Period Lava Area (km2): 20.23\nAfter Period Lava Area (km2): 23.71\nA\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_13-54-11",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "A",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_13-54-12",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_13-54-17",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}
