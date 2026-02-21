@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "Did more forest area burn in Sakha in 2015 than compared to 2021?",
+        "answer": "no",
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_17-55-41",
+        "url": "https://earthobservatory.nasa.gov/images/148943/a-record-breaking-year-for-fire-in-sakha",
+        "unique_id": 91
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_17-55-51",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MCD64A1\"\n- fallback_collection: \"LANDSAT/LC08/C02/T1_L2\"\n- date_range: \"2015-01-01 to 2015-12-31 and 2021-01-01 to 2021-12-31\"\n- region: \"Sakha Republic, Russia (will use a feature from FAO GAUL dataset)\"\n- bands: \"BurnDate (to identify burn pixels), Unnamed (QA band may be useful)\"\n- risks: \"The 500m resolution of MODIS might not capture very small fires. The analysis needs to be restricted to 'forest area', which requires an additional land cover dataset (e.g., Copernicus Global Land Cover).\"\n- needs_cloud_masking: \"no (The MCD64A1 product is a derived product and does not require manual cloud masking.)\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MCD64A1\"\n- fallback_collection: \"LANDSAT/LC08/C02/T1_L2\"\n- date_range: \"2015-01-01 to 2015-12-31 and 2021-01-01 to 2021-12-31\"\n- region: \"Sakha Republic, Russia (will use a feature from FAO GAUL dataset)\"\n- bands: \"BurnDate (to identify burn pixels), Unnamed (QA band may be useful)\"\n- risks: \"The 500m resolution of MODIS might not capture very small fires. The analysis needs to be restricted to 'forest area', which requires an additional land cover dataset (e.g., Copernicus Global Land Cover).\"\n- needs_cloud_masking: \"no (The MCD64A1 product is a derived product and does not require manual cloud masking.)\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_17-56-03",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time/forest mask]\n  - Details:\n    - Define two date ranges: `2015-01-01` to `2015-12-31` and `2021-01-01` to `2021-12-31`.\n    - Load the FAO GAUL 2015 dataset (`FAO/GAUL/2015/level1`) and filter for the Sakha Republic (`ADM1_NAME == 'Sakha'`) to define the `region`.\n    - Load the Copernicus Global Land Cover dataset (`COPERNICUS/Landcover/100m/Proba-V-C3/Global`). Create a forest mask for 2015 by selecting the `discrete_classification` band from the `2015-01-01` image, selecting values corresponding to tree cover (111-126), and creating a binary mask. Repeat for 2021 using the `2019-01-01` image as the best available proxy.\n\nStep 2: [Acquire and validate burn data for each year]\n  - Details:\n    - For 2015, filter the `MODIS/061/MCD64A1` collection by the 2015 date range and the Sakha region.\n    - **VALIDATION**: Check if the collection size for 2015 is greater than zero. If not, exit and report C1 (Empty Collection).\n    - Create a single composite image for 2015 by taking the maximum value of the `BurnDate` band across the collection. A pixel value > 0 indicates a burn during that year.\n    - Repeat the process for the 2021 date range.\n    - **VALIDATION**: Check if the collection size for 2021 is greater than zero. If not, exit and report C1.\n  - Fallback: No fallback is necessary as the primary collection is a reliable global monthly composite product.\n\nStep 3: [Mask data and check for valid pixels]\n  - Details:\n    - Create a binary burned area image for 2015 where `BurnDate > 0`.\n    - Apply the 2015 forest mask to this burned area image using `updateMask()`.\n    - **VALIDATION**: Calculate the number of valid (burned forest) pixels for 2015 using a `reduceRegion` call with a `count` reducer. If the count is 0, record this and proceed, but the final answer might be C2.\n    - Repeat the masking and validation process for 2021 using the 2021 burned area image and the 2019 forest mask.\n\nStep 4: [Calculate total burned forest area for each year]\n  - Details:\n    - Create an area image using `ee.Image.pixelArea()`.\n    - For 2015, multiply the area image by the masked 2015 burned forest image.\n    - Use `reduceRegion` with a `sum` reducer to calculate the total burned forest area in square kilometers for 2015 within the Sakha region. Use a coarse scale (e.g., 1000m) suitable for a region-wide statistic.\n    - Repeat the calculation for 2021.\n\nStep 5: [Validate results and determine answer]\n  - Details:\n    - Retrieve the computed area values for 2015 and 2021.\n    - **GUARD**: Check if either result is `None` or not a number. If so, exit and report C3 (Calculation Failure).\n    - **VALIDATION**: If both calculated areas are 0 after step 3 confirmed 0 valid pixels, report C2 (No Valid Pixels).\n    - Compare the two area values.\n    - If `area_2015 > area_2021`, the answer is A (Yes).\n    - Otherwise, the answer is B (No).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time/forest mask]\n  - Details:\n    - Define two date ranges: `2015-01-01` to `2015-12-31` and `2021-01-01` to `2021-12-31`.\n    - Load the FAO GAUL 2015 dataset (`FAO/GAUL/2015/level1`) and filter for the Sakha Republic (`ADM1_NAME == 'Sakha'`) to define the `region`.\n    - Load the Copernicus Global Land Cover dataset (`COPERNICUS/Landcover/100m/Proba-V-C3/Global`). Create a forest mask for 2015 by selecting the `discrete_classification` band from the `2015-01-01` image, selecting values corresponding to tree cover (111-126), and creating a binary mask. Repeat for 2021 using the `2019-01-01` image as the best available proxy.\n\nStep 2: [Acquire and validate burn data for each year]\n  - Details:\n    - For 2015, filter the `MODIS/061/MCD64A1` collection by the 2015 date range and the Sakha region.\n    - **VALIDATION**: Check if the collection size for 2015 is greater than zero. If not, exit and report C1 (Empty Collection).\n    - Create a single composite image for 2015 by taking the maximum value of the `BurnDate` band across the collection. A pixel value > 0 indicates a burn during that year.\n    - Repeat the process for the 2021 date range.\n    - **VALIDATION**: Check if the collection size for 2021 is greater than zero. If not, exit and report C1.\n  - Fallback: No fallback is necessary as the primary collection is a reliable global monthly composite product.\n\nStep 3: [Mask data and check for valid pixels]\n  - Details:\n    - Create a binary burned area image for 2015 where `BurnDate > 0`.\n    - Apply the 2015 forest mask to this burned area image using `updateMask()`.\n    - **VALIDATION**: Calculate the number of valid (burned forest) pixels for 2015 using a `reduceRegion` call with a `count` reducer. If the count is 0, record this and proceed, but the final answer might be C2.\n    - Repeat the masking and validation process for 2021 using the 2021 burned area image and the 2019 forest mask.\n\nStep 4: [Calculate total burned forest area for each year]\n  - Details:\n    - Create an area image using `ee.Image.pixelArea()`.\n    - For 2015, multiply the area image by the masked 2015 burned forest image.\n    - Use `reduceRegion` with a `sum` reducer to calculate the total burned forest area in square kilometers for 2015 within the Sakha region. Use a coarse scale (e.g., 1000m) suitable for a region-wide statistic.\n    - Repeat the calculation for 2021.\n\nStep 5: [Validate results and determine answer]\n  - Details:\n    - Retrieve the computed area values for 2015 and 2021.\n    - **GUARD**: Check if either result is `None` or not a number. If so, exit and report C3 (Calculation Failure).\n    - **VALIDATION**: If both calculated areas are 0 after step 3 confirmed 0 valid pixels, report C2 (No Valid Pixels).\n    - Compare the two area values.\n    - If `area_2015 > area_2021`, the answer is A (Yes).\n    - Otherwise, the answer is B (No)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_17-56-18",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time/forest mask\n    date_2015 = ee.DateRange('2015-01-01', '2015-12-31')\n    date_2021 = ee.DateRange('2021-01-01', '2021-12-31')\n\n    gaul = ee.FeatureCollection('FAO/GAUL/2015/level1')\n    region = gaul.filter(ee.Filter.eq('ADM1_NAME', 'Sakha')).first().geometry()\n\n    landcover = ee.ImageCollection('COPERNICUS/Landcover/100m/Proba-V-C3/Global').select('discrete_classification')\n    \n    # Tree cover classes: 111-126\n    is_forest = lambda img: img.gte(111).And(img.lte(126))\n\n    forest_mask_2015 = is_forest(landcover.filterDate('2015-01-01').first())\n    # Use 2019 as the best available proxy for 2021\n    forest_mask_2021_proxy = is_forest(landcover.filterDate('2019-01-01').first())\n\n    # Step 2: Acquire and validate burn data for each year\n    modis_burned = ee.ImageCollection('MODIS/061/MCD64A1').select('BurnDate')\n\n    collection_2015 = modis_burned.filterDate(date_2015).filterBounds(region)\n    collection_2021 = modis_burned.filterDate(date_2021).filterBounds(region)\n\n    size_2015 = collection_2015.size().getInfo()\n    size_2021 = collection_2021.size().getInfo()\n\n    print(f\"2015 Image Collection Size: {size_2015}\")\n    print(f\"2021 Image Collection Size: {size_2021}\")\n\n    if size_2015 == 0 or size_2021 == 0:\n        print(\"C1: Empty Collection\")\n        sys.exit()\n\n    # Composite: a pixel value > 0 indicates a burn\n    burn_image_2015 = collection_2015.max().gt(0)\n    burn_image_2021 = collection_2021.max().gt(0)\n\n    # Step 3: Mask data and check for valid pixels\n    burned_forest_2015 = burn_image_2015.updateMask(forest_mask_2015)\n    burned_forest_2021 = burn_image_2021.updateMask(forest_mask_2021_proxy)\n\n    # Step 4: Calculate total burned forest area for each year\n    # Create an image representing the area of each pixel in sq km\n    pixel_area_sqkm = ee.Image.pixelArea().divide(1e6)\n\n    area_image_2015 = pixel_area_sqkm.updateMask(burned_forest_2015)\n    area_image_2021 = pixel_area_sqkm.updateMask(burned_forest_2021)\n\n    reduce_args = {'reducer': ee.Reducer.sum(), 'geometry': region, 'scale': 1000, 'maxPixels': 1e10}\n\n    area_2015_result = area_image_2015.reduceRegion(**reduce_args).get('area')\n    area_2021_result = area_image_2021.reduceRegion(**reduce_args).get('area')\n    \n    # Step 5: Validate results and determine answer\n    area_2015 = area_2015_result.getInfo()\n    area_2021 = area_2021_result.getInfo()\n    \n    if area_2015 is None or area_2021 is None:\n        print(\"C3: Calculation Failure\")\n        sys.exit()\n\n    print(f\"2015 Burned Forest Area (km^2): {area_2015:.2f}\")\n    print(f\"2021 Burned Forest Area (km^2): {area_2021:.2f}\")\n    \n    if area_2015 == 0 and area_2021 == 0:\n        print(\"C2: No Valid Pixels\")\n        sys.exit()\n    \n    if area_2015 > area_2021:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept Exception as e:\n    print(f\"Error: {e}\", file=sys.stderr)\n    print(\"D\")\n\n```",
+                "code": "import ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time/forest mask\n    date_2015 = ee.DateRange('2015-01-01', '2015-12-31')\n    date_2021 = ee.DateRange('2021-01-01', '2021-12-31')\n\n    gaul = ee.FeatureCollection('FAO/GAUL/2015/level1')\n    region = gaul.filter(ee.Filter.eq('ADM1_NAME', 'Sakha')).first().geometry()\n\n    landcover = ee.ImageCollection('COPERNICUS/Landcover/100m/Proba-V-C3/Global').select('discrete_classification')\n    \n    # Tree cover classes: 111-126\n    is_forest = lambda img: img.gte(111).And(img.lte(126))\n\n    forest_mask_2015 = is_forest(landcover.filterDate('2015-01-01').first())\n    # Use 2019 as the best available proxy for 2021\n    forest_mask_2021_proxy = is_forest(landcover.filterDate('2019-01-01').first())\n\n    # Step 2: Acquire and validate burn data for each year\n    modis_burned = ee.ImageCollection('MODIS/061/MCD64A1').select('BurnDate')\n\n    collection_2015 = modis_burned.filterDate(date_2015).filterBounds(region)\n    collection_2021 = modis_burned.filterDate(date_2021).filterBounds(region)\n\n    size_2015 = collection_2015.size().getInfo()\n    size_2021 = collection_2021.size().getInfo()\n\n    print(f\"2015 Image Collection Size: {size_2015}\")\n    print(f\"2021 Image Collection Size: {size_2021}\")\n\n    if size_2015 == 0 or size_2021 == 0:\n        print(\"C1: Empty Collection\")\n        sys.exit()\n\n    # Composite: a pixel value > 0 indicates a burn\n    burn_image_2015 = collection_2015.max().gt(0)\n    burn_image_2021 = collection_2021.max().gt(0)\n\n    # Step 3: Mask data and check for valid pixels\n    burned_forest_2015 = burn_image_2015.updateMask(forest_mask_2015)\n    burned_forest_2021 = burn_image_2021.updateMask(forest_mask_2021_proxy)\n\n    # Step 4: Calculate total burned forest area for each year\n    # Create an image representing the area of each pixel in sq km\n    pixel_area_sqkm = ee.Image.pixelArea().divide(1e6)\n\n    area_image_2015 = pixel_area_sqkm.updateMask(burned_forest_2015)\n    area_image_2021 = pixel_area_sqkm.updateMask(burned_forest_2021)\n\n    reduce_args = {'reducer': ee.Reducer.sum(), 'geometry': region, 'scale': 1000, 'maxPixels': 1e10}\n\n    area_2015_result = area_image_2015.reduceRegion(**reduce_args).get('area')\n    area_2021_result = area_image_2021.reduceRegion(**reduce_args).get('area')\n    \n    # Step 5: Validate results and determine answer\n    area_2015 = area_2015_result.getInfo()\n    area_2021 = area_2021_result.getInfo()\n    \n    if area_2015 is None or area_2021 is None:\n        print(\"C3: Calculation Failure\")\n        sys.exit()\n\n    print(f\"2015 Burned Forest Area (km^2): {area_2015:.2f}\")\n    print(f\"2021 Burned Forest Area (km^2): {area_2021:.2f}\")\n    \n    if area_2015 == 0 and area_2021 == 0:\n        print(\"C2: No Valid Pixels\")\n        sys.exit()\n    \n    if area_2015 > area_2021:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept Exception as e:\n    print(f\"Error: {e}\", file=sys.stderr)\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_17-56-20",
+            "data": {
+                "exec_msg": "D\n",
+                "exec_stderr": "Error: Element.geometry: Parameter 'feature' is required and may not be null.\n",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_17-56-20",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_17-56-22",
+            "data": {
+                "raw_answer": "<answer>\nD\n</answer>",
+                "answer": "D",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_17-56-25",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "D",
+                "verified_answer": "D",
+                "confidence": "high",
+                "final_answer": "D",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "D",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

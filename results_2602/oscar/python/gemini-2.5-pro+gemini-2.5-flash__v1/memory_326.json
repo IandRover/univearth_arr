@@ -1,0 +1,146 @@
+{
+    "metadata": {
+        "question": "Did Cambodia have more active fire detections than Thailand between August 2016 and February 2018?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_19-39-46",
+        "url": "https://earthobservatory.nasa.gov/images/91771/its-fire-season-in-southeast-asia",
+        "unique_id": 326
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_19-39-55",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MCD14ML\"\n- fallback_collection: \"NOAA/VIIRS/001/VNP14IMGML\"\n- date_range: \"2016-08-01 to 2018-02-28\"\n- region: \"Country boundaries of Thailand and Cambodia (e.g., from USDOS/LSIB_SIMPLE/2017)\"\n- bands: \"Confidence\"\n- risks: \"MODIS detections can include non-fire thermal anomalies (e.g., industrial sites, volcanoes). Filtering by confidence level is recommended to reduce false positives.\"\n- needs_cloud_masking: \"no\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MCD14ML\"\n- fallback_collection: \"NOAA/VIIRS/001/VNP14IMGML\"\n- date_range: \"2016-08-01 to 2018-02-28\"\n- region: \"Country boundaries of Thailand and Cambodia (e.g., from USDOS/LSIB_SIMPLE/2017)\"\n- bands: \"Confidence\"\n- risks: \"MODIS detections can include non-fire thermal anomalies (e.g., industrial sites, volcanoes). Filtering by confidence level is recommended to reduce false positives.\"\n- needs_cloud_masking: \"no\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_19-40-07",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define the date range from '2016-08-01' to '2018-02-28'. Load the Large Scale International Boundary Polygons (LSIB) feature collection `USDOS/LSIB_SIMPLE/2017`. Filter this collection to get the specific geometry for 'Thailand' and 'Cambodia' based on the 'country_na' property.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Access the primary fire detection collection `MODIS/061/MCD14ML`. Create two separate filtered collections: one for Thailand and one for Cambodia. Each collection will be filtered by the date range and the respective country's geometry.\n  - Validation: Get the size of each country's collection. If either size is zero, proceed to the fallback.\n  - Fallback: If `MODIS/061/MCD14ML` is empty for either country, repeat the acquisition process using `NOAA/VIIRS/001/VNP14IMGML`. If the fallback is also empty for either country, conclude C1 (Empty Collection).\n\nStep 3: [Apply quality filtering]\n  - Details: The `MCD14ML` dataset contains a 'Confidence' property to reduce false positives. Filter both the Cambodia and Thailand collections to include only features where 'Confidence' is greater than or equal to 80. This is a common threshold for high-confidence detections.\n  - Validation: After filtering, check the size of each collection again. If either collection size becomes zero, conclude C2 (No Valid Pixels).\n\nStep 4: [Perform calculation]\n  - Details: Calculate the total number of high-confidence fire detections for each country. This is done by getting the `.size()` of the final filtered `FeatureCollection` for Cambodia and the final filtered `FeatureCollection` for Thailand. These are server-side objects that need to be evaluated using `.getInfo()`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the two counts.\n    - If `cambodia_fire_count > thailand_fire_count`, the answer is A (Yes).\n    - Otherwise, the answer is B (No).\n  - Guard: Before comparison, check if the returned counts from `.getInfo()` are valid numbers (not None). If a calculation fails and returns None, conclude C3 (Calculation Failure).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define the date range from '2016-08-01' to '2018-02-28'. Load the Large Scale International Boundary Polygons (LSIB) feature collection `USDOS/LSIB_SIMPLE/2017`. Filter this collection to get the specific geometry for 'Thailand' and 'Cambodia' based on the 'country_na' property.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Access the primary fire detection collection `MODIS/061/MCD14ML`. Create two separate filtered collections: one for Thailand and one for Cambodia. Each collection will be filtered by the date range and the respective country's geometry.\n  - Validation: Get the size of each country's collection. If either size is zero, proceed to the fallback.\n  - Fallback: If `MODIS/061/MCD14ML` is empty for either country, repeat the acquisition process using `NOAA/VIIRS/001/VNP14IMGML`. If the fallback is also empty for either country, conclude C1 (Empty Collection).\n\nStep 3: [Apply quality filtering]\n  - Details: The `MCD14ML` dataset contains a 'Confidence' property to reduce false positives. Filter both the Cambodia and Thailand collections to include only features where 'Confidence' is greater than or equal to 80. This is a common threshold for high-confidence detections.\n  - Validation: After filtering, check the size of each collection again. If either collection size becomes zero, conclude C2 (No Valid Pixels).\n\nStep 4: [Perform calculation]\n  - Details: Calculate the total number of high-confidence fire detections for each country. This is done by getting the `.size()` of the final filtered `FeatureCollection` for Cambodia and the final filtered `FeatureCollection` for Thailand. These are server-side objects that need to be evaluated using `.getInfo()`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the two counts.\n    - If `cambodia_fire_count > thailand_fire_count`, the answer is A (Yes).\n    - Otherwise, the answer is B (No).\n  - Guard: Before comparison, check if the returned counts from `.getInfo()` are valid numbers (not None). If a calculation fails and returns None, conclude C3 (Calculation Failure)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_19-40-21",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\n# Initialize the Earth Engine library.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define time range and geometries\nstart_date = '2016-08-01'\nend_date = '2018-02-28'\n\n# Load the LSIB dataset to get country boundaries.\ncountries = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\nthailand_geom = countries.filter(ee.Filter.eq('country_na', 'Thailand')).geometry()\ncambodia_geom = countries.filter(ee.Filter.eq('country_na', 'Cambodia')).geometry()\n\n# Step 2: Acquire data and check collection size\ndef get_fire_collection(dataset_id, geometry):\n    \"\"\"Filters a fire collection by date and geometry.\"\"\"\n    return ee.ImageCollection(dataset_id).filterDate(start_date, end_date).filterBounds(geometry)\n\n# Primary dataset: MODIS\nthailand_fires = get_fire_collection('MODIS/061/MCD14ML', thailand_geom)\ncambodia_fires = get_fire_collection('MODIS/061/MCD14ML', cambodia_geom)\n\nthailand_initial_size = thailand_fires.size().getInfo()\ncambodia_initial_size = cambodia_fires.size().getInfo()\n\n# Fallback dataset: VIIRS, if MODIS is empty\nif thailand_initial_size == 0 or cambodia_initial_size == 0:\n    thailand_fires = get_fire_collection('NOAA/VIIRS/001/VNP14IMGML', thailand_geom)\n    cambodia_fires = get_fire_collection('NOAA/VIIRS/001/VNP14IMGML', cambodia_geom)\n    thailand_fallback_size = thailand_fires.size().getInfo()\n    cambodia_fallback_size = cambodia_fires.size().getInfo()\n    if thailand_fallback_size == 0 or cambodia_fallback_size == 0:\n        print(f\"No images found for one or both countries in primary or fallback collections.\")\n        print(\"C1\")\n        sys.exit()\n\n# Step 3: Apply quality filtering\n# MODIS confidence is a number (0-100), VIIRS is a string ('l', 'n', 'h').\n# We adapt the filter based on the collection's provider.\nprovider = thailand_fires.first().get('system:id').getInfo().split('/')[0]\nif provider == 'MODIS':\n    confidence_filter = ee.Filter.gte('Confidence', 80)\nelse: # Assuming VIIRS\n    confidence_filter = ee.Filter.eq('confidence', 'h')\n\nthailand_fires_filtered = thailand_fires.filter(confidence_filter)\ncambodia_fires_filtered = cambodia_fires.filter(confidence_filter)\n\n# Step 4 & 5: Perform calculation, validate, and determine answer\nthailand_fire_count = thailand_fires_filtered.size().getInfo()\ncambodia_fire_count = cambodia_fires_filtered.size().getInfo()\n\nprint(f\"Thailand high-confidence fire count: {thailand_fire_count}\")\nprint(f\"Cambodia high-confidence fire count: {cambodia_fire_count}\")\n\nif thailand_fire_count is None or cambodia_fire_count is None:\n    print(\"C3\")\nelif thailand_fire_count == 0 and cambodia_fire_count == 0:\n    print(\"C2\")\nelif cambodia_fire_count > thailand_fire_count:\n    print(\"A\")\nelse:\n    print(\"B\")\n```",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine library.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define time range and geometries\nstart_date = '2016-08-01'\nend_date = '2018-02-28'\n\n# Load the LSIB dataset to get country boundaries.\ncountries = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\nthailand_geom = countries.filter(ee.Filter.eq('country_na', 'Thailand')).geometry()\ncambodia_geom = countries.filter(ee.Filter.eq('country_na', 'Cambodia')).geometry()\n\n# Step 2: Acquire data and check collection size\ndef get_fire_collection(dataset_id, geometry):\n    \"\"\"Filters a fire collection by date and geometry.\"\"\"\n    return ee.ImageCollection(dataset_id).filterDate(start_date, end_date).filterBounds(geometry)\n\n# Primary dataset: MODIS\nthailand_fires = get_fire_collection('MODIS/061/MCD14ML', thailand_geom)\ncambodia_fires = get_fire_collection('MODIS/061/MCD14ML', cambodia_geom)\n\nthailand_initial_size = thailand_fires.size().getInfo()\ncambodia_initial_size = cambodia_fires.size().getInfo()\n\n# Fallback dataset: VIIRS, if MODIS is empty\nif thailand_initial_size == 0 or cambodia_initial_size == 0:\n    thailand_fires = get_fire_collection('NOAA/VIIRS/001/VNP14IMGML', thailand_geom)\n    cambodia_fires = get_fire_collection('NOAA/VIIRS/001/VNP14IMGML', cambodia_geom)\n    thailand_fallback_size = thailand_fires.size().getInfo()\n    cambodia_fallback_size = cambodia_fires.size().getInfo()\n    if thailand_fallback_size == 0 or cambodia_fallback_size == 0:\n        print(f\"No images found for one or both countries in primary or fallback collections.\")\n        print(\"C1\")\n        sys.exit()\n\n# Step 3: Apply quality filtering\n# MODIS confidence is a number (0-100), VIIRS is a string ('l', 'n', 'h').\n# We adapt the filter based on the collection's provider.\nprovider = thailand_fires.first().get('system:id').getInfo().split('/')[0]\nif provider == 'MODIS':\n    confidence_filter = ee.Filter.gte('Confidence', 80)\nelse: # Assuming VIIRS\n    confidence_filter = ee.Filter.eq('confidence', 'h')\n\nthailand_fires_filtered = thailand_fires.filter(confidence_filter)\ncambodia_fires_filtered = cambodia_fires.filter(confidence_filter)\n\n# Step 4 & 5: Perform calculation, validate, and determine answer\nthailand_fire_count = thailand_fires_filtered.size().getInfo()\ncambodia_fire_count = cambodia_fires_filtered.size().getInfo()\n\nprint(f\"Thailand high-confidence fire count: {thailand_fire_count}\")\nprint(f\"Cambodia high-confidence fire count: {cambodia_fire_count}\")\n\nif thailand_fire_count is None or cambodia_fire_count is None:\n    print(\"C3\")\nelif thailand_fire_count == 0 and cambodia_fire_count == 0:\n    print(\"C2\")\nelif cambodia_fire_count > thailand_fire_count:\n    print(\"A\")\nelse:\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_19-40-24",
+            "data": {
+                "exec_msg": "",
+                "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 349, in _execute_cloud_call\n    return call.execute(num_retries=num_retries)\n           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/googleapiclient/_helpers.py\", line 130, in positional_wrapper\n    return wrapped(*args, **kwargs)\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/googleapiclient/http.py\", line 938, in execute\n    raise HttpError(resp, content, uri=self.uri)\ngoogleapiclient.errors.HttpError: <HttpError 400 when requesting https://earthengine.googleapis.com/v1/projects/earthsense-436113/value:compute?prettyPrint=false&alt=json returned \"ImageCollection.load: ImageCollection asset 'MODIS/061/MCD14ML' not found (does not exist or caller does not have access).\". Details: \"ImageCollection.load: ImageCollection asset 'MODIS/061/MCD14ML' not found (does not exist or caller does not have access).\">\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/Users/chiahsiang1/Documents/univearth_arr/./temp/1771634421922465.py\", line 25, in <module>\n    thailand_initial_size = thailand_fires.size().getInfo()\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/computedobject.py\", line 108, in getInfo\n    return data.computeValue(self)\n           ~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 1066, in computeValue\n    return _execute_cloud_call(\n           ~~~~~~~~~~~~~~~~~~~^\n        _get_cloud_projects()\n        ^^^^^^^^^^^^^^^^^^^^^\n        .value()\n        ^^^^^^^^\n        .compute(body=body, project=_get_projects_path(), prettyPrint=False)\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )['result']\n    ^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 351, in _execute_cloud_call\n    raise _translate_cloud_exception(e)  # pylint: disable=raise-missing-from\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nee.ee_exception.EEException: ImageCollection.load: ImageCollection asset 'MODIS/061/MCD14ML' not found (does not exist or caller does not have access).\n",
+                "exec_returncode": 1
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_19-40-24",
+            "data": {
+                "exec_returncode": 1,
+                "need_replan": true,
+                "replan_reason": "Non-zero return code (1) \u2014 attempting re-plan.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "replan",
+            "timestamp": "2026-02-20_19-40-41",
+            "data": {
+                "attempt": 1,
+                "diagnosis": "- Failed step: Step 2: [Acquire data and check collection size]\n- Root cause: The code attempts to load the fire detection datasets `MODIS/061/MCD14ML` and `NOAA/VIIRS/001/VNP14IMGML` as `ee.ImageCollection`. The error message `ImageCollection.load: ImageCollection asset 'MODIS/061/MCD14ML' not found` confirms this. These datasets are point-based active fire detections and are stored as `ee.FeatureCollection` in the Earth Engine catalog.\n- Fix strategy: Change the calls from `ee.ImageCollection(...)` to `ee.FeatureCollection(...)` for both the primary (MODIS) and fallback (VIIRS) datasets. The rest of the filtering and counting logic, which is appropriate for `FeatureCollection`s, can be preserved.",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine library.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define time range and geometries\nstart_date = '2016-08-01'\nend_date = '2018-02-28'\n\n# Load the LSIB dataset to get country boundaries.\ncountries = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\nthailand_geom = countries.filter(ee.Filter.eq('country_na', 'Thailand')).geometry()\ncambodia_geom = countries.filter(ee.Filter.eq('country_na', 'Cambodia')).geometry()\n\n# Step 2: Acquire data and check collection size\ndef get_fire_collection(dataset_id, geometry):\n    \"\"\"Filters a fire feature collection by date and geometry.\"\"\"\n    # FIX: Use ee.FeatureCollection instead of ee.ImageCollection\n    return ee.FeatureCollection(dataset_id).filterDate(start_date, end_date).filterBounds(geometry)\n\n# Primary dataset: MODIS\nthailand_fires = get_fire_collection('MODIS/061/MCD14ML', thailand_geom)\ncambodia_fires = get_fire_collection('MODIS/061/MCD14ML', cambodia_geom)\n\nthailand_initial_size = thailand_fires.size().getInfo()\ncambodia_initial_size = cambodia_fires.size().getInfo()\n\nactive_collection_id = 'MODIS/061/MCD14ML'\n\n# Fallback dataset: VIIRS, if MODIS is empty for either country\nif thailand_initial_size == 0 or cambodia_initial_size == 0:\n    active_collection_id = 'NOAA/VIIRS/001/VNP14IMGML'\n    thailand_fires = get_fire_collection(active_collection_id, thailand_geom)\n    cambodia_fires = get_fire_collection(active_collection_id, cambodia_geom)\n    \n    thailand_fallback_size = thailand_fires.size().getInfo()\n    cambodia_fallback_size = cambodia_fires.size().getInfo()\n    \n    if thailand_fallback_size == 0 or cambodia_fallback_size == 0:\n        print(f\"No fire detections found for one or both countries in primary or fallback collections.\")\n        print(\"C1\")\n        # Use sys.exit() to stop execution cleanly if no data is found.\n        # This is not strictly required by the prompt but is good practice.\n        sys.exit()\n\n# Step 3: Apply quality filtering\n# MODIS confidence is a number (0-100), VIIRS is a string ('l', 'n', 'h').\n# We adapt the filter based on the collection's provider.\nif 'MODIS' in active_collection_id:\n    # 'Confidence' property is a percentage\n    confidence_filter = ee.Filter.gte('confidence', 80)\nelif 'VIIRS' in active_collection_id:\n    # 'confidence' property is a string: 'l' (low), 'n' (nominal), 'h' (high)\n    confidence_filter = ee.Filter.eq('confidence', 'h')\n\nthailand_fires_filtered = thailand_fires.filter(confidence_filter)\ncambodia_fires_filtered = cambodia_fires.filter(confidence_filter)\n\n# Step 4 & 5: Perform calculation, validate, and determine answer\nthailand_fire_count = thailand_fires_filtered.size().getInfo()\ncambodia_fire_count = cambodia_fires_filtered.size().getInfo()\n\nprint(f\"Thailand high-confidence fire count: {thailand_fire_count}\")\nprint(f\"Cambodia high-confidence fire count: {cambodia_fire_count}\")\n\nif thailand_fire_count is None or cambodia_fire_count is None:\n    print(\"C3\")\nelif thailand_fire_count == 0 and cambodia_fire_count == 0:\n    # This condition is met if there are initial fires but none pass the confidence filter.\n    print(\"C2\")\nelif cambodia_fire_count > thailand_fire_count:\n    print(\"A\")\nelse:\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "replan_execute",
+            "timestamp": "2026-02-20_19-40-43",
+            "data": {
+                "attempt": 1,
+                "exec_msg": "",
+                "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 349, in _execute_cloud_call\n    return call.execute(num_retries=num_retries)\n           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/googleapiclient/_helpers.py\", line 130, in positional_wrapper\n    return wrapped(*args, **kwargs)\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/googleapiclient/http.py\", line 938, in execute\n    raise HttpError(resp, content, uri=self.uri)\ngoogleapiclient.errors.HttpError: <HttpError 400 when requesting https://earthengine.googleapis.com/v1/projects/earthsense-436113/value:compute?prettyPrint=false&alt=json returned \"Collection.loadTable: Collection asset 'MODIS/061/MCD14ML' not found.\". Details: \"Collection.loadTable: Collection asset 'MODIS/061/MCD14ML' not found.\">\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/Users/chiahsiang1/Documents/univearth_arr/./temp/17716344411919281.py\", line 26, in <module>\n    thailand_initial_size = thailand_fires.size().getInfo()\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/computedobject.py\", line 108, in getInfo\n    return data.computeValue(self)\n           ~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 1066, in computeValue\n    return _execute_cloud_call(\n           ~~~~~~~~~~~~~~~~~~~^\n        _get_cloud_projects()\n        ^^^^^^^^^^^^^^^^^^^^^\n        .value()\n        ^^^^^^^^\n        .compute(body=body, project=_get_projects_path(), prettyPrint=False)\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )['result']\n    ^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 351, in _execute_cloud_call\n    raise _translate_cloud_exception(e)  # pylint: disable=raise-missing-from\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nee.ee_exception.EEException: Collection.loadTable: Collection asset 'MODIS/061/MCD14ML' not found.\n",
+                "exec_returncode": 1
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_19-40-43",
+            "data": {
+                "exec_returncode": 1,
+                "need_replan": true,
+                "replan_reason": "Non-zero return code (1) \u2014 attempting re-plan.",
+                "replan_count": 1
+            }
+        },
+        {
+            "state": "replan",
+            "timestamp": "2026-02-20_19-40-59",
+            "data": {
+                "attempt": 2,
+                "diagnosis": "- Failed step: Step 2: [Acquire data and check collection size]\n- Root cause: The script failed because the Google Earth Engine API could not find the specified collection asset `MODIS/061/MCD14ML`. The error message `ee.ee_exception.EEException: Collection.loadTable: Collection asset 'MODIS/061/MCD14ML' not found.` indicates the collection ID is incorrect or deprecated. The current and correct ID for the MODIS Collection 6.1 active fire data is `FIRMS`.\n- Fix strategy: I will replace the incorrect collection ID `MODIS/061/MCD14ML` with the correct one, `FIRMS`. The `FIRMS` dataset contains data from MODIS and VIIRS, so I will also update the property names used for filtering. Specifically, the 'confidence' property in `FIRMS` is a numeric percentage (like in the old MODIS collection), so I will remove the special string-based filtering logic previously intended for the VIIRS collection.",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine library.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define time range and geometries\n# This step was successful and is preserved.\nstart_date = '2016-08-01'\nend_date = '2018-02-28'\n\n# Load the LSIB dataset to get country boundaries.\ncountries = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\nthailand_geom = countries.filter(ee.Filter.eq('country_na', 'Thailand')).geometry()\ncambodia_geom = countries.filter(ee.Filter.eq('country_na', 'Cambodia')).geometry()\n\n# Step 2: Acquire data and check collection size (FIXED)\n# FIX: Replaced 'MODIS/061/MCD14ML' with the correct 'FIRMS' collection ID.\n# The 'FIRMS' collection includes MODIS data, so it's a direct replacement.\n# The VIIRS fallback is no longer necessary as FIRMS is the primary source.\nfire_collection_id = 'FIRMS'\n\ndef get_fire_collection(dataset_id, geometry):\n    \"\"\"Filters a fire feature collection by date and geometry.\"\"\"\n    return ee.FeatureCollection(dataset_id).filterDate(start_date, end_date).filterBounds(geometry)\n\nthailand_fires = get_fire_collection(fire_collection_id, thailand_geom)\ncambodia_fires = get_fire_collection(fire_collection_id, cambodia_geom)\n\nthailand_initial_size = thailand_fires.size().getInfo()\ncambodia_initial_size = cambodia_fires.size().getInfo()\n\nif thailand_initial_size == 0 or cambodia_initial_size == 0:\n    print(f\"No fire detections found for one or both countries in the {fire_collection_id} collection for the given date range.\")\n    print(\"C1\")\n    sys.exit()\n\n# Step 3: Apply quality filtering (SIMPLIFIED)\n# The 'FIRMS' collection uses a numeric 'confidence' property (0-100).\n# The filter for high-confidence fires is >= 80, which represents 'nominal' and 'high' confidence detections.\n# No need for separate VIIRS logic as FIRMS standardizes this.\nconfidence_filter = ee.Filter.gte('confidence', 80)\n\nthailand_fires_filtered = thailand_fires.filter(confidence_filter)\ncambodia_fires_filtered = cambodia_fires.filter(confidence_filter)\n\n# Step 4 & 5: Perform calculation, validate, and determine answer\n# This logic was correct and is preserved.\nthailand_fire_count = thailand_fires_filtered.size().getInfo()\ncambodia_fire_count = cambodia_fires_filtered.size().getInfo()\n\n# Check for calculation failures or cases with no valid pixels after filtering.\nif thailand_fire_count is None or cambodia_fire_count is None:\n    print(\"C3\")\n    sys.exit()\n\nif thailand_fire_count == 0 and cambodia_fire_count == 0:\n    print(\"No high-confidence fire detections found after filtering.\")\n    print(\"C2\")\n    sys.exit()\n\nprint(f\"Thailand high-confidence fire count: {thailand_fire_count}\")\nprint(f\"Cambodia high-confidence fire count: {cambodia_fire_count}\")\n\nif cambodia_fire_count > thailand_fire_count:\n    print(\"A\")\nelse:\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "replan_execute",
+            "timestamp": "2026-02-20_19-41-03",
+            "data": {
+                "attempt": 2,
+                "exec_msg": "No high-confidence fire detections found after filtering.\nC2\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_19-41-03",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 2
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_19-41-04",
+            "data": {
+                "raw_answer": "<answer>\nC2\n</answer>",
+                "answer": "C2",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_19-41-07",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "C2",
+                "verified_answer": "C2",
+                "confidence": "high",
+                "final_answer": "C2",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "C2",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 2,
+        "total_states": 13
+    }
+}

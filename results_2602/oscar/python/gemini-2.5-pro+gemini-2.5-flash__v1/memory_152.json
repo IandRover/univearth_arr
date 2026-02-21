@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "On July 19, 2022 did UK experience temperatures above 100 degrees fahrenheit?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_19-50-18",
+        "url": "https://earthobservatory.nasa.gov/images/150152/a-july-of-extremes",
+        "unique_id": 152
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_19-50-27",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MOD11A1\"\n- fallback_collection: \"MODIS/061/MYD11A1\"\n- date_range: \"2022-07-19 to 2022-07-20\"\n- region: \"United Kingdom (UK) country boundary, likely from FAO GAUL dataset\"\n- bands: \"LST_Day_1km (Land Surface Temperature)\"\n- risks: \"The MODIS LST product represents land surface temperature, not air temperature, which is what weather forecasts typically report. Surface temperature can be significantly higher than air temperature, especially on a sunny day. The user's threshold of 100\u00b0F will need to be compared against the correct variable.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MOD11A1\"\n- fallback_collection: \"MODIS/061/MYD11A1\"\n- date_range: \"2022-07-19 to 2022-07-20\"\n- region: \"United Kingdom (UK) country boundary, likely from FAO GAUL dataset\"\n- bands: \"LST_Day_1km (Land Surface Temperature)\"\n- risks: \"The MODIS LST product represents land surface temperature, not air temperature, which is what weather forecasts typically report. Surface temperature can be significantly higher than air temperature, especially on a sunny day. The user's threshold of 100\u00b0F will need to be compared against the correct variable.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_19-50-40",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details:\n    - Define the Area of Interest (AOI) by filtering the `FAO/GAUL/2015/level0` feature collection for the United Kingdom.\n    - Define the date range as '2022-07-19' to '2022-07-20'.\n    - Define the temperature threshold in the native unit of the dataset. Convert 100\u00b0F to Kelvin: `(100 - 32) * 5/9 + 273.15 = 310.93 K`.\n\nStep 2: [Acquire data and check collection size]\n  - Details:\n    - Filter the primary collection `MODIS/061/MOD11A1` by the defined date range and AOI.\n    - Check the size of the resulting image collection.\n    - Validation: If `collection.size()` is 0, proceed to the fallback.\n  - Fallback:\n    - If the primary collection is empty, filter the fallback collection `MODIS/061/MYD11A1` using the same date range and AOI.\n    - Validation: If the fallback collection size is also 0, conclude C1: Empty Collection.\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details:\n    - Create a function to mask pixels based on the `QC_Day` band. Keep only pixels where bits 0-1 are '00', indicating good quality data.\n    - Map this function over the image collection.\n    - Create a single mosaic image from the masked collection.\n    - Apply the MODIS LST scale factor of 0.02 to the `LST_Day_1km` band to convert pixel values to Kelvin.\n  - Validation:\n    - Count the number of unmasked pixels within the AOI using `reduceRegion` with a `count` reducer.\n    - If the pixel count is 0, conclude C2: No Valid Pixels.\n\nStep 4: [Perform calculation]\n  - Details:\n    - Use `reduceRegion` with an `ee.Reducer.max()` on the final scaled and masked image to find the maximum LST value within the UK geometry.\n    - Request the result from the server using `.getInfo()`.\n\nStep 5: [Validate result and determine answer]\n  - Details:\n    - Extract the maximum temperature value from the dictionary returned by `reduceRegion`.\n    - Compare this value against the pre-calculated threshold of 310.93 K.\n    - If `max_temp > 310.93`, the answer is A: Yes.\n    - Otherwise, the answer is B: No.\n  - Guard:\n    - Check if the result from `reduceRegion` is None or if the extracted max temperature value is None. If so, conclude C3: Calculation Failure.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details:\n    - Define the Area of Interest (AOI) by filtering the `FAO/GAUL/2015/level0` feature collection for the United Kingdom.\n    - Define the date range as '2022-07-19' to '2022-07-20'.\n    - Define the temperature threshold in the native unit of the dataset. Convert 100\u00b0F to Kelvin: `(100 - 32) * 5/9 + 273.15 = 310.93 K`.\n\nStep 2: [Acquire data and check collection size]\n  - Details:\n    - Filter the primary collection `MODIS/061/MOD11A1` by the defined date range and AOI.\n    - Check the size of the resulting image collection.\n    - Validation: If `collection.size()` is 0, proceed to the fallback.\n  - Fallback:\n    - If the primary collection is empty, filter the fallback collection `MODIS/061/MYD11A1` using the same date range and AOI.\n    - Validation: If the fallback collection size is also 0, conclude C1: Empty Collection.\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details:\n    - Create a function to mask pixels based on the `QC_Day` band. Keep only pixels where bits 0-1 are '00', indicating good quality data.\n    - Map this function over the image collection.\n    - Create a single mosaic image from the masked collection.\n    - Apply the MODIS LST scale factor of 0.02 to the `LST_Day_1km` band to convert pixel values to Kelvin.\n  - Validation:\n    - Count the number of unmasked pixels within the AOI using `reduceRegion` with a `count` reducer.\n    - If the pixel count is 0, conclude C2: No Valid Pixels.\n\nStep 4: [Perform calculation]\n  - Details:\n    - Use `reduceRegion` with an `ee.Reducer.max()` on the final scaled and masked image to find the maximum LST value within the UK geometry.\n    - Request the result from the server using `.getInfo()`.\n\nStep 5: [Validate result and determine answer]\n  - Details:\n    - Extract the maximum temperature value from the dictionary returned by `reduceRegion`.\n    - Compare this value against the pre-calculated threshold of 310.93 K.\n    - If `max_temp > 310.93`, the answer is A: Yes.\n    - Otherwise, the answer is B: No.\n  - Guard:\n    - Check if the result from `reduceRegion` is None or if the extracted max temperature value is None. If so, conclude C3: Calculation Failure."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_19-50-57",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\n# Initialize the Earth Engine library.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\n# Define the Area of Interest (AOI) for the United Kingdom.\n# Using USDOS LSIB instead of FAO/GAUL as per best practices.\ncountries = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\nuk_geom = countries.filter(ee.Filter.eq('country_na', 'United Kingdom')).geometry()\n\n# Define the date range.\ndate_start = '2022-07-19'\ndate_end = '2022-07-20'\n\n# Define the temperature threshold in Kelvin (100\u00b0F).\ntemp_threshold_k = (100 - 32) * 5/9 + 273.15\n\n# Step 2: Acquire data and check collection size\n# Primary collection: MODIS Terra Land Surface Temperature.\ncollection_mod = ee.ImageCollection('MODIS/061/MOD11A1') \\\n    .filterDate(date_start, date_end) \\\n    .filterBounds(uk_geom)\n\n# Check the size of the primary collection.\nmod_size = collection_mod.size().getInfo()\nprint(f\"MOD11A1 (Terra) images: {mod_size}\")\n\n# Select the collection to use.\ncollection = collection_mod\nif mod_size == 0:\n    # Fallback to MODIS Aqua if primary is empty.\n    collection_myd = ee.ImageCollection('MODIS/061/MYD11A1') \\\n        .filterDate(date_start, date_end) \\\n        .filterBounds(uk_geom)\n    myd_size = collection_myd.size().getInfo()\n    print(f\"MYD11A1 (Aqua) fallback images: {myd_size}\")\n    if myd_size == 0:\n        print(\"C1: Empty Collection\")\n        sys.exit() # Exit if both collections are empty.\n    collection = collection_myd\n\n# Step 3: Apply cloud masking and check valid pixels\n# Function to mask pixels based on the QC_Day band.\n# We keep pixels where mandatory QA flags (bits 0-1) are '00' (good quality).\ndef mask_modis_lst(image):\n    qa = image.select('QC_Day')\n    # Bits 0-1 are mandatory QA. '00' is good data.\n    good_quality = qa.bitwiseAnd(3).eq(0)\n    return image.updateMask(good_quality)\n\n# Apply the mask, mosaic, select band, and apply scale factor.\nimage_scaled = collection.map(mask_modis_lst) \\\n    .mosaic() \\\n    .select('LST_Day_1km') \\\n    .multiply(0.02) # Scale factor to convert to Kelvin\n\n# Check for valid pixels after masking.\npixel_count = image_scaled.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=uk_geom,\n    scale=1000,\n    maxPixels=1e9\n).get('LST_Day_1km').getInfo()\n\nprint(f\"Valid pixel count: {pixel_count}\")\nif not pixel_count or pixel_count == 0:\n    print(\"C2: No Valid Pixels\")\n    sys.exit()\n\n# Step 4: Perform calculation\n# Find the maximum temperature within the AOI.\nmax_temp_dict = image_scaled.reduceRegion(\n    reducer=ee.Reducer.max(),\n    geometry=uk_geom,\n    scale=1000, # Use a coarse scale to avoid timeouts.\n    maxPixels=1e9\n)\n\n# Step 5: Validate result and determine answer\n# Extract the result from the server.\nmax_temp_k = max_temp_dict.get('LST_Day_1km').getInfo()\n\nif max_temp_k is None:\n    print(\"C3: Calculation Failure\")\nelse:\n    max_temp_f = (max_temp_k - 273.15) * 9/5 + 32\n    print(f\"Max Temp Found: {max_temp_k:.2f} K ({max_temp_f:.2f} F)\")\n    print(f\"Threshold: {temp_threshold_k:.2f} K (100 F)\")\n\n    if max_temp_k > temp_threshold_k:\n        print(\"A\")\n    else:\n        print(\"B\")\n```",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine library.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\n# Define the Area of Interest (AOI) for the United Kingdom.\n# Using USDOS LSIB instead of FAO/GAUL as per best practices.\ncountries = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\nuk_geom = countries.filter(ee.Filter.eq('country_na', 'United Kingdom')).geometry()\n\n# Define the date range.\ndate_start = '2022-07-19'\ndate_end = '2022-07-20'\n\n# Define the temperature threshold in Kelvin (100\u00b0F).\ntemp_threshold_k = (100 - 32) * 5/9 + 273.15\n\n# Step 2: Acquire data and check collection size\n# Primary collection: MODIS Terra Land Surface Temperature.\ncollection_mod = ee.ImageCollection('MODIS/061/MOD11A1') \\\n    .filterDate(date_start, date_end) \\\n    .filterBounds(uk_geom)\n\n# Check the size of the primary collection.\nmod_size = collection_mod.size().getInfo()\nprint(f\"MOD11A1 (Terra) images: {mod_size}\")\n\n# Select the collection to use.\ncollection = collection_mod\nif mod_size == 0:\n    # Fallback to MODIS Aqua if primary is empty.\n    collection_myd = ee.ImageCollection('MODIS/061/MYD11A1') \\\n        .filterDate(date_start, date_end) \\\n        .filterBounds(uk_geom)\n    myd_size = collection_myd.size().getInfo()\n    print(f\"MYD11A1 (Aqua) fallback images: {myd_size}\")\n    if myd_size == 0:\n        print(\"C1: Empty Collection\")\n        sys.exit() # Exit if both collections are empty.\n    collection = collection_myd\n\n# Step 3: Apply cloud masking and check valid pixels\n# Function to mask pixels based on the QC_Day band.\n# We keep pixels where mandatory QA flags (bits 0-1) are '00' (good quality).\ndef mask_modis_lst(image):\n    qa = image.select('QC_Day')\n    # Bits 0-1 are mandatory QA. '00' is good data.\n    good_quality = qa.bitwiseAnd(3).eq(0)\n    return image.updateMask(good_quality)\n\n# Apply the mask, mosaic, select band, and apply scale factor.\nimage_scaled = collection.map(mask_modis_lst) \\\n    .mosaic() \\\n    .select('LST_Day_1km') \\\n    .multiply(0.02) # Scale factor to convert to Kelvin\n\n# Check for valid pixels after masking.\npixel_count = image_scaled.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=uk_geom,\n    scale=1000,\n    maxPixels=1e9\n).get('LST_Day_1km').getInfo()\n\nprint(f\"Valid pixel count: {pixel_count}\")\nif not pixel_count or pixel_count == 0:\n    print(\"C2: No Valid Pixels\")\n    sys.exit()\n\n# Step 4: Perform calculation\n# Find the maximum temperature within the AOI.\nmax_temp_dict = image_scaled.reduceRegion(\n    reducer=ee.Reducer.max(),\n    geometry=uk_geom,\n    scale=1000, # Use a coarse scale to avoid timeouts.\n    maxPixels=1e9\n)\n\n# Step 5: Validate result and determine answer\n# Extract the result from the server.\nmax_temp_k = max_temp_dict.get('LST_Day_1km').getInfo()\n\nif max_temp_k is None:\n    print(\"C3: Calculation Failure\")\nelse:\n    max_temp_f = (max_temp_k - 273.15) * 9/5 + 32\n    print(f\"Max Temp Found: {max_temp_k:.2f} K ({max_temp_f:.2f} F)\")\n    print(f\"Threshold: {temp_threshold_k:.2f} K (100 F)\")\n\n    if max_temp_k > temp_threshold_k:\n        print(\"A\")\n    else:\n        print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_19-51-04",
+            "data": {
+                "exec_msg": "MOD11A1 (Terra) images: 1\nValid pixel count: 159163\nMax Temp Found: 317.22 K (111.33 F)\nThreshold: 310.93 K (100 F)\nA\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_19-51-04",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_19-51-06",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_19-51-10",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

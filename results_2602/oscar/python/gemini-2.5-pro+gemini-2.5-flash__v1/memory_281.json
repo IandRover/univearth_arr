@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "Was the land surface temperature in Shanghai above 39 degrees Celsius on August 7, 2013?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_19-29-56",
+        "url": "https://earthobservatory.nasa.gov/images/81870/heat-wave-in-china",
+        "unique_id": 281
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_19-30-03",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"LANDSAT/LC08/C02/T1_L2\"\n- fallback_collection: \"LANDSAT/LE07/C02/T1_L2\"\n- date_range: \"2013-08-07 to 2013-08-08\"\n- region: \"City of Shanghai, China\"\n- bands: \"ST_B10 (Land Surface Temperature), QA_PIXEL (for cloud masking)\"\n- risks: \"Shanghai can be cloudy, potentially obscuring the land surface. The single-day request means no image might be available due to the Landsat 8 revisit cycle (16 days).\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"LANDSAT/LC08/C02/T1_L2\"\n- fallback_collection: \"LANDSAT/LE07/C02/T1_L2\"\n- date_range: \"2013-08-07 to 2013-08-08\"\n- region: \"City of Shanghai, China\"\n- bands: \"ST_B10 (Land Surface Temperature), QA_PIXEL (for cloud masking)\"\n- risks: \"Shanghai can be cloudy, potentially obscuring the land surface. The single-day request means no image might be available due to the Landsat 8 revisit cycle (16 days).\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_19-30-14",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define a point geometry for Shanghai, China (longitude: 121.47, latitude: 31.23). Define the date range as '2013-08-07' to '2013-08-08'. Define the temperature threshold as 312.15 Kelvin (39\u00b0C).\n\nStep 2: [Acquire data and check collection size]\n  - Details: Attempt to load the primary image collection 'LANDSAT/LC08/C02/T1_L2'. Filter it by the defined date and geometry. Calculate the size of the resulting collection.\n  - Fallback: If the primary collection size is zero, attempt to load the fallback collection 'LANDSAT/LE07/C02/T1_L2' using the same date and geometry filters. If the fallback collection is also empty, conclude with answer C1 (Empty Collection).\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details: From the non-empty collection (either primary or fallback), create a single mosaic image. Use the 'QA_PIXEL' band to generate a cloud and shadow mask (keeping only 'clear' and 'water' pixels). Apply this mask to the mosaic. Create a new image containing only the unmasked pixels. Reduce this masked image within the Shanghai geometry to count the number of valid pixels. If the count is zero, conclude with answer C2 (No Valid Pixels).\n\nStep 4: [Perform calculation]\n  - Details: Select the 'ST_B10' band from the cloud-masked image. Apply the Landsat scaling factor (multiply by 0.00341802 and add 149.0) to convert digital numbers to Kelvin. Reduce the region of the Shanghai geometry to calculate the maximum land surface temperature ('max' reducer).\n\nStep 5: [Validate result and determine answer]\n  - Details: Retrieve the calculated maximum temperature value from the server.\n  - Guard: Check if the retrieved value is None or NaN. If so, conclude with answer C3 (Calculation Failure).\n  - Details: Compare the calculated temperature in Kelvin against the threshold of 312.15 K. If the temperature is greater than the threshold, the answer is A (Yes). Otherwise, the answer is B (No).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define a point geometry for Shanghai, China (longitude: 121.47, latitude: 31.23). Define the date range as '2013-08-07' to '2013-08-08'. Define the temperature threshold as 312.15 Kelvin (39\u00b0C).\n\nStep 2: [Acquire data and check collection size]\n  - Details: Attempt to load the primary image collection 'LANDSAT/LC08/C02/T1_L2'. Filter it by the defined date and geometry. Calculate the size of the resulting collection.\n  - Fallback: If the primary collection size is zero, attempt to load the fallback collection 'LANDSAT/LE07/C02/T1_L2' using the same date and geometry filters. If the fallback collection is also empty, conclude with answer C1 (Empty Collection).\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details: From the non-empty collection (either primary or fallback), create a single mosaic image. Use the 'QA_PIXEL' band to generate a cloud and shadow mask (keeping only 'clear' and 'water' pixels). Apply this mask to the mosaic. Create a new image containing only the unmasked pixels. Reduce this masked image within the Shanghai geometry to count the number of valid pixels. If the count is zero, conclude with answer C2 (No Valid Pixels).\n\nStep 4: [Perform calculation]\n  - Details: Select the 'ST_B10' band from the cloud-masked image. Apply the Landsat scaling factor (multiply by 0.00341802 and add 149.0) to convert digital numbers to Kelvin. Reduce the region of the Shanghai geometry to calculate the maximum land surface temperature ('max' reducer).\n\nStep 5: [Validate result and determine answer]\n  - Details: Retrieve the calculated maximum temperature value from the server.\n  - Guard: Check if the retrieved value is None or NaN. If so, conclude with answer C3 (Calculation Failure).\n  - Details: Compare the calculated temperature in Kelvin against the threshold of 312.15 K. If the temperature is greater than the threshold, the answer is A (Yes). Otherwise, the answer is B (No)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_19-30-30",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\n# It's a best practice to handle potential GEE initialization errors.\ntry:\n    ee.Initialize(project='earthsense-436113')\nexcept Exception as e:\n    print(f\"Failed to initialize Earth Engine: {e}\", file=sys.stderr)\n    print(\"D\")\n    sys.exit(1)\n\n# Step 1: Initialize and define geometry/time\nshanghai_point = ee.Geometry.Point([121.47, 31.23])\ndate_start = '2013-08-07'\ndate_end = '2013-08-08'\ntemp_threshold_k = 39 + 273.15 # 312.15 Kelvin\n\n# Step 2: Acquire data and check collection size\ndef get_landsat_collection(collection_name, start_date, end_date, geometry):\n    \"\"\"Filters a Landsat collection by date and bounds.\"\"\"\n    return ee.ImageCollection(collection_name) \\\n             .filterDate(start_date, end_date) \\\n             .filterBounds(geometry)\n\ncollection_l8 = get_landsat_collection('LANDSAT/LC08/C02/T1_L2', date_start, date_end, shanghai_point)\nl8_size = collection_l8.size().getInfo()\nprint(f\"Landsat 8 Images found: {l8_size}\")\n\ncollection = None\nif l8_size > 0:\n    collection = collection_l8\n    st_band = 'ST_B10'\n    qa_band = 'QA_PIXEL'\nelse:\n    # Fallback to Landsat 7\n    collection_l7 = get_landsat_collection('LANDSAT/LE07/C02/T1_L2', date_start, date_end, shanghai_point)\n    l7_size = collection_l7.size().getInfo()\n    print(f\"Landsat 7 Images found: {l7_size}\")\n    if l7_size > 0:\n        collection = collection_l7\n        st_band = 'ST_B6'\n        qa_band = 'QA_PIXEL'\n    else:\n        print(\"C1\")\n        sys.exit(0)\n\n# Step 3: Apply cloud masking and check valid pixels\ndef cloud_mask_landsat(image, qa_band_name):\n    \"\"\"Masks clouds and shadows in Landsat C2 L2 images using QA_PIXEL.\"\"\"\n    qa = image.select(qa_band_name)\n    # Bits 3 (Cloud) and 4 (Cloud Shadow) must be 0\n    cloud_shadow_mask = (1 << 3) | (1 << 4)\n    mask = qa.bitwiseAnd(cloud_shadow_mask).eq(0)\n    return image.updateMask(mask)\n\nmasked_collection = collection.map(lambda img: cloud_mask_landsat(img, qa_band))\nimage = masked_collection.mosaic()\n\n# Check for valid pixels in a small region around the point\npixel_count_dict = image.select(st_band).reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=shanghai_point.buffer(500), # Use a buffer to create an area\n    scale=30,\n    maxPixels=1e9\n)\npixel_count = pixel_count_dict.get(st_band).getInfo()\nprint(f\"Valid pixels after cloud masking: {pixel_count}\")\n\nif not pixel_count or pixel_count == 0:\n    print(\"C2\")\n    sys.exit(0)\n\n# Step 4: Perform calculation\n# Apply scaling factors. Note: L7 and L8 use the same scaling for ST bands.\ntemp_image = image.select(st_band).multiply(0.00341802).add(149.0)\n\n# Reduce region to get the maximum temperature\ntemp_stats = temp_image.reduceRegion(\n    reducer=ee.Reducer.max(),\n    geometry=shanghai_point,\n    scale=30\n)\n\n# Step 5: Validate result and determine answer\nmax_temp_k = temp_stats.get(st_band).getInfo()\nprint(f\"Max Temperature (K): {max_temp_k}\")\n\nif max_temp_k is None:\n    print(\"C3\")\nelif max_temp_k > temp_threshold_k:\n    print(\"A\")\nelse:\n    print(\"B\")\n```",
+                "code": "import ee\nimport sys\n\n# It's a best practice to handle potential GEE initialization errors.\ntry:\n    ee.Initialize(project='earthsense-436113')\nexcept Exception as e:\n    print(f\"Failed to initialize Earth Engine: {e}\", file=sys.stderr)\n    print(\"D\")\n    sys.exit(1)\n\n# Step 1: Initialize and define geometry/time\nshanghai_point = ee.Geometry.Point([121.47, 31.23])\ndate_start = '2013-08-07'\ndate_end = '2013-08-08'\ntemp_threshold_k = 39 + 273.15 # 312.15 Kelvin\n\n# Step 2: Acquire data and check collection size\ndef get_landsat_collection(collection_name, start_date, end_date, geometry):\n    \"\"\"Filters a Landsat collection by date and bounds.\"\"\"\n    return ee.ImageCollection(collection_name) \\\n             .filterDate(start_date, end_date) \\\n             .filterBounds(geometry)\n\ncollection_l8 = get_landsat_collection('LANDSAT/LC08/C02/T1_L2', date_start, date_end, shanghai_point)\nl8_size = collection_l8.size().getInfo()\nprint(f\"Landsat 8 Images found: {l8_size}\")\n\ncollection = None\nif l8_size > 0:\n    collection = collection_l8\n    st_band = 'ST_B10'\n    qa_band = 'QA_PIXEL'\nelse:\n    # Fallback to Landsat 7\n    collection_l7 = get_landsat_collection('LANDSAT/LE07/C02/T1_L2', date_start, date_end, shanghai_point)\n    l7_size = collection_l7.size().getInfo()\n    print(f\"Landsat 7 Images found: {l7_size}\")\n    if l7_size > 0:\n        collection = collection_l7\n        st_band = 'ST_B6'\n        qa_band = 'QA_PIXEL'\n    else:\n        print(\"C1\")\n        sys.exit(0)\n\n# Step 3: Apply cloud masking and check valid pixels\ndef cloud_mask_landsat(image, qa_band_name):\n    \"\"\"Masks clouds and shadows in Landsat C2 L2 images using QA_PIXEL.\"\"\"\n    qa = image.select(qa_band_name)\n    # Bits 3 (Cloud) and 4 (Cloud Shadow) must be 0\n    cloud_shadow_mask = (1 << 3) | (1 << 4)\n    mask = qa.bitwiseAnd(cloud_shadow_mask).eq(0)\n    return image.updateMask(mask)\n\nmasked_collection = collection.map(lambda img: cloud_mask_landsat(img, qa_band))\nimage = masked_collection.mosaic()\n\n# Check for valid pixels in a small region around the point\npixel_count_dict = image.select(st_band).reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=shanghai_point.buffer(500), # Use a buffer to create an area\n    scale=30,\n    maxPixels=1e9\n)\npixel_count = pixel_count_dict.get(st_band).getInfo()\nprint(f\"Valid pixels after cloud masking: {pixel_count}\")\n\nif not pixel_count or pixel_count == 0:\n    print(\"C2\")\n    sys.exit(0)\n\n# Step 4: Perform calculation\n# Apply scaling factors. Note: L7 and L8 use the same scaling for ST bands.\ntemp_image = image.select(st_band).multiply(0.00341802).add(149.0)\n\n# Reduce region to get the maximum temperature\ntemp_stats = temp_image.reduceRegion(\n    reducer=ee.Reducer.max(),\n    geometry=shanghai_point,\n    scale=30\n)\n\n# Step 5: Validate result and determine answer\nmax_temp_k = temp_stats.get(st_band).getInfo()\nprint(f\"Max Temperature (K): {max_temp_k}\")\n\nif max_temp_k is None:\n    print(\"C3\")\nelif max_temp_k > temp_threshold_k:\n    print(\"A\")\nelse:\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_19-30-34",
+            "data": {
+                "exec_msg": "Landsat 8 Images found: 0\nLandsat 7 Images found: 0\nC1\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_19-30-34",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_19-30-35",
+            "data": {
+                "raw_answer": "<answer>\nC1\n</answer>",
+                "answer": "C1",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_19-30-39",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "C1",
+                "verified_answer": "C1",
+                "confidence": "high",
+                "final_answer": "C1",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "C1",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

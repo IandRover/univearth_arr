@@ -1,0 +1,89 @@
+{
+    "metadata": {
+        "question": "Was there an active fire present near Paradise, California between November 7, 2018 to November 10, 2018?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_11-50-23",
+        "url": "https://earthobservatory.nasa.gov/images/144225/camp-fire-rages-in-california",
+        "unique_id": 5
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_11-50-32",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"FIRMS\"\n- fallback_collection: \"MODIS/061/MCD14ML\"\n- date_range: \"2018-11-07 to 2018-11-10\"\n- region: \"Point of interest: Paradise, California (approx. -121.62, 39.75)\"\n- bands: \"Not applicable for a point-based feature collection. The presence of features is the key variable. May filter by 'confidence' property.\"\n- risks: \"The FIRMS collection is very reliable for this type of query. The primary risk would be heavy smoke or cloud cover obscuring the fire from the satellite's view, potentially leading to an under-detection.\"\n- needs_cloud_masking: \"no\"\n</observation>",
+                "observation": "- collection: \"FIRMS\"\n- fallback_collection: \"MODIS/061/MCD14ML\"\n- date_range: \"2018-11-07 to 2018-11-10\"\n- region: \"Point of interest: Paradise, California (approx. -121.62, 39.75)\"\n- bands: \"Not applicable for a point-based feature collection. The presence of features is the key variable. May filter by 'confidence' property.\"\n- risks: \"The FIRMS collection is very reliable for this type of query. The primary risk would be heavy smoke or cloud cover obscuring the fire from the satellite's view, potentially leading to an under-detection.\"\n- needs_cloud_masking: \"no\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_11-50-45",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define an ee.Geometry.Point for Paradise, California at [-121.62, 39.75]. Create a 10km search radius around this point using the buffer() method. Define the start date as '2018-11-07' and the end date as '2018-11-11' to create an inclusive range.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the 'FIRMS' ee.FeatureCollection. Filter it by the date range and the buffered geometry. Calculate the size of the resulting collection.\n  - Fallback: If the size of the 'FIRMS' collection is zero, repeat the exact same filtering process using the 'MODIS/061/MCD14ML' collection as a fallback.\n\nStep 3: [Apply quality filtering and check valid data count]\n  - Details: For the non-empty collection from Step 2, apply a filter to select only high-confidence fire detections. Use `ee.Filter.gt('confidence', 80)`. This acts as a quality assurance step instead of a traditional cloud mask for this point-based dataset.\n  - Validation: Get the size of this final, confidence-filtered collection. This count represents the number of high-confidence active fire points.\n\nStep 4: [Perform calculation]\n  - Details: The primary calculation is the `.size().getInfo()` call on the final filtered collection from Step 3. This will return the integer count of detected fires.\n\nStep 5: [Validate result and determine answer]\n  - Details: Evaluate the integer count from Step 4. If the count is greater than 0, there was an active fire. If the initial collection sizes from both primary and fallback collections in Step 2 were 0, no data was available. If the final count after confidence filtering in Step 3 is 0, then no high-confidence fires were found.\n  - Guard: The result of `.size().getInfo()` will be an integer, so None/NaN checks are not necessary.\n  - Answer Logic:\n    - If final count > 0: Answer is A (Yes).\n    - If final count == 0 and initial collection size > 0: Answer is B (No high-confidence fires found).\n    - If initial collection sizes from both primary and fallback are 0: Answer is C1 (Empty Collection).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define an ee.Geometry.Point for Paradise, California at [-121.62, 39.75]. Create a 10km search radius around this point using the buffer() method. Define the start date as '2018-11-07' and the end date as '2018-11-11' to create an inclusive range.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the 'FIRMS' ee.FeatureCollection. Filter it by the date range and the buffered geometry. Calculate the size of the resulting collection.\n  - Fallback: If the size of the 'FIRMS' collection is zero, repeat the exact same filtering process using the 'MODIS/061/MCD14ML' collection as a fallback.\n\nStep 3: [Apply quality filtering and check valid data count]\n  - Details: For the non-empty collection from Step 2, apply a filter to select only high-confidence fire detections. Use `ee.Filter.gt('confidence', 80)`. This acts as a quality assurance step instead of a traditional cloud mask for this point-based dataset.\n  - Validation: Get the size of this final, confidence-filtered collection. This count represents the number of high-confidence active fire points.\n\nStep 4: [Perform calculation]\n  - Details: The primary calculation is the `.size().getInfo()` call on the final filtered collection from Step 3. This will return the integer count of detected fires.\n\nStep 5: [Validate result and determine answer]\n  - Details: Evaluate the integer count from Step 4. If the count is greater than 0, there was an active fire. If the initial collection sizes from both primary and fallback collections in Step 2 were 0, no data was available. If the final count after confidence filtering in Step 3 is 0, then no high-confidence fires were found.\n  - Guard: The result of `.size().getInfo()` will be an integer, so None/NaN checks are not necessary.\n  - Answer Logic:\n    - If final count > 0: Answer is A (Yes).\n    - If final count == 0 and initial collection size > 0: Answer is B (No high-confidence fires found).\n    - If initial collection sizes from both primary and fallback are 0: Answer is C1 (Empty Collection)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_11-50-58",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\n# Initialize the Earth Engine library.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define geometry and time\n# Define a point for Paradise, California and a 10km buffer.\npoint = ee.Geometry.Point([-121.62, 39.75])\nbuffer_radius = 10000  # 10 km\naoi = point.buffer(buffer_radius)\nstart_date = '2018-11-07'\n# The end date is exclusive, so use '2018-11-11' to include Nov 10th.\nend_date = '2018-11-11'\n\n# Step 2: Acquire data and check collection size (Primary: FIRMS)\nfirms_collection = ee.FeatureCollection('FIRMS') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(aoi)\n\ninitial_firms_count = firms_collection.size().getInfo()\nprint(f\"Initial FIRMS detections: {initial_firms_count}\")\n\n# Initialize variables for the chosen collection\ncollection_to_process = firms_collection\ninitial_collection_count = initial_firms_count\n\n# Step 2 (Fallback): If FIRMS is empty, try MODIS\nif initial_firms_count == 0:\n    print(\"FIRMS empty, trying MODIS fallback.\")\n    modis_collection = ee.FeatureCollection('MODIS/061/MCD14ML') \\\n        .filterDate(start_date, end_date) \\\n        .filterBounds(aoi)\n    initial_modis_count = modis_collection.size().getInfo()\n    print(f\"Initial MODIS detections: {initial_modis_count}\")\n    collection_to_process = modis_collection\n    initial_collection_count = initial_modis_count\n\n# Step 3: Apply quality filtering and check valid data count\n# If both collections were empty, output C1 and stop.\nif initial_collection_count == 0:\n    print(\"C1\")\n    sys.exit()\n\n# Filter for high confidence fires. The 'confidence' property exists in both datasets.\nhigh_confidence_collection = collection_to_process.filter(ee.Filter.gt('confidence', 80))\n\n# Step 4: Perform calculation\nhigh_confidence_count = high_confidence_collection.size().getInfo()\nprint(f\"High-confidence (>80) fire detections: {high_confidence_count}\")\n\n# Step 5: Validate result and determine answer\nif high_confidence_count > 0:\n    print(\"A\")\nelse:\n    # This case is reached if initial_collection_count > 0 but high_confidence_count is 0.\n    print(\"B\")\n```",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine library.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define geometry and time\n# Define a point for Paradise, California and a 10km buffer.\npoint = ee.Geometry.Point([-121.62, 39.75])\nbuffer_radius = 10000  # 10 km\naoi = point.buffer(buffer_radius)\nstart_date = '2018-11-07'\n# The end date is exclusive, so use '2018-11-11' to include Nov 10th.\nend_date = '2018-11-11'\n\n# Step 2: Acquire data and check collection size (Primary: FIRMS)\nfirms_collection = ee.FeatureCollection('FIRMS') \\\n    .filterDate(start_date, end_date) \\\n    .filterBounds(aoi)\n\ninitial_firms_count = firms_collection.size().getInfo()\nprint(f\"Initial FIRMS detections: {initial_firms_count}\")\n\n# Initialize variables for the chosen collection\ncollection_to_process = firms_collection\ninitial_collection_count = initial_firms_count\n\n# Step 2 (Fallback): If FIRMS is empty, try MODIS\nif initial_firms_count == 0:\n    print(\"FIRMS empty, trying MODIS fallback.\")\n    modis_collection = ee.FeatureCollection('MODIS/061/MCD14ML') \\\n        .filterDate(start_date, end_date) \\\n        .filterBounds(aoi)\n    initial_modis_count = modis_collection.size().getInfo()\n    print(f\"Initial MODIS detections: {initial_modis_count}\")\n    collection_to_process = modis_collection\n    initial_collection_count = initial_modis_count\n\n# Step 3: Apply quality filtering and check valid data count\n# If both collections were empty, output C1 and stop.\nif initial_collection_count == 0:\n    print(\"C1\")\n    sys.exit()\n\n# Filter for high confidence fires. The 'confidence' property exists in both datasets.\nhigh_confidence_collection = collection_to_process.filter(ee.Filter.gt('confidence', 80))\n\n# Step 4: Perform calculation\nhigh_confidence_count = high_confidence_collection.size().getInfo()\nprint(f\"High-confidence (>80) fire detections: {high_confidence_count}\")\n\n# Step 5: Validate result and determine answer\nif high_confidence_count > 0:\n    print(\"A\")\nelse:\n    # This case is reached if initial_collection_count > 0 but high_confidence_count is 0.\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_11-51-00",
+            "data": {
+                "exec_msg": "Initial FIRMS detections: 4\nHigh-confidence (>80) fire detections: 0\nB\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_11-51-00",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "B",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_11-51-03",
+            "data": {
+                "raw_answer": "<answer>\nB\n</answer>",
+                "answer": "B",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_11-51-07",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "B",
+                "verified_answer": "B",
+                "confidence": "high",
+                "final_answer": "B",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "B",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

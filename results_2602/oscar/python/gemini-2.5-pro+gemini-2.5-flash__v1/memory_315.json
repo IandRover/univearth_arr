@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "Between June 15-21, 2017, did temperatures in Phoenix, Arizona reach at least 110 degrees fahrenheit?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_19-57-36",
+        "url": "https://earthobservatory.nasa.gov/images/90443/heat-broils-the-american-southwest",
+        "unique_id": 315
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_19-57-46",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MOD11A1\"\n- fallback_collection: \"NOAA/VIIRS/001/VNP21A1D\"\n- date_range: \"2017-06-15 to 2017-06-22\"\n- region: \"Phoenix, Arizona (approx. 33.4484\u00b0 N, 112.0740\u00b0 W)\"\n- bands: \"LST_Day_1km\"\n- risks: \"The 'LST_Day_1km' band is provided in Kelvin and needs to be scaled by 0.02, then converted to Fahrenheit. LST is not the same as air temperature; it is often higher, especially in urban areas. Cloud cover could obscure measurements on some days.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MOD11A1\"\n- fallback_collection: \"NOAA/VIIRS/001/VNP21A1D\"\n- date_range: \"2017-06-15 to 2017-06-22\"\n- region: \"Phoenix, Arizona (approx. 33.4484\u00b0 N, 112.0740\u00b0 W)\"\n- bands: \"LST_Day_1km\"\n- risks: \"The 'LST_Day_1km' band is provided in Kelvin and needs to be scaled by 0.02, then converted to Fahrenheit. LST is not the same as air temperature; it is often higher, especially in urban areas. Cloud cover could obscure measurements on some days.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_19-57-59",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define the area of interest as a point for Phoenix, Arizona: `ee.Geometry.Point([-112.0740, 33.4484])`. Define the date range from '2017-06-15' to '2017-06-22'. Define the temperature threshold constant: `110.0` degrees Fahrenheit.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the primary image collection `MODIS/061/MOD11A1`. Filter it by the defined date range and geometry. Select the 'LST_Day_1km' and 'QC_Day' bands.\n  - Validation: Get the size of the filtered collection. If the size is zero, proceed to the fallback step.\n  - Fallback: If the primary collection is empty, load the `NOAA/VIIRS/001/VNP21A1D` collection and apply the same filters. If this fallback is also empty, conclude with answer `C1: Empty Collection`.\n\nStep 3: [Apply cloud masking and unit conversion]\n  - Details: Create a function that uses the 'QC_Day' band to mask pixels with poor quality (keeping only pixels where bits 0-1 are '00'). Map this function over the collection. Create another function to convert the 'LST_Day_1km' band from scaled Kelvin to Fahrenheit using the formula: `F = (LST * 0.02 - 273.15) * 9/5 + 32`. Map this function over the masked collection.\n\nStep 4: [Perform calculation]\n  - Details: Create a single composite image representing the maximum temperature value at each pixel over the entire time series by applying `.max()` to the processed image collection.\n  - Validation: Use a reducer (`reduceRegion`) to calculate the maximum pixel value within a 1km buffer around the Phoenix point geometry.\n  - Guard: Check if the dictionary returned by the reducer is empty or if the value for the temperature band is null. If so, conclude with `C2: No Valid Pixels`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Extract the single maximum temperature value from the reducer result.\n  - Guard: Check if the extracted value is None, NaN, or a physically nonsensical number (e.g., < -100 F). If it is, conclude with `C3: Calculation Failure`.\n  - Final Check: Compare the calculated maximum temperature to the 110\u00b0F threshold. If it is greater than or equal to 110, the answer is `A: Yes`. Otherwise, the answer is `B: No`. Print the result clearly.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define the area of interest as a point for Phoenix, Arizona: `ee.Geometry.Point([-112.0740, 33.4484])`. Define the date range from '2017-06-15' to '2017-06-22'. Define the temperature threshold constant: `110.0` degrees Fahrenheit.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the primary image collection `MODIS/061/MOD11A1`. Filter it by the defined date range and geometry. Select the 'LST_Day_1km' and 'QC_Day' bands.\n  - Validation: Get the size of the filtered collection. If the size is zero, proceed to the fallback step.\n  - Fallback: If the primary collection is empty, load the `NOAA/VIIRS/001/VNP21A1D` collection and apply the same filters. If this fallback is also empty, conclude with answer `C1: Empty Collection`.\n\nStep 3: [Apply cloud masking and unit conversion]\n  - Details: Create a function that uses the 'QC_Day' band to mask pixels with poor quality (keeping only pixels where bits 0-1 are '00'). Map this function over the collection. Create another function to convert the 'LST_Day_1km' band from scaled Kelvin to Fahrenheit using the formula: `F = (LST * 0.02 - 273.15) * 9/5 + 32`. Map this function over the masked collection.\n\nStep 4: [Perform calculation]\n  - Details: Create a single composite image representing the maximum temperature value at each pixel over the entire time series by applying `.max()` to the processed image collection.\n  - Validation: Use a reducer (`reduceRegion`) to calculate the maximum pixel value within a 1km buffer around the Phoenix point geometry.\n  - Guard: Check if the dictionary returned by the reducer is empty or if the value for the temperature band is null. If so, conclude with `C2: No Valid Pixels`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Extract the single maximum temperature value from the reducer result.\n  - Guard: Check if the extracted value is None, NaN, or a physically nonsensical number (e.g., < -100 F). If it is, conclude with `C3: Calculation Failure`.\n  - Final Check: Compare the calculated maximum temperature to the 110\u00b0F threshold. If it is greater than or equal to 110, the answer is `A: Yes`. Otherwise, the answer is `B: No`. Print the result clearly."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_19-58-12",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\n# Initialize the Earth Engine API.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\npoint = ee.Geometry.Point([-112.0740, 33.4484])\nstart_date = '2017-06-15'\nend_date = '2017-06-22'\ntemp_threshold_f = 110.0\n\n# Step 2: Acquire data and check collection size\ncollection = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(start_date, end_date).filterBounds(point).select(['LST_Day_1km', 'QC_Day'])\ncollection_size = collection.size().getInfo()\nprint(f\"MODIS images found: {collection_size}\")\n\nif collection_size == 0:\n    print(\"Fallback to VIIRS data.\")\n    collection = ee.ImageCollection('NOAA/VIIRS/001/VNP21A1D').filterDate(start_date, end_date).filterBounds(point).select(['LST_Day_1km', 'QF1_LST'])\n    collection_size = collection.size().getInfo()\n    print(f\"VIIRS images found: {collection_size}\")\n    if collection_size == 0:\n        print(\"C1: Empty Collection\")\n        sys.exit()\n    # Use VIIRS QC band name for subsequent steps\n    qc_band = 'QF1_LST'\nelse:\n    # Use MODIS QC band name\n    qc_band = 'QC_Day'\n\n# Step 3: Apply cloud masking and unit conversion\ndef mask_quality(image):\n    qc = image.select(qc_band)\n    # Bits 0-1: LST produced, good quality (for both MODIS and VIIRS)\n    quality_mask = qc.bitwiseAnd(3).eq(0)\n    return image.updateMask(quality_mask)\n\ndef to_fahrenheit(image):\n    lst = image.select('LST_Day_1km')\n    # Scale, convert Kelvin to Celsius, then to Fahrenheit\n    fahrenheit = lst.multiply(0.02).subtract(273.15).multiply(9.0/5.0).add(32.0)\n    return fahrenheit.rename('LST_F')\n\nmasked_collection = collection.map(mask_quality)\nfahrenheit_collection = masked_collection.map(to_fahrenheit)\n\n# Step 4: Perform calculation\nmax_temp_image = fahrenheit_collection.max()\nregion = point.buffer(1000)\n\nmax_temp_dict = max_temp_image.reduceRegion(\n    reducer=ee.Reducer.max(),\n    geometry=region,\n    scale=1000,\n    maxPixels=1e9\n)\n\n# Step 5: Validate result and determine answer\nmax_temp_value = max_temp_dict.get('LST_F').getInfo()\n\nif max_temp_value is None:\n    print(\"C2: No Valid Pixels\")\n    sys.exit()\n\n# Check for physically implausible temperatures as a C3 guard\nif not (-100 < max_temp_value < 200):\n    print(f\"Calculation Failure: Implausible temperature {max_temp_value:.2f} F\")\n    print(\"C3: Calculation Failure\")\n    sys.exit()\n\nprint(f\"Max temperature found: {max_temp_value:.2f} F\")\nprint(f\"Threshold: {temp_threshold_f:.2f} F\")\n\nif max_temp_value >= temp_threshold_f:\n    print(\"A: Yes\")\nelse:\n    print(\"B: No\")\n```",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine API.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\npoint = ee.Geometry.Point([-112.0740, 33.4484])\nstart_date = '2017-06-15'\nend_date = '2017-06-22'\ntemp_threshold_f = 110.0\n\n# Step 2: Acquire data and check collection size\ncollection = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(start_date, end_date).filterBounds(point).select(['LST_Day_1km', 'QC_Day'])\ncollection_size = collection.size().getInfo()\nprint(f\"MODIS images found: {collection_size}\")\n\nif collection_size == 0:\n    print(\"Fallback to VIIRS data.\")\n    collection = ee.ImageCollection('NOAA/VIIRS/001/VNP21A1D').filterDate(start_date, end_date).filterBounds(point).select(['LST_Day_1km', 'QF1_LST'])\n    collection_size = collection.size().getInfo()\n    print(f\"VIIRS images found: {collection_size}\")\n    if collection_size == 0:\n        print(\"C1: Empty Collection\")\n        sys.exit()\n    # Use VIIRS QC band name for subsequent steps\n    qc_band = 'QF1_LST'\nelse:\n    # Use MODIS QC band name\n    qc_band = 'QC_Day'\n\n# Step 3: Apply cloud masking and unit conversion\ndef mask_quality(image):\n    qc = image.select(qc_band)\n    # Bits 0-1: LST produced, good quality (for both MODIS and VIIRS)\n    quality_mask = qc.bitwiseAnd(3).eq(0)\n    return image.updateMask(quality_mask)\n\ndef to_fahrenheit(image):\n    lst = image.select('LST_Day_1km')\n    # Scale, convert Kelvin to Celsius, then to Fahrenheit\n    fahrenheit = lst.multiply(0.02).subtract(273.15).multiply(9.0/5.0).add(32.0)\n    return fahrenheit.rename('LST_F')\n\nmasked_collection = collection.map(mask_quality)\nfahrenheit_collection = masked_collection.map(to_fahrenheit)\n\n# Step 4: Perform calculation\nmax_temp_image = fahrenheit_collection.max()\nregion = point.buffer(1000)\n\nmax_temp_dict = max_temp_image.reduceRegion(\n    reducer=ee.Reducer.max(),\n    geometry=region,\n    scale=1000,\n    maxPixels=1e9\n)\n\n# Step 5: Validate result and determine answer\nmax_temp_value = max_temp_dict.get('LST_F').getInfo()\n\nif max_temp_value is None:\n    print(\"C2: No Valid Pixels\")\n    sys.exit()\n\n# Check for physically implausible temperatures as a C3 guard\nif not (-100 < max_temp_value < 200):\n    print(f\"Calculation Failure: Implausible temperature {max_temp_value:.2f} F\")\n    print(\"C3: Calculation Failure\")\n    sys.exit()\n\nprint(f\"Max temperature found: {max_temp_value:.2f} F\")\nprint(f\"Threshold: {temp_threshold_f:.2f} F\")\n\nif max_temp_value >= temp_threshold_f:\n    print(\"A: Yes\")\nelse:\n    print(\"B: No\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_19-58-15",
+            "data": {
+                "exec_msg": "MODIS images found: 7\nC2: No Valid Pixels\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_19-58-15",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_19-58-16",
+            "data": {
+                "raw_answer": "<answer>\nC2: No Valid Pixels\n</answer>",
+                "answer": "C2: No Valid Pixels",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_19-58-20",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "C2: No Valid Pixels",
+                "verified_answer": "C2",
+                "confidence": "high",
+                "final_answer": "C2",
+                "answer_source": "verify_override"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "C2",
+        "answer_source": "verify_override",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

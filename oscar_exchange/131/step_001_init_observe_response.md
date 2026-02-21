@@ -1,0 +1,9 @@
+<observation>
+- collection: "USDA/NASS/CDL" (USDA Cropland Data Layer — annual crop-specific land cover at 30m resolution, available 2008–present). For 2003–2007, use "USDA/NASS/CDL" if available, otherwise fall back to MODIS Land Cover.
+- fallback_collection: "MODIS/061/MCD12Q1" (MODIS Land Cover Type, available 2001–present, 500m, has cropland classes but not crop-specific like corn/wheat/soybean). Another option: "USDA/NASS/CDL" starts from 2008 for most states, so for 2003 we may need to use the CDL archive which has some Great Plains states from 2006+. If 2003 data is unavailable, widen to earliest available year.
+- date_range: "2003-01-01 to 2019-12-31" (comparing crop area in 2003 vs 2019; CDL is annual so we need the specific year images)
+- region: Great Plains grasslands, US — approximate bounding box covering the Great Plains region: ee.Geometry.Rectangle([-104.5, 33.0, -96.0, 49.0]). This covers the core Great Plains states (Texas panhandle through North Dakota, roughly west of 96°W to 104.5°W).
+- bands: "cropland" band from USDA/NASS/CDL. Corn = class 1, Soybeans = class 5, Spring Wheat = class 23, Winter Wheat = class 24, Durum Wheat = class 22. For MODIS MCD12Q1: "LC_Type1" band, class 12 = Croplands.
+- risks: (1) CDL coverage for 2003 may not exist — the CDL only became nationally complete around 2008. Some Great Plains states had CDL starting 2006. For 2003, data may be absent → potential C1. (2) "Great Plains grasslands" is a broad region — need to define a reasonable geometry. (3) CDL is a classification product, not raw imagery, so no cloud masking is needed. (4) Comparing pixel counts across years assumes consistent spatial coverage.
+- needs_cloud_masking: no (CDL is a pre-processed annual classification product, not raw satellite imagery)
+</observation>

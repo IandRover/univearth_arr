@@ -1,0 +1,179 @@
+{
+    "metadata": {
+        "question": "Between 2003 and 2019, did Africa's total land area covered by crops increase by more than 400,000 square kilometers?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_11-37-24",
+        "url": "https://earthobservatory.nasa.gov/images/149617/global-croplands-expand",
+        "unique_id": 129
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_11-37-35",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MCD12Q1\"\n- fallback_collection: \"none\"\n- date_range: \"2003-01-01 to 2019-12-31\"\n- region: \"Continent of Africa (e.g., from USDOS/LSIB_SIMPLE/2017)\"\n- bands: \"LC_Type1 (IGBP classification scheme, specifically classes 12 'Croplands' and 14 'Cropland/Natural Vegetation Mosaics')\"\n- risks: \"The MODIS land cover product has inherent classification accuracy limitations which can vary regionally. The definition of 'cropland' (pure vs. mosaic) can influence the final result.\"\n- needs_cloud_masking: \"no\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MCD12Q1\"\n- fallback_collection: \"none\"\n- date_range: \"2003-01-01 to 2019-12-31\"\n- region: \"Continent of Africa (e.g., from USDOS/LSIB_SIMPLE/2017)\"\n- bands: \"LC_Type1 (IGBP classification scheme, specifically classes 12 'Croplands' and 14 'Cropland/Natural Vegetation Mosaics')\"\n- risks: \"The MODIS land cover product has inherent classification accuracy limitations which can vary regionally. The definition of 'cropland' (pure vs. mosaic) can influence the final result.\"\n- needs_cloud_masking: \"no\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_11-37-47",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define the area of interest (AOI) as the continent of Africa using the `USDOS/LSIB_SIMPLE/2017` FeatureCollection, filtering for `country_co == 'AF'`. Define the start year as 2003 and the end year as 2019. Define the comparison threshold as 400,000 square kilometers.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the `MODIS/061/MCD12Q1` ImageCollection. Create two separate single-image objects by filtering the collection for the exact dates '2003-01-01' and '2019-01-01'.\n  - Validation: After creating each image object, check that it is not None. If either is None, the specific year's data is missing. Terminate and classify the result as C1 (Empty Collection).\n\nStep 3: [Create cropland masks for each year]\n  - Details: For both the 2003 and 2019 images, select the 'LC_Type1' band. Create a binary mask where pixel values are equal to 12 (Croplands) or 14 (Cropland/Natural Vegetation Mosaics). This results in two binary images where 1 represents cropland and 0 represents non-cropland.\n\nStep 4: [Perform calculation]\n  - Details: Define a reusable function that takes a binary mask image and the Africa geometry. Inside the function:\n    1. Generate a pixel area image using `ee.Image.pixelArea()`.\n    2. Multiply the area image by the binary mask to get the area of only the cropland pixels.\n    3. Use `reduceRegion` with a `sum` reducer over the Africa geometry to calculate the total cropland area in square meters. Use a scale of 500 meters, which is the native resolution of the dataset.\n    4. Convert the result from square meters to square kilometers by dividing by 1,000,000.\n  - Details: Apply this function to the 2003 mask and the 2019 mask to get `area_2003_sqkm` and `area_2019_sqkm`. Calculate the change in area: `area_change = area_2019_sqkm - area_2003_sqkm`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the calculated `area_change` to the 400,000 sq km threshold.\n    - If `area_change > 400000`, the answer is A (Yes).\n    - Otherwise, the answer is B (No).\n  - Guard: Before the comparison, check if `area_2003_sqkm` or `area_2019_sqkm` are None, NaN, or zero. A zero value could indicate no cropland pixels were found in the entire continent, which is highly unlikely and may suggest a processing error. If any guard check fails, classify the result as C2 (No Valid Pixels) or C3 (Calculation Failure).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define the area of interest (AOI) as the continent of Africa using the `USDOS/LSIB_SIMPLE/2017` FeatureCollection, filtering for `country_co == 'AF'`. Define the start year as 2003 and the end year as 2019. Define the comparison threshold as 400,000 square kilometers.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the `MODIS/061/MCD12Q1` ImageCollection. Create two separate single-image objects by filtering the collection for the exact dates '2003-01-01' and '2019-01-01'.\n  - Validation: After creating each image object, check that it is not None. If either is None, the specific year's data is missing. Terminate and classify the result as C1 (Empty Collection).\n\nStep 3: [Create cropland masks for each year]\n  - Details: For both the 2003 and 2019 images, select the 'LC_Type1' band. Create a binary mask where pixel values are equal to 12 (Croplands) or 14 (Cropland/Natural Vegetation Mosaics). This results in two binary images where 1 represents cropland and 0 represents non-cropland.\n\nStep 4: [Perform calculation]\n  - Details: Define a reusable function that takes a binary mask image and the Africa geometry. Inside the function:\n    1. Generate a pixel area image using `ee.Image.pixelArea()`.\n    2. Multiply the area image by the binary mask to get the area of only the cropland pixels.\n    3. Use `reduceRegion` with a `sum` reducer over the Africa geometry to calculate the total cropland area in square meters. Use a scale of 500 meters, which is the native resolution of the dataset.\n    4. Convert the result from square meters to square kilometers by dividing by 1,000,000.\n  - Details: Apply this function to the 2003 mask and the 2019 mask to get `area_2003_sqkm` and `area_2019_sqkm`. Calculate the change in area: `area_change = area_2019_sqkm - area_2003_sqkm`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the calculated `area_change` to the 400,000 sq km threshold.\n    - If `area_change > 400000`, the answer is A (Yes).\n    - Otherwise, the answer is B (No).\n  - Guard: Before the comparison, check if `area_2003_sqkm` or `area_2019_sqkm` are None, NaN, or zero. A zero value could indicate no cropland pixels were found in the entire continent, which is highly unlikely and may suggest a processing error. If any guard check fails, classify the result as C2 (No Valid Pixels) or C3 (Calculation Failure)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_11-38-00",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    africa_geom = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017').filter(ee.Filter.eq('continent', 'Africa')).geometry()\n    start_year = 2003\n    end_year = 2019\n    threshold_sqkm = 400000\n\n    # Step 2: Acquire data and check collection size\n    modis_lc = ee.ImageCollection('MODIS/061/MCD12Q1')\n\n    image_2003 = modis_lc.filterDate(f'{start_year}-01-01', f'{start_year}-12-31').first()\n    image_2019 = modis_lc.filterDate(f'{end_year}-01-01', f'{end_year}-12-31').first()\n\n    # Server-side check for null images\n    image_count_2003 = ee.Algorithms.If(image_2003, 1, 0)\n    image_count_2019 = ee.Algorithms.If(image_2019, 1, 0)\n    total_images = ee.Number(image_count_2003).add(image_count_2019).getInfo()\n\n    if total_images < 2:\n        print(f\"Image 2003 exists: {image_count_2003.getInfo()==1}\")\n        print(f\"Image 2019 exists: {image_count_2019.getInfo()==1}\")\n        print(\"C1\")\n        sys.exit()\n\n    # Step 3: Create cropland masks for each year\n    lc_band = 'LC_Type1'\n    cropland_mask_2003 = image_2003.select(lc_band).eq(12).Or(image_2003.select(lc_band).eq(14))\n    cropland_mask_2019 = image_2019.select(lc_band).eq(12).Or(image_2019.select(lc_band).eq(14))\n\n    # Step 4: Perform calculation\n    def calculate_cropland_area(mask_image, geometry):\n        area_image = ee.Image.pixelArea().multiply(mask_image)\n        area = area_image.reduceRegion(\n            reducer=ee.Reducer.sum(),\n            geometry=geometry,\n            scale=1000, # Use a coarser scale to ensure completion\n            maxPixels=1e10\n        )\n        return ee.Number(area.get('area')).divide(1e6) # Convert to sq km\n\n    area_2003_sqkm = calculate_cropland_area(cropland_mask_2003, africa_geom)\n    area_2019_sqkm = calculate_cropland_area(cropland_mask_2019, africa_geom)\n\n    # Step 5: Validate result and determine answer\n    area_2003_val = area_2003_sqkm.getInfo()\n    area_2019_val = area_2019_sqkm.getInfo()\n\n    if area_2003_val is None or area_2019_val is None:\n        print(f\"2003 Cropland Area (sqkm): {area_2003_val}\")\n        print(f\"2019 Cropland Area (sqkm): {area_2019_val}\")\n        print(\"C3\")\n        sys.exit()\n\n    if area_2003_val == 0 or area_2019_val == 0:\n        print(f\"2003 Cropland Area (sqkm): {area_2003_val}\")\n        print(f\"2019 Cropland Area (sqkm): {area_2019_val}\")\n        print(\"C2\")\n        sys.exit()\n    \n    area_change = area_2019_val - area_2003_val\n\n    print(f\"2003 Cropland Area (sqkm): {area_2003_val:,.0f}\")\n    print(f\"2019 Cropland Area (sqkm): {area_2019_val:,.0f}\")\n    print(f\"Area Change (sqkm): {area_change:,.0f}\")\n    print(f\"Threshold (sqkm): {threshold_sqkm:,.0f}\")\n\n    if area_change > threshold_sqkm:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An error occurred: {e}\")\n    print(\"D\")\n```",
+                "code": "import ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    africa_geom = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017').filter(ee.Filter.eq('continent', 'Africa')).geometry()\n    start_year = 2003\n    end_year = 2019\n    threshold_sqkm = 400000\n\n    # Step 2: Acquire data and check collection size\n    modis_lc = ee.ImageCollection('MODIS/061/MCD12Q1')\n\n    image_2003 = modis_lc.filterDate(f'{start_year}-01-01', f'{start_year}-12-31').first()\n    image_2019 = modis_lc.filterDate(f'{end_year}-01-01', f'{end_year}-12-31').first()\n\n    # Server-side check for null images\n    image_count_2003 = ee.Algorithms.If(image_2003, 1, 0)\n    image_count_2019 = ee.Algorithms.If(image_2019, 1, 0)\n    total_images = ee.Number(image_count_2003).add(image_count_2019).getInfo()\n\n    if total_images < 2:\n        print(f\"Image 2003 exists: {image_count_2003.getInfo()==1}\")\n        print(f\"Image 2019 exists: {image_count_2019.getInfo()==1}\")\n        print(\"C1\")\n        sys.exit()\n\n    # Step 3: Create cropland masks for each year\n    lc_band = 'LC_Type1'\n    cropland_mask_2003 = image_2003.select(lc_band).eq(12).Or(image_2003.select(lc_band).eq(14))\n    cropland_mask_2019 = image_2019.select(lc_band).eq(12).Or(image_2019.select(lc_band).eq(14))\n\n    # Step 4: Perform calculation\n    def calculate_cropland_area(mask_image, geometry):\n        area_image = ee.Image.pixelArea().multiply(mask_image)\n        area = area_image.reduceRegion(\n            reducer=ee.Reducer.sum(),\n            geometry=geometry,\n            scale=1000, # Use a coarser scale to ensure completion\n            maxPixels=1e10\n        )\n        return ee.Number(area.get('area')).divide(1e6) # Convert to sq km\n\n    area_2003_sqkm = calculate_cropland_area(cropland_mask_2003, africa_geom)\n    area_2019_sqkm = calculate_cropland_area(cropland_mask_2019, africa_geom)\n\n    # Step 5: Validate result and determine answer\n    area_2003_val = area_2003_sqkm.getInfo()\n    area_2019_val = area_2019_sqkm.getInfo()\n\n    if area_2003_val is None or area_2019_val is None:\n        print(f\"2003 Cropland Area (sqkm): {area_2003_val}\")\n        print(f\"2019 Cropland Area (sqkm): {area_2019_val}\")\n        print(\"C3\")\n        sys.exit()\n\n    if area_2003_val == 0 or area_2019_val == 0:\n        print(f\"2003 Cropland Area (sqkm): {area_2003_val}\")\n        print(f\"2019 Cropland Area (sqkm): {area_2019_val}\")\n        print(\"C2\")\n        sys.exit()\n    \n    area_change = area_2019_val - area_2003_val\n\n    print(f\"2003 Cropland Area (sqkm): {area_2003_val:,.0f}\")\n    print(f\"2019 Cropland Area (sqkm): {area_2019_val:,.0f}\")\n    print(f\"Area Change (sqkm): {area_change:,.0f}\")\n    print(f\"Threshold (sqkm): {threshold_sqkm:,.0f}\")\n\n    if area_change > threshold_sqkm:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An error occurred: {e}\")\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_11-38-03",
+            "data": {
+                "exec_msg": "2003 Cropland Area (sqkm): 0\n2019 Cropland Area (sqkm): 0\nC2\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_11-38-03",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "C2",
+                "need_replan": true,
+                "replan_reason": "Code self-reported C2 (no valid pixels) \u2014 try relaxing masking or wider area.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "replan",
+            "timestamp": "2026-02-21_11-38-17",
+            "data": {
+                "attempt": 1,
+                "diagnosis": "- Failed step: Step 4: [Perform calculation] and Step 3: [Create cropland masks for each year]\n- Root cause: The `reduceRegion` call was attempting to get the sum of a band named 'area' from the `area_image`. However, the `area_image` (created by `ee.Image.pixelArea().multiply(mask_image)`) has a band named `LC_Type1` because the mask image's band name was preserved. Therefore, `area.get('area')` returned `None`, which when converted to an `ee.Number` and evaluated, became 0.\n- Fix strategy: Explicitly rename the band in the `area_image` to 'area' using `.rename('area')` before passing it to `reduceRegion`. This ensures that `reduceRegion` sums the correct band and `area.get('area')` retrieves the correct value.",
+                "code": "import ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    africa_geom = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017').filter(ee.Filter.eq('continent', 'Africa')).geometry()\n    start_year = 2003\n    end_year = 2019\n    threshold_sqkm = 400000\n\n    # Step 2: Acquire data and check collection size\n    modis_lc = ee.ImageCollection('MODIS/061/MCD12Q1')\n\n    image_2003 = modis_lc.filterDate(f'{start_year}-01-01', f'{start_year}-12-31').first()\n    image_2019 = modis_lc.filterDate(f'{end_year}-01-01', f'{end_year}-12-31').first()\n\n    # Server-side check for null images\n    image_count_2003 = ee.Algorithms.If(image_2003, 1, 0)\n    image_count_2019 = ee.Algorithms.If(image_2019, 1, 0)\n    total_images = ee.Number(image_count_2003).add(image_count_2019).getInfo()\n\n    if total_images < 2:\n        print(\"C1\")\n        sys.exit()\n\n    # Step 3: Create cropland masks for each year\n    lc_band = 'LC_Type1'\n    # Combine the two conditions for cropland classes into a single mask\n    cropland_mask_2003 = image_2003.select(lc_band).eq(12).Or(image_2003.select(lc_band).eq(14))\n    cropland_mask_2019 = image_2019.select(lc_band).eq(12).Or(image_2019.select(lc_band).eq(14))\n\n    # Step 4: Perform calculation (with fix)\n    def calculate_cropland_area(mask_image, geometry):\n        # FIX: Rename the band to 'area' so reduceRegion can find it.\n        area_image = ee.Image.pixelArea().multiply(mask_image).rename('area')\n        area = area_image.reduceRegion(\n            reducer=ee.Reducer.sum(),\n            geometry=geometry,\n            scale=1000, # Use a coarser scale to ensure completion\n            maxPixels=1e10\n        )\n        return ee.Number(area.get('area')).divide(1e6) # Convert to sq km\n\n    area_2003_sqkm = calculate_cropland_area(cropland_mask_2003, africa_geom)\n    area_2019_sqkm = calculate_cropland_area(cropland_mask_2019, africa_geom)\n\n    # Step 5: Validate result and determine answer\n    area_2003_val = area_2003_sqkm.getInfo()\n    area_2019_val = area_2019_sqkm.getInfo()\n\n    if area_2003_val is None or area_2019_val is None:\n        print(\"C3\")\n        sys.exit()\n\n    if area_2003_val == 0 or area_2019_val == 0:\n        print(\"C2\")\n        sys.exit()\n    \n    area_change = area_2019_val - area_2003_val\n\n    print(f\"2003 Cropland Area (sqkm): {area_2003_val:,.0f}\")\n    print(f\"2019 Cropland Area (sqkm): {area_2019_val:,.0f}\")\n    print(f\"Area Change (sqkm): {area_change:,.0f}\")\n\n    if area_change > threshold_sqkm:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\", file=sys.stderr)\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An error occurred: {e}\", file=sys.stderr)\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "replan_execute",
+            "timestamp": "2026-02-21_11-38-20",
+            "data": {
+                "attempt": 1,
+                "exec_msg": "C2\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_11-38-20",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "C2",
+                "need_replan": true,
+                "replan_reason": "Code self-reported C2 (no valid pixels) \u2014 try relaxing masking or wider area.",
+                "replan_count": 1
+            }
+        },
+        {
+            "state": "replan",
+            "timestamp": "2026-02-21_11-38-36",
+            "data": {
+                "attempt": 2,
+                "diagnosis": "- Failed step: Step 5: Validate result and determine answer\n- Root cause: The code produced the output `C2`, which corresponds to the condition `if area_2003_val == 0 or area_2019_val == 0:`. This indicates that the `reduceRegion` calculation for at least one of the years resulted in a total area of zero. This is highly improbable for an entire continent and suggests an issue in how the area calculation is being performed. The `multiply(mask)` operation is correct, but an alternative and more robust GEE method is to use `updateMask(mask)` before calculating area. This explicitly tells Earth Engine to ignore non-cropland pixels during the `reduceRegion` sum, which can sometimes be more reliable than multiplying by a 0/1 mask.\n- Fix strategy: Replace the `ee.Image.pixelArea().multiply(mask_image)` logic with `ee.Image.pixelArea().updateMask(mask_image)`. This will ensure that only pixels corresponding to cropland (where the mask is 1) are included in the sum reducer, preventing a potential erroneous zero result.",
+                "code": "import ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    africa_geom = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017').filter(ee.Filter.eq('continent', 'Africa')).geometry()\n    start_year = 2003\n    end_year = 2019\n    threshold_sqkm = 400000\n\n    # Step 2: Acquire data and check collection size\n    modis_lc = ee.ImageCollection('MODIS/061/MCD12Q1')\n\n    image_2003 = modis_lc.filterDate(f'{start_year}-01-01', f'{start_year}-12-31').first()\n    image_2019 = modis_lc.filterDate(f'{end_year}-01-01', f'{end_year}-12-31').first()\n\n    # Server-side check for null images\n    image_count_2003 = ee.Algorithms.If(image_2003, 1, 0)\n    image_count_2019 = ee.Algorithms.If(image_2019, 1, 0)\n    total_images = ee.Number(image_count_2003).add(image_count_2019).getInfo()\n\n    if total_images < 2:\n        print(\"C1\")\n        sys.exit()\n\n    # Step 3: Create cropland masks for each year\n    lc_band = 'LC_Type1'\n    cropland_mask_2003 = image_2003.select(lc_band).eq(12).Or(image_2003.select(lc_band).eq(14))\n    cropland_mask_2019 = image_2019.select(lc_band).eq(12).Or(image_2019.select(lc_band).eq(14))\n\n    # Step 4: Perform calculation (with fix)\n    def calculate_cropland_area(mask_image, geometry):\n        # FIX: Use updateMask instead of multiply for a more robust calculation.\n        # This tells GEE to only consider pixels where the mask is 1 (cropland).\n        area_image = ee.Image.pixelArea().updateMask(mask_image)\n        \n        area_stats = area_image.reduceRegion(\n            reducer=ee.Reducer.sum(),\n            geometry=geometry,\n            scale=3000, # Use a coarser scale to prevent timeouts on large geometries\n            maxPixels=1e10\n        )\n        # The result of ee.Image.pixelArea() is a band named 'area'.\n        return ee.Number(area_stats.get('area')).divide(1e6) # Convert m^2 to km^2\n\n    area_2003_sqkm = calculate_cropland_area(cropland_mask_2003, africa_geom)\n    area_2019_sqkm = calculate_cropland_area(cropland_mask_2019, africa_geom)\n\n    # Step 5: Validate result and determine answer\n    area_2003_val = area_2003_sqkm.getInfo()\n    area_2019_val = area_2019_sqkm.getInfo()\n\n    if area_2003_val is None or area_2019_val is None:\n        print(\"C3\")\n        sys.exit()\n\n    # This check is still valid, in case the region truly has no cropland pixels.\n    if area_2003_val == 0 or area_2019_val == 0:\n        print(\"C2\")\n        sys.exit()\n    \n    area_change = area_2019_val - area_2003_val\n\n    print(f\"2003 Cropland Area (sqkm): {area_2003_val:,.0f}\")\n    print(f\"2019 Cropland Area (sqkm): {area_2019_val:,.0f}\")\n    print(f\"Area Change (sqkm): {area_change:,.0f}\")\n\n    if area_change > threshold_sqkm:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\", file=sys.stderr)\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An error occurred: {e}\", file=sys.stderr)\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "replan_execute",
+            "timestamp": "2026-02-21_11-38-38",
+            "data": {
+                "attempt": 2,
+                "exec_msg": "C2\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_11-38-38",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "C2",
+                "need_replan": true,
+                "replan_reason": "Code self-reported C2 (no valid pixels) \u2014 try relaxing masking or wider area.",
+                "replan_count": 2
+            }
+        },
+        {
+            "state": "replan",
+            "timestamp": "2026-02-21_11-38-55",
+            "data": {
+                "attempt": 3,
+                "diagnosis": "- Failed step: Step 5: Validate result and determine answer.\n- Root cause: The script incorrectly output `C2` (No Valid Pixels). The condition `if area_2003_val == 0 or area_2019_val == 0:` was triggered, implying that the cropland area calculation for one or both years returned zero. This is highly improbable for the entire continent of Africa and suggests a logical error in how the area of multiple classes was calculated. The expression `mask.eq(12).Or(mask.eq(14))` is flawed; it should be `image.eq(12).Or(image.eq(14))` to correctly identify pixels belonging to either class 12 or 14. The `.Or` method was being applied to a boolean image (`mask.eq(12)`) and another boolean image (`mask.eq(14)`), which does not produce the intended multi-class mask from the original land cover image.\n- Fix strategy: Correct the cropland mask creation logic. Instead of chaining `.eq()` and `.Or()` on an already selected band, apply them directly to the source image (`image_2003` and `image_2019`) to create a single binary mask where pixels are 1 if their value is either 12 or 14, and 0 otherwise. This is most efficiently done using `image.eq(12).or(image.eq(14))`. The lowercase `or` is the correct method for combining boolean images.",
+                "code": "import ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    africa_geom = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017').filter(ee.Filter.eq('continent', 'Africa')).geometry()\n    start_year = 2003\n    end_year = 2019\n    threshold_sqkm = 400000\n\n    # Step 2: Acquire data and check collection size\n    modis_lc = ee.ImageCollection('MODIS/061/MCD12Q1')\n\n    image_2003_full = modis_lc.filterDate(f'{start_year}-01-01', f'{start_year}-12-31').first()\n    image_2019_full = modis_lc.filterDate(f'{end_year}-01-01', f'{end_year}-12-31').first()\n\n    # Server-side check for null images\n    # Using ee.Algorithms.IsEqual to check if an object is null is more robust.\n    image_2003_exists = ee.Algorithms.IsEqual(image_2003_full, None).Not()\n    image_2019_exists = ee.Algorithms.IsEqual(image_2019_full, None).Not()\n    \n    # Check if both images exist before proceeding. getInfo() is needed here.\n    if not image_2003_exists.getInfo() or not image_2019_exists.getInfo():\n        print(\"C1\")\n        sys.exit()\n\n    # Select the land cover band\n    lc_band = 'LC_Type1'\n    image_2003 = image_2003_full.select(lc_band)\n    image_2019 = image_2019_full.select(lc_band)\n    \n    # Step 3: Create cropland masks for each year (FIXED)\n    # The fix is to use .or() on the results of two .eq() operations on the same source image.\n    cropland_mask_2003 = image_2003.eq(12).Or(image_2003.eq(14))\n    cropland_mask_2019 = image_2019.eq(12).Or(image_2019.eq(14))\n\n    # Step 4: Perform calculation\n    def calculate_cropland_area(mask_image, geometry):\n        # Use updateMask for a robust calculation.\n        # This tells GEE to only consider pixels where the mask is 1 (cropland).\n        area_image = ee.Image.pixelArea().updateMask(mask_image)\n        \n        area_stats = area_image.reduceRegion(\n            reducer=ee.Reducer.sum(),\n            geometry=geometry,\n            scale=3000, # Use a coarser scale to prevent timeouts on large geometries\n            maxPixels=1e10\n        )\n        # The result of ee.Image.pixelArea() is a band named 'area'.\n        return ee.Number(area_stats.get('area')).divide(1e6) # Convert m^2 to km^2\n\n    area_2003_sqkm = calculate_cropland_area(cropland_mask_2003, africa_geom)\n    area_2019_sqkm = calculate_cropland_area(cropland_mask_2019, africa_geom)\n\n    # Step 5: Validate result and determine answer\n    area_2003_val = area_2003_sqkm.getInfo()\n    area_2019_val = area_2019_sqkm.getInfo()\n\n    if area_2003_val is None or area_2019_val is None:\n        print(\"C3\")\n        sys.exit()\n\n    if area_2003_val == 0 or area_2019_val == 0:\n        print(\"C2\")\n        sys.exit()\n    \n    area_change = area_2019_val - area_2003_val\n\n    print(f\"2003 Cropland Area (sqkm): {area_2003_val:,.0f}\")\n    print(f\"2019 Cropland Area (sqkm): {area_2019_val:,.0f}\")\n    print(f\"Area Change (sqkm): {area_change:,.0f}\")\n\n    if area_change > threshold_sqkm:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\", file=sys.stderr)\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An error occurred: {e}\", file=sys.stderr)\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "replan_execute",
+            "timestamp": "2026-02-21_11-38-57",
+            "data": {
+                "attempt": 3,
+                "exec_msg": "D\n",
+                "exec_stderr": "An error occurred: 'ComputedObject' object has no attribute 'Not'\n",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_11-38-57",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "D",
+                "need_replan": true,
+                "replan_reason": "Code self-reported a D (error) answer.",
+                "replan_count": 3
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_11-39-00",
+            "data": {
+                "raw_answer": "<answer>\nD\n</answer>",
+                "answer": "D",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_11-39-03",
+            "data": {
+                "physical_validation": "Execution success: True\nError type: gee_compute_error\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "D",
+                "verified_answer": "D",
+                "confidence": "high",
+                "final_answer": "D",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "D",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 3,
+        "total_states": 16
+    }
+}

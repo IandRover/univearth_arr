@@ -1,0 +1,89 @@
+{
+    "metadata": {
+        "question": "In April 2023, did southern Spain experience temperatures over 90 degrees Fahrenheit?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_11-34-07",
+        "url": "https://earthobservatory.nasa.gov/images/151366/spain-browned-by-drought",
+        "unique_id": 177
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_11-34-15",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MOD11A1\"\n- fallback_collection: \"MODIS/061/MYD11A1\"\n- date_range: \"2023-04-01 to 2023-04-30\"\n- region: \"A bounding box or polygon covering southern Spain (e.g., Andalusia region)\"\n- bands: \"LST_Day_1km\"\n- risks: \"The user's temperature is in Fahrenheit, but the sensor data (LST) is in Kelvin. A unit conversion is required. The question implies air temperature, but the sensor measures Land Surface Temperature (LST), which can be significantly higher than air temperature during the day.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MOD11A1\"\n- fallback_collection: \"MODIS/061/MYD11A1\"\n- date_range: \"2023-04-01 to 2023-04-30\"\n- region: \"A bounding box or polygon covering southern Spain (e.g., Andalusia region)\"\n- bands: \"LST_Day_1km\"\n- risks: \"The user's temperature is in Fahrenheit, but the sensor data (LST) is in Kelvin. A unit conversion is required. The question implies air temperature, but the sensor measures Land Surface Temperature (LST), which can be significantly higher than air temperature during the day.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_11-34-29",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time/thresholds]\n  - Details:\n    - Define a region of interest (ROI) for southern Spain using `ee.Geometry.Rectangle([-7.5, 36.0, -1.5, 38.5])`.\n    - Define the date range as `'2023-04-01'` to `'2023-04-30'`.\n    - Convert the 90\u00b0F threshold to Kelvin for comparison with the source data. The formula is `K = (F - 32) * 5/9 + 273.15`. This results in a threshold of approximately `305.372 K`.\n\nStep 2: [Acquire data and check collection size]\n  - Details:\n    - Attempt to load the primary image collection: `MODIS/061/MOD11A1`.\n    - Filter it by the date range and ROI.\n    - Select the `LST_Day_1km` and `QC_Day` bands.\n  - Validation:\n    - Get the size of the filtered collection. If the size is 0, proceed to the fallback.\n  - Fallback:\n    - If the primary collection is empty, repeat the process with the fallback collection: `MODIS/061/MYD11A1`.\n    - If the fallback collection is also empty, conclude the answer is C1 (Empty Collection).\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details:\n    - Create a function to cloud-mask each image. This function will use the `QC_Day` band. It will keep only pixels where the two least significant bits (bits 0-1) are '00', indicating 'LST produced, good quality'.\n    - Apply this masking function to the entire collection.\n  - Validation:\n    - Create a single composite image from the masked collection by taking the maximum value of `LST_Day_1km` at each pixel location over the time period.\n    - Calculate the number of unmasked (valid) pixels in the ROI for this max-value composite.\n    - If the count of valid pixels is 0, conclude the answer is C2 (No Valid Pixels).\n\nStep 4: [Perform calculation]\n  - Details:\n    - On the max-value composite image, convert the `LST_Day_1km` band values from Kelvin to Fahrenheit. The formula is `F = (K * 1.8) - 459.67`.\n    - Find the single maximum pixel value within the ROI using `reduceRegion` with the `ee.Reducer.max()` reducer. Set `scale` to 1000 meters.\n\nStep 5: [Validate result and determine answer]\n  - Details:\n    - Retrieve the maximum temperature value from the reduction dictionary.\n    - Compare this value to the 90\u00b0F threshold.\n    - If `max_temp >= 90`, the answer is A (Yes).\n    - If `max_temp < 90`, the answer is B (No).\n  - Guard:\n    - Check if the result from `reduceRegion` is `None` or if the extracted temperature value is `None` or NaN. If so, conclude the answer is C3 (Calculation Failure).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time/thresholds]\n  - Details:\n    - Define a region of interest (ROI) for southern Spain using `ee.Geometry.Rectangle([-7.5, 36.0, -1.5, 38.5])`.\n    - Define the date range as `'2023-04-01'` to `'2023-04-30'`.\n    - Convert the 90\u00b0F threshold to Kelvin for comparison with the source data. The formula is `K = (F - 32) * 5/9 + 273.15`. This results in a threshold of approximately `305.372 K`.\n\nStep 2: [Acquire data and check collection size]\n  - Details:\n    - Attempt to load the primary image collection: `MODIS/061/MOD11A1`.\n    - Filter it by the date range and ROI.\n    - Select the `LST_Day_1km` and `QC_Day` bands.\n  - Validation:\n    - Get the size of the filtered collection. If the size is 0, proceed to the fallback.\n  - Fallback:\n    - If the primary collection is empty, repeat the process with the fallback collection: `MODIS/061/MYD11A1`.\n    - If the fallback collection is also empty, conclude the answer is C1 (Empty Collection).\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details:\n    - Create a function to cloud-mask each image. This function will use the `QC_Day` band. It will keep only pixels where the two least significant bits (bits 0-1) are '00', indicating 'LST produced, good quality'.\n    - Apply this masking function to the entire collection.\n  - Validation:\n    - Create a single composite image from the masked collection by taking the maximum value of `LST_Day_1km` at each pixel location over the time period.\n    - Calculate the number of unmasked (valid) pixels in the ROI for this max-value composite.\n    - If the count of valid pixels is 0, conclude the answer is C2 (No Valid Pixels).\n\nStep 4: [Perform calculation]\n  - Details:\n    - On the max-value composite image, convert the `LST_Day_1km` band values from Kelvin to Fahrenheit. The formula is `F = (K * 1.8) - 459.67`.\n    - Find the single maximum pixel value within the ROI using `reduceRegion` with the `ee.Reducer.max()` reducer. Set `scale` to 1000 meters.\n\nStep 5: [Validate result and determine answer]\n  - Details:\n    - Retrieve the maximum temperature value from the reduction dictionary.\n    - Compare this value to the 90\u00b0F threshold.\n    - If `max_temp >= 90`, the answer is A (Yes).\n    - If `max_temp < 90`, the answer is B (No).\n  - Guard:\n    - Check if the result from `reduceRegion` is `None` or if the extracted temperature value is `None` or NaN. If so, conclude the answer is C3 (Calculation Failure)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_11-34-43",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time/thresholds\nroi = ee.Geometry.Rectangle([-7.5, 36.0, -1.5, 38.5])\nstart_date = '2023-04-01'\nend_date = '2023-04-30'\ntemp_threshold_f = 90.0\n\n# Step 2: Acquire data and check collection size\ndef get_modis_collection(collection_name):\n    return ee.ImageCollection(collection_name) \\\n        .filterDate(start_date, end_date) \\\n        .filterBounds(roi) \\\n        .select(['LST_Day_1km', 'QC_Day'])\n\ncollection_mod = get_modis_collection('MODIS/061/MOD11A1')\ncollection_size = collection_mod.size().getInfo()\n\nif collection_size == 0:\n    print(\"MOD11A1 collection empty, trying MYD11A1.\")\n    collection_mod = get_modis_collection('MODIS/061/MYD11A1')\n    collection_size = collection_mod.size().getInfo()\n    if collection_size == 0:\n        print(\"Both MODIS collections are empty for the given date and location.\")\n        print(\"C1\")\n        sys.exit()\n\nprint(f\"Image Collection Size: {collection_size}\")\n\n# Step 3: Apply cloud masking and check valid pixels\ndef mask_modis_lst(image):\n    qc = image.select('QC_Day')\n    # Bits 0-1: Mandatory QA flags. 00 = LST produced, good quality.\n    quality_mask = qc.bitwiseAnd(3).eq(0)\n    return image.updateMask(quality_mask)\n\nmasked_collection = collection_mod.map(mask_modis_lst)\nmax_temp_composite = masked_collection.select('LST_Day_1km').max()\n\n# Check for valid pixels after masking\nvalid_pixel_count = max_temp_composite.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=roi,\n    scale=1000,\n    maxPixels=1e9\n).get('LST_Day_1km').getInfo()\n\nprint(f\"Valid Pixels Count: {valid_pixel_count}\")\n\nif valid_pixel_count == 0:\n    print(\"No valid pixels found after cloud masking.\")\n    print(\"C2\")\n    sys.exit()\n\n# Step 4: Perform calculation\n# LST is in Kelvin with a scale factor of 0.02.\n# Formula F = (K * 1.8) - 459.67\n# F = ((LST * 0.02) * 1.8) - 459.67\ntemp_f_composite = max_temp_composite.multiply(0.02).multiply(1.8).subtract(459.67)\n\nmax_temp_dict = temp_f_composite.reduceRegion(\n    reducer=ee.Reducer.max(),\n    geometry=roi,\n    scale=1000,\n    maxPixels=1e9\n)\n\n# Step 5: Validate result and determine answer\nmax_temp_value = max_temp_dict.get('LST_Day_1km').getInfo()\n\nif max_temp_value is None:\n    print(\"Calculation failed, reduceRegion returned None.\")\n    print(\"C3\")\nelse:\n    print(f\"Max Temperature (F): {max_temp_value:.2f}\")\n    if max_temp_value >= temp_threshold_f:\n        print(\"A\")\n    else:\n        print(\"B\")\n```",
+                "code": "import ee\nimport sys\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time/thresholds\nroi = ee.Geometry.Rectangle([-7.5, 36.0, -1.5, 38.5])\nstart_date = '2023-04-01'\nend_date = '2023-04-30'\ntemp_threshold_f = 90.0\n\n# Step 2: Acquire data and check collection size\ndef get_modis_collection(collection_name):\n    return ee.ImageCollection(collection_name) \\\n        .filterDate(start_date, end_date) \\\n        .filterBounds(roi) \\\n        .select(['LST_Day_1km', 'QC_Day'])\n\ncollection_mod = get_modis_collection('MODIS/061/MOD11A1')\ncollection_size = collection_mod.size().getInfo()\n\nif collection_size == 0:\n    print(\"MOD11A1 collection empty, trying MYD11A1.\")\n    collection_mod = get_modis_collection('MODIS/061/MYD11A1')\n    collection_size = collection_mod.size().getInfo()\n    if collection_size == 0:\n        print(\"Both MODIS collections are empty for the given date and location.\")\n        print(\"C1\")\n        sys.exit()\n\nprint(f\"Image Collection Size: {collection_size}\")\n\n# Step 3: Apply cloud masking and check valid pixels\ndef mask_modis_lst(image):\n    qc = image.select('QC_Day')\n    # Bits 0-1: Mandatory QA flags. 00 = LST produced, good quality.\n    quality_mask = qc.bitwiseAnd(3).eq(0)\n    return image.updateMask(quality_mask)\n\nmasked_collection = collection_mod.map(mask_modis_lst)\nmax_temp_composite = masked_collection.select('LST_Day_1km').max()\n\n# Check for valid pixels after masking\nvalid_pixel_count = max_temp_composite.reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=roi,\n    scale=1000,\n    maxPixels=1e9\n).get('LST_Day_1km').getInfo()\n\nprint(f\"Valid Pixels Count: {valid_pixel_count}\")\n\nif valid_pixel_count == 0:\n    print(\"No valid pixels found after cloud masking.\")\n    print(\"C2\")\n    sys.exit()\n\n# Step 4: Perform calculation\n# LST is in Kelvin with a scale factor of 0.02.\n# Formula F = (K * 1.8) - 459.67\n# F = ((LST * 0.02) * 1.8) - 459.67\ntemp_f_composite = max_temp_composite.multiply(0.02).multiply(1.8).subtract(459.67)\n\nmax_temp_dict = temp_f_composite.reduceRegion(\n    reducer=ee.Reducer.max(),\n    geometry=roi,\n    scale=1000,\n    maxPixels=1e9\n)\n\n# Step 5: Validate result and determine answer\nmax_temp_value = max_temp_dict.get('LST_Day_1km').getInfo()\n\nif max_temp_value is None:\n    print(\"Calculation failed, reduceRegion returned None.\")\n    print(\"C3\")\nelse:\n    print(f\"Max Temperature (F): {max_temp_value:.2f}\")\n    if max_temp_value >= temp_threshold_f:\n        print(\"A\")\n    else:\n        print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_11-34-51",
+            "data": {
+                "exec_msg": "Image Collection Size: 29\nValid Pixels Count: 117152\nMax Temperature (F): 123.28\nA\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_11-34-51",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "A",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_11-34-52",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_11-34-57",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

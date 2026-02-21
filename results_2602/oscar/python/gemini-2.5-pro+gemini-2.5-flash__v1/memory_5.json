@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "Was there an active fire present near Paradise, California between November 7, 2018 to November 10, 2018?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_18-21-59",
+        "url": "https://earthobservatory.nasa.gov/images/144225/camp-fire-rages-in-california",
+        "unique_id": 5
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_18-22-08",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"FIRMS\"\n- fallback_collection: \"MODIS/MCD14ML/MCD14ML\"\n- date_range: \"2018-11-07 to 2018-11-11\"\n- region: \"Point of Interest: Paradise, California (approx. -121.62, 39.76)\"\n- bands: \"T21 (Brightness temperature), confidence\"\n- risks: \"Active fire products can have false positives from other heat sources (e.g., industrial sites, sun glint). The 'confidence' band should be used to filter for high-confidence detections.\"\n- needs_cloud_masking: \"no\"\n</observation>",
+                "observation": "- collection: \"FIRMS\"\n- fallback_collection: \"MODIS/MCD14ML/MCD14ML\"\n- date_range: \"2018-11-07 to 2018-11-11\"\n- region: \"Point of Interest: Paradise, California (approx. -121.62, 39.76)\"\n- bands: \"T21 (Brightness temperature), confidence\"\n- risks: \"Active fire products can have false positives from other heat sources (e.g., industrial sites, sun glint). The 'confidence' band should be used to filter for high-confidence detections.\"\n- needs_cloud_masking: \"no\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_18-22-19",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define the area of interest (AOI) as a 5km buffer around the coordinates for Paradise, California (-121.62, 39.76). Define the start date as '2018-11-07' and the end date as '2018-11-11'.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Attempt to load and filter the 'FIRMS' ImageCollection by the defined date range and AOI.\n  - Validation: Get the size of the resulting collection. If the size is zero, proceed to the fallback.\n  - Fallback: If 'FIRMS' collection is empty, repeat the process using the 'MODIS/MCD14ML/MCD14ML' collection. If this fallback collection is also empty, conclude with answer C1.\n\nStep 3: [Apply filtering and check valid pixels]\n  - Details: From the non-empty collection (either FIRMS or the MODIS fallback), filter the images to select only high-confidence fire detections. Use a filter where the 'confidence' band is greater than or equal to 80.\n  - Validation: Create a mosaic of the filtered images and clip it to the AOI. Calculate the total number of valid (non-masked) pixels in the 'confidence' band within the AOI. If the pixel count is zero, conclude with answer C2.\n\nStep 4: [Perform calculation]\n  - Details: The calculation is implicit in the pixel count from the previous step. The goal is to determine if at least one valid, high-confidence fire pixel exists. The result of the pixel count itself serves as the basis for the final decision.\n\nStep 5: [Validate result and determine answer]\n  - Details: Evaluate the pixel count result from Step 3.\n  - Guard: Check if the pixel count result is `None`. If it is, conclude with answer C3.\n  - If the pixel count is greater than 0, conclude with answer A (Yes).\n  - If the pixel count is exactly 0 (and the initial collections were not empty), conclude with answer B (No, meaning no high-confidence fires were found).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define the area of interest (AOI) as a 5km buffer around the coordinates for Paradise, California (-121.62, 39.76). Define the start date as '2018-11-07' and the end date as '2018-11-11'.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Attempt to load and filter the 'FIRMS' ImageCollection by the defined date range and AOI.\n  - Validation: Get the size of the resulting collection. If the size is zero, proceed to the fallback.\n  - Fallback: If 'FIRMS' collection is empty, repeat the process using the 'MODIS/MCD14ML/MCD14ML' collection. If this fallback collection is also empty, conclude with answer C1.\n\nStep 3: [Apply filtering and check valid pixels]\n  - Details: From the non-empty collection (either FIRMS or the MODIS fallback), filter the images to select only high-confidence fire detections. Use a filter where the 'confidence' band is greater than or equal to 80.\n  - Validation: Create a mosaic of the filtered images and clip it to the AOI. Calculate the total number of valid (non-masked) pixels in the 'confidence' band within the AOI. If the pixel count is zero, conclude with answer C2.\n\nStep 4: [Perform calculation]\n  - Details: The calculation is implicit in the pixel count from the previous step. The goal is to determine if at least one valid, high-confidence fire pixel exists. The result of the pixel count itself serves as the basis for the final decision.\n\nStep 5: [Validate result and determine answer]\n  - Details: Evaluate the pixel count result from Step 3.\n  - Guard: Check if the pixel count result is `None`. If it is, conclude with answer C3.\n  - If the pixel count is greater than 0, conclude with answer A (Yes).\n  - If the pixel count is exactly 0 (and the initial collections were not empty), conclude with answer B (No, meaning no high-confidence fires were found)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_18-22-31",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\n# It's a good practice to handle potential initialization errors.\ntry:\n    ee.Initialize(project='earthsense-436113')\nexcept Exception as e:\n    sys.stderr.write(f\"Error initializing Earth Engine: {e}\\n\")\n    sys.exit(\"D\") # Exit with a custom error code if initialization fails\n\n# Step 1: Initialize and define geometry/time\n# Define the area of interest (AOI) for Paradise, California with a 5km buffer.\npoint = ee.Geometry.Point([-121.62, 39.76])\naoi = point.buffer(5000)\nstartDate = '2018-11-07'\n# The end date is exclusive in GEE, so '2018-11-11' includes up to Nov 10.\nendDate = '2018-11-11'\n\n# Step 2: Acquire data and check collection size\n# Primary dataset: FIRMS\nfirms_collection = ee.ImageCollection('FIRMS').filterBounds(aoi).filterDate(startDate, endDate)\nfirms_size = firms_collection.size().getInfo()\nprint(f\"FIRMS images found: {firms_size}\")\n\ncollection_to_process = None\nif firms_size > 0:\n    collection_to_process = firms_collection\nelse:\n    # Fallback dataset: MODIS\n    print(\"FIRMS empty, trying MODIS fallback.\")\n    modis_collection = ee.ImageCollection('MODIS/MCD14ML/MCD14ML').filterBounds(aoi).filterDate(startDate, endDate)\n    modis_size = modis_collection.size().getInfo()\n    print(f\"MODIS images found: {modis_size}\")\n    if modis_size > 0:\n        collection_to_process = modis_collection\n    else:\n        print(\"C1\")\n        sys.exit()\n\n# Step 3: Apply filtering and check valid pixels\n# Filter for high-confidence fires (confidence >= 80).\nhigh_confidence_fires = collection_to_process.map(lambda img: img.updateMask(img.select('confidence').gte(80)))\n\n# Create a single image of fire pixels and clip to the AOI.\nfire_mosaic = high_confidence_fires.mosaic().clip(aoi)\n\n# Count the number of valid, high-confidence fire pixels.\npixel_count_dict = fire_mosaic.select('confidence').reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=aoi,\n    scale=1000,  # FIRMS/MODIS resolution is ~1km\n    maxPixels=1e9\n).getInfo()\n\n# Step 4 & 5: Perform calculation, validate result, and determine answer\nfire_pixel_count = pixel_count_dict.get('confidence')\nprint(f\"High-confidence fire pixels: {fire_pixel_count}\")\n\nif fire_pixel_count is None:\n    print(\"C3\")\nelif fire_pixel_count > 0:\n    print(\"A\")\nelse:\n    # This case means collections were found, but no pixels met the high-confidence criteria.\n    print(\"B\")\n```",
+                "code": "import ee\nimport sys\n\n# It's a good practice to handle potential initialization errors.\ntry:\n    ee.Initialize(project='earthsense-436113')\nexcept Exception as e:\n    sys.stderr.write(f\"Error initializing Earth Engine: {e}\\n\")\n    sys.exit(\"D\") # Exit with a custom error code if initialization fails\n\n# Step 1: Initialize and define geometry/time\n# Define the area of interest (AOI) for Paradise, California with a 5km buffer.\npoint = ee.Geometry.Point([-121.62, 39.76])\naoi = point.buffer(5000)\nstartDate = '2018-11-07'\n# The end date is exclusive in GEE, so '2018-11-11' includes up to Nov 10.\nendDate = '2018-11-11'\n\n# Step 2: Acquire data and check collection size\n# Primary dataset: FIRMS\nfirms_collection = ee.ImageCollection('FIRMS').filterBounds(aoi).filterDate(startDate, endDate)\nfirms_size = firms_collection.size().getInfo()\nprint(f\"FIRMS images found: {firms_size}\")\n\ncollection_to_process = None\nif firms_size > 0:\n    collection_to_process = firms_collection\nelse:\n    # Fallback dataset: MODIS\n    print(\"FIRMS empty, trying MODIS fallback.\")\n    modis_collection = ee.ImageCollection('MODIS/MCD14ML/MCD14ML').filterBounds(aoi).filterDate(startDate, endDate)\n    modis_size = modis_collection.size().getInfo()\n    print(f\"MODIS images found: {modis_size}\")\n    if modis_size > 0:\n        collection_to_process = modis_collection\n    else:\n        print(\"C1\")\n        sys.exit()\n\n# Step 3: Apply filtering and check valid pixels\n# Filter for high-confidence fires (confidence >= 80).\nhigh_confidence_fires = collection_to_process.map(lambda img: img.updateMask(img.select('confidence').gte(80)))\n\n# Create a single image of fire pixels and clip to the AOI.\nfire_mosaic = high_confidence_fires.mosaic().clip(aoi)\n\n# Count the number of valid, high-confidence fire pixels.\npixel_count_dict = fire_mosaic.select('confidence').reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=aoi,\n    scale=1000,  # FIRMS/MODIS resolution is ~1km\n    maxPixels=1e9\n).getInfo()\n\n# Step 4 & 5: Perform calculation, validate result, and determine answer\nfire_pixel_count = pixel_count_dict.get('confidence')\nprint(f\"High-confidence fire pixels: {fire_pixel_count}\")\n\nif fire_pixel_count is None:\n    print(\"C3\")\nelif fire_pixel_count > 0:\n    print(\"A\")\nelse:\n    # This case means collections were found, but no pixels met the high-confidence criteria.\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_18-22-33",
+            "data": {
+                "exec_msg": "FIRMS images found: 4\nHigh-confidence fire pixels: 101\nA\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_18-22-33",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_18-22-35",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_18-22-38",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

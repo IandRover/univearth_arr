@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "Did Dry Chaco forest cover decrease by more than 10% between 2000 and 2019?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_20-05-29",
+        "url": "https://landsat.gsfc.nasa.gov/article/deforestation-in-paraguays-gran-chaco/",
+        "unique_id": 347
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_20-05-38",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"UMD/hansen/global_forest_change_2022_v1_10\"\n- fallback_collection: \"LANDSAT/LT05/C02/T1_L2, LANDSAT/LE07/C02/T1_L2, LANDSAT/LC08/C02/T1_L2\"\n- date_range: \"2000-01-01 to 2019-12-31\"\n- region: \"WWF Terrestrial Ecoregion 'Dry Chaco' (from collection WWF/Terrestrial_Ecoregions/v1/2012)\"\n- bands: \"treecover2000, loss, lossyear\"\n- risks: \"The Hansen dataset uses a specific definition of 'tree cover' (>5m in height), which might not capture all types of woody vegetation in the Dry Chaco. The accuracy of the product can vary regionally.\"\n- needs_cloud_masking: \"no\"\n</observation>",
+                "observation": "- collection: \"UMD/hansen/global_forest_change_2022_v1_10\"\n- fallback_collection: \"LANDSAT/LT05/C02/T1_L2, LANDSAT/LE07/C02/T1_L2, LANDSAT/LC08/C02/T1_L2\"\n- date_range: \"2000-01-01 to 2019-12-31\"\n- region: \"WWF Terrestrial Ecoregion 'Dry Chaco' (from collection WWF/Terrestrial_Ecoregions/v1/2012)\"\n- bands: \"treecover2000, loss, lossyear\"\n- risks: \"The Hansen dataset uses a specific definition of 'tree cover' (>5m in height), which might not capture all types of woody vegetation in the Dry Chaco. The accuracy of the product can vary regionally.\"\n- needs_cloud_masking: \"no\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_20-05-51",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry]\n  - Details: Load the WWF Terrestrial Ecoregions feature collection (`WWF/Terrestrial_Ecoregions/v1/2012`). Filter this collection to find the specific feature where the `ECO_NAME` property is 'Dry Chaco'. Extract the geometry of this ecoregion to be used as the area of interest (AOI).\n\nStep 2: [Acquire and prepare data]\n  - Details: Load the UMD Hansen Global Forest Change dataset as a single image (`ee.Image('UMD/hansen/global_forest_change_2022_v1_10')`). Select the `treecover2000`, `loss`, and `lossyear` bands. Clip this image to the Dry Chaco geometry defined in Step 1.\n  - Fallback: The Hansen dataset is a single global image, so a fallback to another collection is not applicable for the primary calculation. This plan will proceed assuming the Hansen image is available.\n\nStep 3: [Calculate initial forest area and loss area]\n  - Details:\n    1.  Create a baseline forest mask (`forest_2000_mask`) where the `treecover2000` band is greater than 30%. This defines what is considered \"forest\" for the year 2000.\n    2.  Create a loss mask (`loss_2001_2019_mask`) for the specified period. This mask should identify pixels where `loss` is 1 AND `lossyear` is between 1 and 19 (inclusive, corresponding to years 2001-2019).\n    3.  Combine the masks to find the area of forest that existed in 2000 and was lost by the end of 2019 (`actual_loss_mask`).\n    4.  Calculate the total area of the initial forest (`initial_forest_area`) by summing the pixels of `forest_2000_mask` and multiplying by the pixel area.\n    5.  Calculate the total area of forest lost (`loss_area`) by summing the pixels of `actual_loss_mask` and multiplying by the pixel area.\n\nStep 4: [Perform final calculation]\n  - Details: Calculate the percentage of forest loss using the formula: `(loss_area / initial_forest_area) * 100`. Store this value as `percentage_loss`.\n\nStep 5: [Validate result and determine answer]\n  - Details:\n    1.  Compare the computed `percentage_loss` to the threshold of 10.\n    2.  If `percentage_loss` > 10, the answer is 'A: Yes'.\n    3.  If `percentage_loss` <= 10, the answer is 'B: No'.\n  - Guard:\n    1.  Before the final comparison, check if `initial_forest_area` is None or zero. If so, there were no valid forest pixels to begin with, and the answer is 'C2: No Valid Pixels'.\n    2.  Check if `percentage_loss` is None or NaN. If so, the answer is 'C3: Calculation Failure'.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry]\n  - Details: Load the WWF Terrestrial Ecoregions feature collection (`WWF/Terrestrial_Ecoregions/v1/2012`). Filter this collection to find the specific feature where the `ECO_NAME` property is 'Dry Chaco'. Extract the geometry of this ecoregion to be used as the area of interest (AOI).\n\nStep 2: [Acquire and prepare data]\n  - Details: Load the UMD Hansen Global Forest Change dataset as a single image (`ee.Image('UMD/hansen/global_forest_change_2022_v1_10')`). Select the `treecover2000`, `loss`, and `lossyear` bands. Clip this image to the Dry Chaco geometry defined in Step 1.\n  - Fallback: The Hansen dataset is a single global image, so a fallback to another collection is not applicable for the primary calculation. This plan will proceed assuming the Hansen image is available.\n\nStep 3: [Calculate initial forest area and loss area]\n  - Details:\n    1.  Create a baseline forest mask (`forest_2000_mask`) where the `treecover2000` band is greater than 30%. This defines what is considered \"forest\" for the year 2000.\n    2.  Create a loss mask (`loss_2001_2019_mask`) for the specified period. This mask should identify pixels where `loss` is 1 AND `lossyear` is between 1 and 19 (inclusive, corresponding to years 2001-2019).\n    3.  Combine the masks to find the area of forest that existed in 2000 and was lost by the end of 2019 (`actual_loss_mask`).\n    4.  Calculate the total area of the initial forest (`initial_forest_area`) by summing the pixels of `forest_2000_mask` and multiplying by the pixel area.\n    5.  Calculate the total area of forest lost (`loss_area`) by summing the pixels of `actual_loss_mask` and multiplying by the pixel area.\n\nStep 4: [Perform final calculation]\n  - Details: Calculate the percentage of forest loss using the formula: `(loss_area / initial_forest_area) * 100`. Store this value as `percentage_loss`.\n\nStep 5: [Validate result and determine answer]\n  - Details:\n    1.  Compare the computed `percentage_loss` to the threshold of 10.\n    2.  If `percentage_loss` > 10, the answer is 'A: Yes'.\n    3.  If `percentage_loss` <= 10, the answer is 'B: No'.\n  - Guard:\n    1.  Before the final comparison, check if `initial_forest_area` is None or zero. If so, there were no valid forest pixels to begin with, and the answer is 'C2: No Valid Pixels'.\n    2.  Check if `percentage_loss` is None or NaN. If so, the answer is 'C3: Calculation Failure'."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_20-06-04",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry\ntry:\n    ecoregions = ee.FeatureCollection('WWF/Terrestrial_Ecoregions/v1/2012')\n    dry_chaco_feature = ecoregions.filter(ee.Filter.eq('ECO_NAME', 'Dry Chaco')).first()\n    \n    # Check if the feature was found\n    if dry_chaco_feature.getInfo() is None:\n        print(\"Ecoregion 'Dry Chaco' not found.\")\n        print(\"C1: Empty Collection\") # Technically not an image collection, but the principle applies\n        sys.exit()\n    \n    aoi = dry_chaco_feature.geometry()\nexcept Exception as e:\n    print(f\"Error defining geometry: {e}\")\n    print(\"D\")\n    sys.exit()\n\n# Step 2: Acquire and prepare data\nhansen_image = ee.Image('UMD/hansen/global_forest_change_2022_v1_10')\nhansen_clipped = hansen_image.clip(aoi)\n\n# Step 3: Calculate initial forest area and loss area\n# 1. Create a baseline forest mask for the year 2000 (>30% tree cover)\nforest_2000_mask = hansen_clipped.select('treecover2000').gt(30)\n\n# 2. Create a loss mask for the period 2001-2019\nloss = hansen_clipped.select('loss')\nlossyear = hansen_clipped.select('lossyear')\nloss_2001_2019_mask = loss.eq(1).And(lossyear.gte(1)).And(lossyear.lte(19))\n\n# 3. Combine masks to find the area of forest that existed in 2000 and was lost\nactual_loss_mask = forest_2000_mask.And(loss_2001_2019_mask)\n\n# 4 & 5. Calculate the area for initial forest and lost forest\npixel_area = ee.Image.pixelArea()\nscale = 1000 # Use a reasonable scale for regional analysis to avoid timeouts\n\ntry:\n    # Calculate area of initial forest\n    initial_forest_stats = forest_2000_mask.multiply(pixel_area).reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=aoi,\n        scale=scale,\n        maxPixels=1e12\n    )\n    initial_forest_area = initial_forest_stats.get('treecover2000').getInfo()\n\n    # Calculate area of lost forest\n    loss_stats = actual_loss_mask.multiply(pixel_area).reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=aoi,\n        scale=scale,\n        maxPixels=1e12\n    )\n    loss_area = loss_stats.get('treecover2000').getInfo()\n\n    # Guard: Check for valid calculation results\n    if initial_forest_area is None or loss_area is None:\n        print(\"Calculation failed: Area calculation returned None.\")\n        print(\"C3: Calculation Failure\")\n        sys.exit()\n\n    # Guard: Check for zero initial forest area\n    if initial_forest_area == 0:\n        print(\"No valid forest pixels found for the year 2000 with >30% cover.\")\n        print(f\"Initial Forest Area (sq meters): {initial_forest_area}\")\n        print(\"C2: No Valid Pixels\")\n        sys.exit()\n\n    # Step 4: Perform final calculation\n    percentage_loss = (loss_area / initial_forest_area) * 100\n\n    print(f\"Initial Forest Area (km^2): {initial_forest_area / 1e6:.2f}\")\n    print(f\"Lost Forest Area (km^2): {loss_area / 1e6:.2f}\")\n    print(f\"Percentage Loss: {percentage_loss:.2f}%\")\n\n    # Step 5: Validate result and determine answer\n    if percentage_loss > 10:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    # Catch GEE-specific errors, often related to computation limits or asset issues\n    print(f\"GEE Error during reduction: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    # Catch other potential errors (e.g., Python issues)\n    print(f\"An unexpected error occurred: {e}\")\n    print(\"D\")\n\n```",
+                "code": "import ee\nimport sys\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry\ntry:\n    ecoregions = ee.FeatureCollection('WWF/Terrestrial_Ecoregions/v1/2012')\n    dry_chaco_feature = ecoregions.filter(ee.Filter.eq('ECO_NAME', 'Dry Chaco')).first()\n    \n    # Check if the feature was found\n    if dry_chaco_feature.getInfo() is None:\n        print(\"Ecoregion 'Dry Chaco' not found.\")\n        print(\"C1: Empty Collection\") # Technically not an image collection, but the principle applies\n        sys.exit()\n    \n    aoi = dry_chaco_feature.geometry()\nexcept Exception as e:\n    print(f\"Error defining geometry: {e}\")\n    print(\"D\")\n    sys.exit()\n\n# Step 2: Acquire and prepare data\nhansen_image = ee.Image('UMD/hansen/global_forest_change_2022_v1_10')\nhansen_clipped = hansen_image.clip(aoi)\n\n# Step 3: Calculate initial forest area and loss area\n# 1. Create a baseline forest mask for the year 2000 (>30% tree cover)\nforest_2000_mask = hansen_clipped.select('treecover2000').gt(30)\n\n# 2. Create a loss mask for the period 2001-2019\nloss = hansen_clipped.select('loss')\nlossyear = hansen_clipped.select('lossyear')\nloss_2001_2019_mask = loss.eq(1).And(lossyear.gte(1)).And(lossyear.lte(19))\n\n# 3. Combine masks to find the area of forest that existed in 2000 and was lost\nactual_loss_mask = forest_2000_mask.And(loss_2001_2019_mask)\n\n# 4 & 5. Calculate the area for initial forest and lost forest\npixel_area = ee.Image.pixelArea()\nscale = 1000 # Use a reasonable scale for regional analysis to avoid timeouts\n\ntry:\n    # Calculate area of initial forest\n    initial_forest_stats = forest_2000_mask.multiply(pixel_area).reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=aoi,\n        scale=scale,\n        maxPixels=1e12\n    )\n    initial_forest_area = initial_forest_stats.get('treecover2000').getInfo()\n\n    # Calculate area of lost forest\n    loss_stats = actual_loss_mask.multiply(pixel_area).reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=aoi,\n        scale=scale,\n        maxPixels=1e12\n    )\n    loss_area = loss_stats.get('treecover2000').getInfo()\n\n    # Guard: Check for valid calculation results\n    if initial_forest_area is None or loss_area is None:\n        print(\"Calculation failed: Area calculation returned None.\")\n        print(\"C3: Calculation Failure\")\n        sys.exit()\n\n    # Guard: Check for zero initial forest area\n    if initial_forest_area == 0:\n        print(\"No valid forest pixels found for the year 2000 with >30% cover.\")\n        print(f\"Initial Forest Area (sq meters): {initial_forest_area}\")\n        print(\"C2: No Valid Pixels\")\n        sys.exit()\n\n    # Step 4: Perform final calculation\n    percentage_loss = (loss_area / initial_forest_area) * 100\n\n    print(f\"Initial Forest Area (km^2): {initial_forest_area / 1e6:.2f}\")\n    print(f\"Lost Forest Area (km^2): {loss_area / 1e6:.2f}\")\n    print(f\"Percentage Loss: {percentage_loss:.2f}%\")\n\n    # Step 5: Validate result and determine answer\n    if percentage_loss > 10:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    # Catch GEE-specific errors, often related to computation limits or asset issues\n    print(f\"GEE Error during reduction: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    # Catch other potential errors (e.g., Python issues)\n    print(f\"An unexpected error occurred: {e}\")\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_20-06-06",
+            "data": {
+                "exec_msg": "Error defining geometry: Collection.loadTable: Collection asset 'WWF/Terrestrial_Ecoregions/v1/2012' not found.\nD\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_20-06-06",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_20-06-08",
+            "data": {
+                "raw_answer": "<answer>\nD\n</answer>",
+                "answer": "D",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_20-06-11",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "D",
+                "verified_answer": "D",
+                "confidence": "high",
+                "final_answer": "D",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "D",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

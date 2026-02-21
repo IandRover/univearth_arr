@@ -1,0 +1,89 @@
+{
+    "metadata": {
+        "question": "Were there more active fire counts in Punjab than Haryana on November 8, 2024?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_12-03-47",
+        "url": "https://earthobservatory.nasa.gov/images/153826/is-fire-activity-declining-in-northwestern-india",
+        "unique_id": 221
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_12-03-57",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"FIRMS\" (VIIRS I-Band 375m Active Fire/Thermal Anomaly product)\n- fallback_collection: \"MODIS/061/MOD14A1\" (MODIS Terra/Aqua Thermal Anomalies/Fire)\n- date_range: \"2024-11-08 to 2024-11-09\"\n- region: \"Two administrative boundaries for the Indian states of Punjab and Haryana. These can be sourced from a dataset like FAO GAUL 2015 (level 1).\"\n- bands: \"Not applicable for counting features. The goal is to count the number of fire detection points (features) within each region.\"\n- risks: \"The requested date is in the future. The query will yield no results until data for November 8, 2024, is available. Cloud cover can obscure ground fires, potentially leading to an undercount. The accuracy of the administrative boundaries is crucial for correct spatial filtering.\"\n- needs_cloud_masking: \"no\"\n</observation>",
+                "observation": "- collection: \"FIRMS\" (VIIRS I-Band 375m Active Fire/Thermal Anomaly product)\n- fallback_collection: \"MODIS/061/MOD14A1\" (MODIS Terra/Aqua Thermal Anomalies/Fire)\n- date_range: \"2024-11-08 to 2024-11-09\"\n- region: \"Two administrative boundaries for the Indian states of Punjab and Haryana. These can be sourced from a dataset like FAO GAUL 2015 (level 1).\"\n- bands: \"Not applicable for counting features. The goal is to count the number of fire detection points (features) within each region.\"\n- risks: \"The requested date is in the future. The query will yield no results until data for November 8, 2024, is available. Cloud cover can obscure ground fires, potentially leading to an undercount. The accuracy of the administrative boundaries is crucial for correct spatial filtering.\"\n- needs_cloud_masking: \"no\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_12-04-10",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define the date range from '2024-11-08' to '2024-11-09'. Load the FAO GAUL 2015 Level 1 administrative boundaries dataset ('FAO/GAUL/2015/level1'). Filter this dataset to get the specific geometries for 'Punjab' and 'Haryana' within India.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the primary feature collection 'FIRMS'. Filter this collection by the date range defined in Step 1. Create two separate filtered collections by spatially filtering the date-filtered collection with the Punjab and Haryana geometries.\n  - Fallback: The FIRMS collection is the global standard. If it is empty for the specified date, no alternative collection is likely to have data either. The plan will proceed assuming no fires were detected.\n  - Validation: Get the size of the Punjab-filtered collection and the Haryana-filtered collection using `.size()`. These sizes represent the fire counts.\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details: This step is not applicable. The 'FIRMS' collection consists of feature points (detected fires), not images that require cloud masking.\n\nStep 4: [Perform calculation]\n  - Details: Compare the two fire count values obtained in Step 2. Specifically, check if the Punjab fire count is greater than the Haryana fire count.\n\nStep 5: [Validate result and determine answer]\n  - Details: Based on the comparison in Step 4, determine the final answer.\n    - If both counts are 0, or if the initial date-filtered collection size is 0, categorize as 'C1: Empty Collection'. This is the expected outcome for a future date.\n    - If Punjab count > Haryana count, categorize as 'A: Yes'.\n    - Otherwise (Punjab count <= Haryana count), categorize as 'B: No'.\n  - Guard: Before comparison, verify that the `.size()` operation returned a valid number for both states. If either result is None, categorize as 'C3: Calculation Failure'.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define the date range from '2024-11-08' to '2024-11-09'. Load the FAO GAUL 2015 Level 1 administrative boundaries dataset ('FAO/GAUL/2015/level1'). Filter this dataset to get the specific geometries for 'Punjab' and 'Haryana' within India.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the primary feature collection 'FIRMS'. Filter this collection by the date range defined in Step 1. Create two separate filtered collections by spatially filtering the date-filtered collection with the Punjab and Haryana geometries.\n  - Fallback: The FIRMS collection is the global standard. If it is empty for the specified date, no alternative collection is likely to have data either. The plan will proceed assuming no fires were detected.\n  - Validation: Get the size of the Punjab-filtered collection and the Haryana-filtered collection using `.size()`. These sizes represent the fire counts.\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details: This step is not applicable. The 'FIRMS' collection consists of feature points (detected fires), not images that require cloud masking.\n\nStep 4: [Perform calculation]\n  - Details: Compare the two fire count values obtained in Step 2. Specifically, check if the Punjab fire count is greater than the Haryana fire count.\n\nStep 5: [Validate result and determine answer]\n  - Details: Based on the comparison in Step 4, determine the final answer.\n    - If both counts are 0, or if the initial date-filtered collection size is 0, categorize as 'C1: Empty Collection'. This is the expected outcome for a future date.\n    - If Punjab count > Haryana count, categorize as 'A: Yes'.\n    - Otherwise (Punjab count <= Haryana count), categorize as 'B: No'.\n  - Guard: Before comparison, verify that the `.size()` operation returned a valid number for both states. If either result is None, categorize as 'C3: Calculation Failure'."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_12-04-23",
+            "data": {
+                "raw_code": "```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\n# Define the date range.\nstart_date = '2024-11-08'\nend_date = '2024-11-09'\n\n# Use a reliable administrative boundary dataset instead of FAO GAUL.\nadmin_boundaries = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\n\n# Filter for Punjab and Haryana within India.\npunjab_geom = admin_boundaries.filter(ee.Filter.And(\n    ee.Filter.eq('country_na', 'India'),\n    ee.Filter.eq('admin_name', 'Punjab')\n)).geometry()\n\nharyana_geom = admin_boundaries.filter(ee.Filter.And(\n    ee.Filter.eq('country_na', 'India'),\n    ee.Filter.eq('admin_name', 'Haryana')\n)).geometry()\n\n# Step 2: Acquire data and check collection size\n# Load the FIRMS active fire data.\nfirms_collection = ee.ImageCollection('FIRMS').select('T21')\n\n# Filter the collection by date.\nfirms_filtered_by_date = firms_collection.filterDate(start_date, end_date)\n\n# Spatially filter for each state.\npunjab_fires = firms_filtered_by_date.filterBounds(punjab_geom)\nharyana_fires = firms_filtered_by_date.filterBounds(haryana_geom)\n\n# Get the size (fire counts).\npunjab_fire_count = punjab_fires.size().getInfo()\nharyana_fire_count = haryana_fires.size().getInfo()\n\nprint(f\"Punjab fire count on {start_date}: {punjab_fire_count}\")\nprint(f\"Haryana fire count on {start_date}: {haryana_fire_count}\")\n\n# Step 4 & 5: Perform calculation, validate result, and determine answer\nfinal_answer = None\n\nif punjab_fire_count is None or haryana_fire_count is None:\n    final_answer = 'C3' # Calculation Failure\nelif firms_filtered_by_date.size().getInfo() == 0:\n    final_answer = 'C1' # Empty Collection for the date range\nelif punjab_fire_count > haryana_fire_count:\n    final_answer = 'A' # Yes\nelse:\n    final_answer = 'B' # No\n\nprint(final_answer)\n```",
+                "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\n# Define the date range.\nstart_date = '2024-11-08'\nend_date = '2024-11-09'\n\n# Use a reliable administrative boundary dataset instead of FAO GAUL.\nadmin_boundaries = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')\n\n# Filter for Punjab and Haryana within India.\npunjab_geom = admin_boundaries.filter(ee.Filter.And(\n    ee.Filter.eq('country_na', 'India'),\n    ee.Filter.eq('admin_name', 'Punjab')\n)).geometry()\n\nharyana_geom = admin_boundaries.filter(ee.Filter.And(\n    ee.Filter.eq('country_na', 'India'),\n    ee.Filter.eq('admin_name', 'Haryana')\n)).geometry()\n\n# Step 2: Acquire data and check collection size\n# Load the FIRMS active fire data.\nfirms_collection = ee.ImageCollection('FIRMS').select('T21')\n\n# Filter the collection by date.\nfirms_filtered_by_date = firms_collection.filterDate(start_date, end_date)\n\n# Spatially filter for each state.\npunjab_fires = firms_filtered_by_date.filterBounds(punjab_geom)\nharyana_fires = firms_filtered_by_date.filterBounds(haryana_geom)\n\n# Get the size (fire counts).\npunjab_fire_count = punjab_fires.size().getInfo()\nharyana_fire_count = haryana_fires.size().getInfo()\n\nprint(f\"Punjab fire count on {start_date}: {punjab_fire_count}\")\nprint(f\"Haryana fire count on {start_date}: {haryana_fire_count}\")\n\n# Step 4 & 5: Perform calculation, validate result, and determine answer\nfinal_answer = None\n\nif punjab_fire_count is None or haryana_fire_count is None:\n    final_answer = 'C3' # Calculation Failure\nelif firms_filtered_by_date.size().getInfo() == 0:\n    final_answer = 'C1' # Empty Collection for the date range\nelif punjab_fire_count > haryana_fire_count:\n    final_answer = 'A' # Yes\nelse:\n    final_answer = 'B' # No\n\nprint(final_answer)"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_12-04-25",
+            "data": {
+                "exec_msg": "Punjab fire count on 2024-11-08: 0\nHaryana fire count on 2024-11-08: 0\nB\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_12-04-25",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "B",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_12-04-30",
+            "data": {
+                "raw_answer": "<answer>\nB\n</answer>",
+                "answer": "B",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_12-04-34",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "B",
+                "verified_answer": "B",
+                "confidence": "high",
+                "final_answer": "B",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "B",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

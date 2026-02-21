@@ -1,0 +1,146 @@
+{
+    "metadata": {
+        "question": "On August 6, 2024 at 1:40 pm local time, did land surface temperatures in Paris exceed 32 degrees Celcius?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_19-20-20",
+        "url": "https://www.earthobservatory.nasa.gov/images/153178/running-through-paris-heat",
+        "unique_id": 374
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_19-20-31",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MYD11_L2\"\n- fallback_collection: \"MODIS/061/MOD11_L2\"\n- date_range: \"2024-08-06 to 2024-08-06\"\n- region: \"Paris, France (e.g., ee.Geometry.Point([2.3522, 48.8566]))\"\n- bands: \"LST_Day_1km\"\n- risks: \"The requested date is in the future; no data will be available until after the acquisition time. The request is for a specific time (1:40 pm local), which requires checking the 'View_time' property of the MODIS L2 (swath) product. The Aqua satellite (MYD11_L2) has an afternoon overpass (~1:30 pm local time) which is a good match, but the exact time over Paris on that specific day is not guaranteed. The spatial resolution of MODIS (1km) is coarse and may not accurately represent intra-urban temperature variations (urban heat island effect).\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MYD11_L2\"\n- fallback_collection: \"MODIS/061/MOD11_L2\"\n- date_range: \"2024-08-06 to 2024-08-06\"\n- region: \"Paris, France (e.g., ee.Geometry.Point([2.3522, 48.8566]))\"\n- bands: \"LST_Day_1km\"\n- risks: \"The requested date is in the future; no data will be available until after the acquisition time. The request is for a specific time (1:40 pm local), which requires checking the 'View_time' property of the MODIS L2 (swath) product. The Aqua satellite (MYD11_L2) has an afternoon overpass (~1:30 pm local time) which is a good match, but the exact time over Paris on that specific day is not guaranteed. The spatial resolution of MODIS (1km) is coarse and may not accurately represent intra-urban temperature variations (urban heat island effect).\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_19-20-43",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define an ee.Geometry.Point for Paris [2.3522, 48.8566]. Define the single date of interest as '2024-08-06'. Define the temperature threshold as 32.0 degrees Celsius. Note that since the date is in the future, the expected outcome is C1 (Empty Collection) until the data is available.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the primary image collection 'MODIS/061/MYD11_L2'. Filter it by the date '2024-08-06' to '2024-08-07' and the Paris point geometry.\n  - Validation: Check the size of the resulting collection. If the size is 0, proceed to the fallback.\n  - Fallback: If the primary collection is empty, repeat the acquisition and size check using the fallback collection 'MODIS/061/MOD11_L2'. If this is also empty, conclude the answer is C1 (Empty Collection).\n\nStep 3: [Apply cloud masking and reduce to single image]\n  - Details: Create a cloud masking function using the 'QC_Day' band. For the MODIS LST product, bits 0-1 ('Mandatory QA flags') should equal 0 ('LST produced, good quality'). Apply this mask to the collection. After masking, since there should only be one image for a given day and location, use `.first()` to select it.\n  - Validation: Check if the resulting image object is valid (not None). If it is None after filtering and masking, conclude C1.\n\nStep 4: [Perform calculation and extract temperature]\n  - Details: Select the 'LST_Day_1km' band. Apply the scaling factor of 0.02 to convert the digital number to Kelvin. Subtract 273.15 to convert from Kelvin to Celsius. Use `reduceRegion` with a 'first' reducer on the Paris point to get the specific pixel value. Extract the temperature value from the resulting dictionary.\n  - Guard: Before proceeding, verify the result from `reduceRegion` is not None and the extracted temperature value is not None. If it is, conclude C2 (No Valid Pixels).\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the extracted Celsius temperature value to the 32.0-degree threshold.\n  - Guard: Check if the temperature is a number and within a physically plausible range for LST (e.g., -50 to 80 C). If it is None, NaN, or outside this range, conclude C3 (Calculation Failure).\n  - Answer Logic:\n    - If temperature > 32.0, the answer is A (Yes).\n    - If temperature <= 32.0, the answer is B (No).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define an ee.Geometry.Point for Paris [2.3522, 48.8566]. Define the single date of interest as '2024-08-06'. Define the temperature threshold as 32.0 degrees Celsius. Note that since the date is in the future, the expected outcome is C1 (Empty Collection) until the data is available.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the primary image collection 'MODIS/061/MYD11_L2'. Filter it by the date '2024-08-06' to '2024-08-07' and the Paris point geometry.\n  - Validation: Check the size of the resulting collection. If the size is 0, proceed to the fallback.\n  - Fallback: If the primary collection is empty, repeat the acquisition and size check using the fallback collection 'MODIS/061/MOD11_L2'. If this is also empty, conclude the answer is C1 (Empty Collection).\n\nStep 3: [Apply cloud masking and reduce to single image]\n  - Details: Create a cloud masking function using the 'QC_Day' band. For the MODIS LST product, bits 0-1 ('Mandatory QA flags') should equal 0 ('LST produced, good quality'). Apply this mask to the collection. After masking, since there should only be one image for a given day and location, use `.first()` to select it.\n  - Validation: Check if the resulting image object is valid (not None). If it is None after filtering and masking, conclude C1.\n\nStep 4: [Perform calculation and extract temperature]\n  - Details: Select the 'LST_Day_1km' band. Apply the scaling factor of 0.02 to convert the digital number to Kelvin. Subtract 273.15 to convert from Kelvin to Celsius. Use `reduceRegion` with a 'first' reducer on the Paris point to get the specific pixel value. Extract the temperature value from the resulting dictionary.\n  - Guard: Before proceeding, verify the result from `reduceRegion` is not None and the extracted temperature value is not None. If it is, conclude C2 (No Valid Pixels).\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the extracted Celsius temperature value to the 32.0-degree threshold.\n  - Guard: Check if the temperature is a number and within a physically plausible range for LST (e.g., -50 to 80 C). If it is None, NaN, or outside this range, conclude C3 (Calculation Failure).\n  - Answer Logic:\n    - If temperature > 32.0, the answer is A (Yes).\n    - If temperature <= 32.0, the answer is B (No)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_19-20-56",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\ngeom = ee.Geometry.Point([2.3522, 48.8566])\nstart_date = '2024-08-06'\nend_date = '2024-08-07'\nthreshold_celsius = 32.0\n\ndef get_modis_collection(collection_name, start, end, point):\n    return ee.ImageCollection(collection_name).filterDate(start, end).filterBounds(point)\n\n# Step 2: Acquire data and check collection size\nprimary_collection_name = 'MODIS/061/MYD11_L2'\nfallback_collection_name = 'MODIS/061/MOD11_L2'\n\ncollection = get_modis_collection(primary_collection_name, start_date, end_date, geom)\ncollection_size = collection.size().getInfo()\nprint(f\"Primary collection ({primary_collection_name}) size: {collection_size}\")\n\nif collection_size == 0:\n    collection = get_modis_collection(fallback_collection_name, start_date, end_date, geom)\n    collection_size = collection.size().getInfo()\n    print(f\"Fallback collection ({fallback_collection_name}) size: {collection_size}\")\n    if collection_size == 0:\n        print(\"C1\")\n        sys.exit()\n\n# Step 3: Apply cloud masking and reduce to single image\ndef mask_modis_lst(image):\n    qa = image.select('QC_Day')\n    # Bits 0-1: Mandatory QA flags. 00 = LST produced, good quality\n    good_quality_mask = qa.bitwiseAnd(3).eq(0)\n    return image.updateMask(good_quality_mask)\n\nmasked_collection = collection.map(mask_modis_lst)\nimage = masked_collection.first()\n\nif image.getInfo() is None:\n    print(\"No valid images found after filtering and masking.\")\n    print(\"C1\")\n    sys.exit()\n\n# Step 4: Perform calculation and extract temperature\nlst_celsius = image.select('LST_Day_1km').multiply(0.02).subtract(273.15)\nstats = lst_celsius.reduceRegion(\n    reducer=ee.Reducer.first(),\n    geometry=geom,\n    scale=1000\n).getInfo()\n\ntemperature = stats.get('LST_Day_1km')\nprint(f\"Raw LST value extracted: {temperature}\")\n\n# Step 5: Validate result and determine answer\nif temperature is None:\n    print(\"No valid pixels found at the location after masking.\")\n    print(\"C2\")\n    sys.exit()\n\n# Guard for physically plausible range\nif not (-50 <= temperature <= 80):\n    print(f\"Calculation failed: Unrealistic temperature {temperature} C.\")\n    print(\"C3\")\n    sys.exit()\n\nprint(f\"Temperature in Paris: {temperature:.2f} C\")\nif temperature > threshold_celsius:\n    print(\"A\")\nelse:\n    print(\"B\")\n```",
+                "code": "import ee\nimport sys\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\ngeom = ee.Geometry.Point([2.3522, 48.8566])\nstart_date = '2024-08-06'\nend_date = '2024-08-07'\nthreshold_celsius = 32.0\n\ndef get_modis_collection(collection_name, start, end, point):\n    return ee.ImageCollection(collection_name).filterDate(start, end).filterBounds(point)\n\n# Step 2: Acquire data and check collection size\nprimary_collection_name = 'MODIS/061/MYD11_L2'\nfallback_collection_name = 'MODIS/061/MOD11_L2'\n\ncollection = get_modis_collection(primary_collection_name, start_date, end_date, geom)\ncollection_size = collection.size().getInfo()\nprint(f\"Primary collection ({primary_collection_name}) size: {collection_size}\")\n\nif collection_size == 0:\n    collection = get_modis_collection(fallback_collection_name, start_date, end_date, geom)\n    collection_size = collection.size().getInfo()\n    print(f\"Fallback collection ({fallback_collection_name}) size: {collection_size}\")\n    if collection_size == 0:\n        print(\"C1\")\n        sys.exit()\n\n# Step 3: Apply cloud masking and reduce to single image\ndef mask_modis_lst(image):\n    qa = image.select('QC_Day')\n    # Bits 0-1: Mandatory QA flags. 00 = LST produced, good quality\n    good_quality_mask = qa.bitwiseAnd(3).eq(0)\n    return image.updateMask(good_quality_mask)\n\nmasked_collection = collection.map(mask_modis_lst)\nimage = masked_collection.first()\n\nif image.getInfo() is None:\n    print(\"No valid images found after filtering and masking.\")\n    print(\"C1\")\n    sys.exit()\n\n# Step 4: Perform calculation and extract temperature\nlst_celsius = image.select('LST_Day_1km').multiply(0.02).subtract(273.15)\nstats = lst_celsius.reduceRegion(\n    reducer=ee.Reducer.first(),\n    geometry=geom,\n    scale=1000\n).getInfo()\n\ntemperature = stats.get('LST_Day_1km')\nprint(f\"Raw LST value extracted: {temperature}\")\n\n# Step 5: Validate result and determine answer\nif temperature is None:\n    print(\"No valid pixels found at the location after masking.\")\n    print(\"C2\")\n    sys.exit()\n\n# Guard for physically plausible range\nif not (-50 <= temperature <= 80):\n    print(f\"Calculation failed: Unrealistic temperature {temperature} C.\")\n    print(\"C3\")\n    sys.exit()\n\nprint(f\"Temperature in Paris: {temperature:.2f} C\")\nif temperature > threshold_celsius:\n    print(\"A\")\nelse:\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_19-20-57",
+            "data": {
+                "exec_msg": "",
+                "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 349, in _execute_cloud_call\n    return call.execute(num_retries=num_retries)\n           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/googleapiclient/_helpers.py\", line 130, in positional_wrapper\n    return wrapped(*args, **kwargs)\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/googleapiclient/http.py\", line 938, in execute\n    raise HttpError(resp, content, uri=self.uri)\ngoogleapiclient.errors.HttpError: <HttpError 400 when requesting https://earthengine.googleapis.com/v1/projects/earthsense-436113/value:compute?prettyPrint=false&alt=json returned \"ImageCollection.load: ImageCollection asset 'MODIS/061/MYD11_L2' not found (does not exist or caller does not have access).\". Details: \"ImageCollection.load: ImageCollection asset 'MODIS/061/MYD11_L2' not found (does not exist or caller does not have access).\">\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/Users/chiahsiang1/Documents/univearth_arr/./temp/1771633256084051.py\", line 20, in <module>\n    collection_size = collection.size().getInfo()\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/computedobject.py\", line 108, in getInfo\n    return data.computeValue(self)\n           ~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 1066, in computeValue\n    return _execute_cloud_call(\n           ~~~~~~~~~~~~~~~~~~~^\n        _get_cloud_projects()\n        ^^^^^^^^^^^^^^^^^^^^^\n        .value()\n        ^^^^^^^^\n        .compute(body=body, project=_get_projects_path(), prettyPrint=False)\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )['result']\n    ^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 351, in _execute_cloud_call\n    raise _translate_cloud_exception(e)  # pylint: disable=raise-missing-from\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nee.ee_exception.EEException: ImageCollection.load: ImageCollection asset 'MODIS/061/MYD11_L2' not found (does not exist or caller does not have access).\n",
+                "exec_returncode": 1
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_19-20-57",
+            "data": {
+                "exec_returncode": 1,
+                "need_replan": true,
+                "replan_reason": "Non-zero return code (1) \u2014 attempting re-plan.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "replan",
+            "timestamp": "2026-02-20_19-21-14",
+            "data": {
+                "attempt": 1,
+                "diagnosis": "- Failed step: Step 2: [Acquire data and check collection size]\n- Root cause: The code failed with `ee.ee_exception.EEException: ImageCollection.load: ImageCollection asset 'MODIS/061/MYD11_L2' not found`. The primary collection ID `MODIS/061/MYD11_L2` (Aqua LST Swath) and the fallback ID `MODIS/061/MOD11_L2` (Terra LST Swath) are valid collection names, but the API is unable to find them. The question also specifies a future date ('2024-08-06'), for which no data will exist, resulting in an empty collection regardless of the collection ID.\n- Fix strategy: The immediate error is the \"not found\" exception. I will switch to the more commonly used daily gridded LST products, `MODIS/061/MYD11A1` (Aqua/afternoon) and `MODIS/061/MOD11A1` (Terra/morning), which are more robust. This resolves the asset loading error. The code's existing logic correctly handles the case of an empty collection due to the future date, so that part will be preserved.",
+                "code": "import ee\nimport sys\n\n# The ee.Initialize call is executed implicitly by the environment.\n# No need to add ee.Initialize(project='...')\n\n# Step 1: Initialize and define geometry/time\ngeom = ee.Geometry.Point([2.3522, 48.8566])\n# The date is in the future, so data is not expected to exist yet.\nstart_date = '2024-08-06'\nend_date = '2024-08-07'\nthreshold_celsius = 32.0\n\ndef get_modis_collection(collection_name, start, end, point):\n    return ee.ImageCollection(collection_name).filterDate(start, end).filterBounds(point)\n\n# Step 2: Acquire data and check collection size\n# FIX: Switched to the daily gridded LST product, which is more robustly available.\n# MYD11A1 is Aqua (afternoon overpass), which aligns with the 1:40 pm local time.\nprimary_collection_name = 'MODIS/061/MYD11A1'\nfallback_collection_name = 'MODIS/061/MOD11A1'\n\ntry:\n    collection = get_modis_collection(primary_collection_name, start_date, end_date, geom)\n    collection_size = collection.size().getInfo()\n\n    if collection_size == 0:\n        collection = get_modis_collection(fallback_collection_name, start_date, end_date, geom)\n        collection_size = collection.size().getInfo()\n        if collection_size == 0:\n            # This is the expected outcome for a future date.\n            print(\"C1\")\n            sys.exit()\n\n    # Step 3: Apply cloud masking and reduce to single image\n    def mask_modis_lst(image):\n        qa = image.select('QC_Day')\n        # Bits 0-1: Mandatory QA flags. 00 = LST produced, good quality\n        good_quality_mask = qa.bitwiseAnd(3).eq(0)\n        return image.updateMask(good_quality_mask)\n\n    masked_collection = collection.map(mask_modis_lst)\n    image = masked_collection.first()\n\n    # This check is important as masking can remove all images\n    if image is None or image.getInfo() is None:\n        print(\"No valid images found after filtering and masking.\")\n        print(\"C1\")\n        sys.exit()\n\n    # Step 4: Perform calculation and extract temperature\n    lst_celsius = image.select('LST_Day_1km').multiply(0.02).subtract(273.15)\n    stats = lst_celsius.reduceRegion(\n        reducer=ee.Reducer.first(),\n        geometry=geom,\n        scale=1000,\n        maxPixels=1e9\n    ).getInfo()\n\n    temperature = stats.get('LST_Day_1km')\n\n    # Step 5: Validate result and determine answer\n    if temperature is None:\n        print(\"No valid pixels found at the location after masking.\")\n        print(\"C2\")\n        sys.exit()\n\n    if temperature > threshold_celsius:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.ee_exception.EEException as e:\n    # This block handles the original error type, though the fix should prevent it.\n    # It also handles other potential API errors during execution.\n    print(f\"An Earth Engine error occurred: {e}\", file=sys.stderr)\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "replan_execute",
+            "timestamp": "2026-02-20_19-21-15",
+            "data": {
+                "attempt": 1,
+                "exec_msg": "",
+                "exec_stderr": "Traceback (most recent call last):\n  File \"/Users/chiahsiang1/Documents/univearth_arr/./temp/1771633274524131.py\", line 8, in <module>\n    geom = ee.Geometry.Point([2.3522, 48.8566])\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/geometry.py\", line 212, in Point\n    return Geometry(init)\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/computedobject.py\", line 29, in __call__\n    return type.__call__(cls, *args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/_utils.py\", line 39, in wrapper\n    return func(*args, **kwargs)\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/geometry.py\", line 73, in __init__\n    self.initialize()\n    ~~~~~~~~~~~~~~~^^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/geometry.py\", line 170, in initialize\n    apifunction.ApiFunction.importApi(cls, cls.name(), cls.name())\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/_utils.py\", line 39, in wrapper\n    return func(*args, **kwargs)\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/apifunction.py\", line 199, in importApi\n    cls.initialize()\n    ~~~~~~~~~~~~~~^^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/apifunction.py\", line 163, in initialize\n    signatures = data.getAlgorithms()\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 1424, in getAlgorithms\n    _get_cloud_projects()\n    ~~~~~~~~~~~~~~~~~~~^^\n  File \"/Users/chiahsiang1/miniconda3/lib/python3.13/site-packages/ee/data.py\", line 289, in _get_cloud_projects\n    raise ee_exception.EEException(_NOT_INITIALIZED_MESSAGE)\nee.ee_exception.EEException: Earth Engine client library not initialized. See http://goo.gle/ee-auth.\n",
+                "exec_returncode": 1
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_19-21-15",
+            "data": {
+                "exec_returncode": 1,
+                "need_replan": true,
+                "replan_reason": "Non-zero return code (1) \u2014 attempting re-plan.",
+                "replan_count": 1
+            }
+        },
+        {
+            "state": "replan",
+            "timestamp": "2026-02-20_19-21-28",
+            "data": {
+                "attempt": 2,
+                "diagnosis": "- Failed step: Step 1: Initialize and define geometry/time\n- Root cause: The error message `ee.ee_exception.EEException: Earth Engine client library not initialized` indicates that the `ee.Initialize()` function was not called before other Earth Engine API functions (like `ee.Geometry.Point`). The execution environment did not implicitly initialize the library as the code comments assumed.\n- Fix strategy: Add an explicit `ee.Initialize(project='...')` call at the beginning of the script to ensure the API is authenticated and ready for use before any GEE objects are created or methods are called.",
+                "code": "import ee\nimport sys\n\n# FIX: Explicitly initialize the Earth Engine library. This was the cause of the error.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\ngeom = ee.Geometry.Point([2.3522, 48.8566])\n# The date is in the future, so data is not expected to exist yet.\nstart_date = '2024-08-06'\nend_date = '2024-08-07'\nthreshold_celsius = 32.0\n\ndef get_modis_collection(collection_name, start, end, point):\n    \"\"\"Filters a MODIS collection by date and location.\"\"\"\n    return ee.ImageCollection(collection_name).filterDate(start, end).filterBounds(point)\n\n# Step 2: Acquire data and check collection size\n# Using the daily gridded LST product. MYD11A1 is Aqua (afternoon overpass).\nprimary_collection_name = 'MODIS/061/MYD11A1'\nfallback_collection_name = 'MODIS/061/MOD11A1'\n\ntry:\n    collection = get_modis_collection(primary_collection_name, start_date, end_date, geom)\n    collection_size = collection.size().getInfo()\n\n    if collection_size == 0:\n        collection = get_modis_collection(fallback_collection_name, start_date, end_date, geom)\n        collection_size = collection.size().getInfo()\n        if collection_size == 0:\n            # This is the expected outcome for a future date.\n            print(\"C1\")\n            sys.exit(0) # Use sys.exit(0) for clean exit\n\n    # Step 3: Apply cloud masking and reduce to single image\n    def mask_modis_lst(image):\n        \"\"\"Masks MODIS LST images based on the QC_Day band.\"\"\"\n        qa = image.select('QC_Day')\n        # Bits 0-1: Mandatory QA flags. 00 = LST produced, good quality\n        good_quality_mask = qa.bitwiseAnd(3).eq(0)\n        return image.updateMask(good_quality_mask)\n\n    masked_collection = collection.map(mask_modis_lst)\n    image = masked_collection.first()\n\n    # This check is important as masking can remove all images\n    # We need to compute the result before checking if it's None client-side\n    image_info = ee.Algorithms.If(image, image.getInfo(), None)\n    if image_info.getInfo() is None:\n        print(\"No valid images found after filtering and masking.\")\n        print(\"C1\")\n        sys.exit(0)\n\n    # Step 4: Perform calculation and extract temperature\n    lst_celsius = image.select('LST_Day_1km').multiply(0.02).subtract(273.15)\n    stats = lst_celsius.reduceRegion(\n        reducer=ee.Reducer.first(),\n        geometry=geom,\n        scale=1000,\n        maxPixels=1e9\n    ).getInfo()\n\n    temperature = stats.get('LST_Day_1km')\n\n    # Step 5: Validate result and determine answer\n    if temperature is None:\n        print(\"No valid pixels found at the location after masking.\")\n        print(\"C2\")\n        sys.exit(0)\n\n    if not isinstance(temperature, (int, float)):\n        print(\"Calculation resulted in a non-numeric value.\")\n        print(\"C3\")\n        sys.exit(0)\n\n    if temperature > threshold_celsius:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.ee_exception.EEException as e:\n    # Handle potential API errors during execution.\n    print(f\"An Earth Engine error occurred: {e}\", file=sys.stderr)\n    print(\"D\")\nexcept Exception as e:\n    print(f\"A non-EE error occurred: {e}\", file=sys.stderr)\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "replan_execute",
+            "timestamp": "2026-02-20_19-21-31",
+            "data": {
+                "attempt": 2,
+                "exec_msg": "No valid pixels found at the location after masking.\nC2\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_19-21-31",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 2
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_19-21-32",
+            "data": {
+                "raw_answer": "<answer>\nC2\n</answer>",
+                "answer": "C2",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_19-21-36",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "C2",
+                "verified_answer": "C2",
+                "confidence": "high",
+                "final_answer": "C2",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "C2",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 2,
+        "total_states": 13
+    }
+}

@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "Did burn scars near San Jose, California on August 26, 2020 expand in comparison to the same region in June?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_17-44-44",
+        "url": "https://earthobservatory.nasa.gov/images/147182/august-fires-leave-vast-burn-scars-in-california",
+        "unique_id": 65
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_17-44-52",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"LANDSAT/LC08/C02/T1_L2\"\n- fallback_collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- date_range: \"Pre-fire: 2020-06-01 to 2020-06-30; Post-fire: 2020-08-20 to 2020-08-31\"\n- region: \"Point of Interest near San Jose, California (approx. -121.88, 37.33)\"\n- bands: \"SR_B5 (NIR), SR_B7 (SWIR2) to calculate Normalized Burn Ratio (NBR). QA_PIXEL for cloud masking.\"\n- risks: \"California summer can have haze or smoke, which might affect image quality even on 'clear' days. Finding a completely cloud/smoke-free image for the specific post-fire date might be difficult.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"LANDSAT/LC08/C02/T1_L2\"\n- fallback_collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- date_range: \"Pre-fire: 2020-06-01 to 2020-06-30; Post-fire: 2020-08-20 to 2020-08-31\"\n- region: \"Point of Interest near San Jose, California (approx. -121.88, 37.33)\"\n- bands: \"SR_B5 (NIR), SR_B7 (SWIR2) to calculate Normalized Burn Ratio (NBR). QA_PIXEL for cloud masking.\"\n- risks: \"California summer can have haze or smoke, which might affect image quality even on 'clear' days. Finding a completely cloud/smoke-free image for the specific post-fire date might be difficult.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_17-45-05",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define a Point of Interest (POI) at [-121.88, 37.33] for San Jose, CA. Create a 10km buffer around this point to define the Area of Interest (AOI). Define two date ranges: '2020-06-01' to '2020-06-30' (pre-fire) and '2020-08-20' to '2020-08-31' (post-fire).\n\nStep 2: [Acquire data and check collection size]\n  - Details: For both pre-fire and post-fire periods, filter the `LANDSAT/LC08/C02/T1_L2` collection by the AOI and date range.\n  - Validation: Check the size of each collection. If either collection has zero images, stop and conclude C1: Empty Collection.\n\nStep 3: [Apply cloud masking and reduce to single images]\n  - Details: Create a function `maskL8sr` that uses the `QA_PIXEL` band to mask out clouds, cloud shadows, and snow/ice. Apply this function to every image in both the pre-fire and post-fire collections. Create a single, median-composite image for each time period to represent the clearest available pixels (`pre_fire_image`, `post_fire_image`).\n\nStep 4: [Perform calculation and check for valid pixels]\n  - Details: Calculate the Normalized Burn Ratio (NBR) for both the pre-fire and post-fire images using the formula `(NIR - SWIR2) / (NIR + SWIR2)`, which corresponds to bands `(SR_B5 - SR_B7) / (SR_B5 + SR_B7)`. This results in `pre_fire_nbr` and `post_fire_nbr` images.\n  - Validation: Get the number of valid (unmasked) pixels within the AOI for the `post_fire_nbr` image. If the pixel count is zero, stop and conclude C2: No Valid Pixels.\n\nStep 5: [Validate result and determine answer]\n  - Details: Calculate the mean NBR value for the AOI from both the pre-fire and post-fire NBR images. A significant drop in NBR indicates new burn scars. Compare the mean `post_fire_nbr` to the mean `pre_fire_nbr`. If `post_fire_nbr` is less than `pre_fire_nbr`, conclude A: Yes. Otherwise, conclude B: No.\n  - Guard: Before comparison, check if the calculated mean values from the `reduceRegion` calls are None or NaN. If so, conclude C3: Calculation Failure.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define a Point of Interest (POI) at [-121.88, 37.33] for San Jose, CA. Create a 10km buffer around this point to define the Area of Interest (AOI). Define two date ranges: '2020-06-01' to '2020-06-30' (pre-fire) and '2020-08-20' to '2020-08-31' (post-fire).\n\nStep 2: [Acquire data and check collection size]\n  - Details: For both pre-fire and post-fire periods, filter the `LANDSAT/LC08/C02/T1_L2` collection by the AOI and date range.\n  - Validation: Check the size of each collection. If either collection has zero images, stop and conclude C1: Empty Collection.\n\nStep 3: [Apply cloud masking and reduce to single images]\n  - Details: Create a function `maskL8sr` that uses the `QA_PIXEL` band to mask out clouds, cloud shadows, and snow/ice. Apply this function to every image in both the pre-fire and post-fire collections. Create a single, median-composite image for each time period to represent the clearest available pixels (`pre_fire_image`, `post_fire_image`).\n\nStep 4: [Perform calculation and check for valid pixels]\n  - Details: Calculate the Normalized Burn Ratio (NBR) for both the pre-fire and post-fire images using the formula `(NIR - SWIR2) / (NIR + SWIR2)`, which corresponds to bands `(SR_B5 - SR_B7) / (SR_B5 + SR_B7)`. This results in `pre_fire_nbr` and `post_fire_nbr` images.\n  - Validation: Get the number of valid (unmasked) pixels within the AOI for the `post_fire_nbr` image. If the pixel count is zero, stop and conclude C2: No Valid Pixels.\n\nStep 5: [Validate result and determine answer]\n  - Details: Calculate the mean NBR value for the AOI from both the pre-fire and post-fire NBR images. A significant drop in NBR indicates new burn scars. Compare the mean `post_fire_nbr` to the mean `pre_fire_nbr`. If `post_fire_nbr` is less than `pre_fire_nbr`, conclude A: Yes. Otherwise, conclude B: No.\n  - Guard: Before comparison, check if the calculated mean values from the `reduceRegion` calls are None or NaN. If so, conclude C3: Calculation Failure."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_17-45-19",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    poi = ee.Geometry.Point([-121.88, 37.33])\n    aoi = poi.buffer(10000)\n    pre_fire_start = '2020-06-01'\n    pre_fire_end = '2020-06-30'\n    post_fire_start = '2020-08-20'\n    post_fire_end = '2020-08-31'\n\n    # Step 2: Acquire data and check collection size\n    def get_l8_collection(start_date, end_date, geometry):\n        return ee.ImageCollection('LANDSAT/LC08/C02/T1_L2') \\\n            .filterBounds(geometry) \\\n            .filterDate(start_date, end_date)\n\n    pre_fire_col = get_l8_collection(pre_fire_start, pre_fire_end, aoi)\n    post_fire_col = get_l8_collection(post_fire_start, post_fire_end, aoi)\n\n    pre_fire_size = pre_fire_col.size().getInfo()\n    post_fire_size = post_fire_col.size().getInfo()\n    print(f\"Image Count June: {pre_fire_size}\")\n    print(f\"Image Count August: {post_fire_size}\")\n\n    if pre_fire_size == 0 or post_fire_size == 0:\n        print(\"C1: Empty Collection\")\n        sys.exit()\n\n    # Step 3: Apply cloud masking and reduce to single images\n    def maskL8sr(image):\n        qa_pixel = image.select('QA_PIXEL')\n        # Bits 3 (Cloud), 4 (Cloud Shadow), 5 (Snow) should be 0\n        cloud_shadow_snow_mask = (1 << 3) | (1 << 4) | (1 << 5)\n        mask = qa_pixel.bitwiseAnd(cloud_shadow_snow_mask).eq(0)\n        return image.updateMask(mask).select(\"SR_B[1-7]\").multiply(0.0000275).add(-0.2)\n\n    pre_fire_image = pre_fire_col.map(maskL8sr).median().clip(aoi)\n    post_fire_image = post_fire_col.map(maskL8sr).median().clip(aoi)\n\n    # Step 4: Perform calculation and check for valid pixels\n    pre_fire_nbr = pre_fire_image.normalizedDifference(['SR_B5', 'SR_B7'])\n    post_fire_nbr = post_fire_image.normalizedDifference(['SR_B5', 'SR_B7'])\n\n    pixel_count_dict = post_fire_nbr.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=aoi,\n        scale=1000,\n        maxPixels=1e9\n    )\n    pixel_count = pixel_count_dict.get('nd').getInfo()\n    print(f\"Valid Pixels (Post-fire): {pixel_count}\")\n\n    if pixel_count == 0:\n        print(\"C2: No Valid Pixels\")\n        sys.exit()\n\n    # Step 5: Validate result and determine answer\n    pre_fire_mean_dict = pre_fire_nbr.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=aoi,\n        scale=1000,\n        maxPixels=1e9\n    )\n    post_fire_mean_dict = post_fire_nbr.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=aoi,\n        scale=1000,\n        maxPixels=1e9\n    )\n\n    pre_fire_val = pre_fire_mean_dict.get('nd').getInfo()\n    post_fire_val = post_fire_mean_dict.get('nd').getInfo()\n    print(f\"June 2020 Mean NBR: {pre_fire_val:.4f}\")\n    print(f\"August 2020 Mean NBR: {post_fire_val:.4f}\")\n\n    if pre_fire_val is None or post_fire_val is None:\n        print(\"C3: Calculation Failure\")\n    elif post_fire_val < pre_fire_val:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An error occurred: {e}\")\n    print(\"D\")\n```",
+                "code": "import ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    poi = ee.Geometry.Point([-121.88, 37.33])\n    aoi = poi.buffer(10000)\n    pre_fire_start = '2020-06-01'\n    pre_fire_end = '2020-06-30'\n    post_fire_start = '2020-08-20'\n    post_fire_end = '2020-08-31'\n\n    # Step 2: Acquire data and check collection size\n    def get_l8_collection(start_date, end_date, geometry):\n        return ee.ImageCollection('LANDSAT/LC08/C02/T1_L2') \\\n            .filterBounds(geometry) \\\n            .filterDate(start_date, end_date)\n\n    pre_fire_col = get_l8_collection(pre_fire_start, pre_fire_end, aoi)\n    post_fire_col = get_l8_collection(post_fire_start, post_fire_end, aoi)\n\n    pre_fire_size = pre_fire_col.size().getInfo()\n    post_fire_size = post_fire_col.size().getInfo()\n    print(f\"Image Count June: {pre_fire_size}\")\n    print(f\"Image Count August: {post_fire_size}\")\n\n    if pre_fire_size == 0 or post_fire_size == 0:\n        print(\"C1: Empty Collection\")\n        sys.exit()\n\n    # Step 3: Apply cloud masking and reduce to single images\n    def maskL8sr(image):\n        qa_pixel = image.select('QA_PIXEL')\n        # Bits 3 (Cloud), 4 (Cloud Shadow), 5 (Snow) should be 0\n        cloud_shadow_snow_mask = (1 << 3) | (1 << 4) | (1 << 5)\n        mask = qa_pixel.bitwiseAnd(cloud_shadow_snow_mask).eq(0)\n        return image.updateMask(mask).select(\"SR_B[1-7]\").multiply(0.0000275).add(-0.2)\n\n    pre_fire_image = pre_fire_col.map(maskL8sr).median().clip(aoi)\n    post_fire_image = post_fire_col.map(maskL8sr).median().clip(aoi)\n\n    # Step 4: Perform calculation and check for valid pixels\n    pre_fire_nbr = pre_fire_image.normalizedDifference(['SR_B5', 'SR_B7'])\n    post_fire_nbr = post_fire_image.normalizedDifference(['SR_B5', 'SR_B7'])\n\n    pixel_count_dict = post_fire_nbr.reduceRegion(\n        reducer=ee.Reducer.count(),\n        geometry=aoi,\n        scale=1000,\n        maxPixels=1e9\n    )\n    pixel_count = pixel_count_dict.get('nd').getInfo()\n    print(f\"Valid Pixels (Post-fire): {pixel_count}\")\n\n    if pixel_count == 0:\n        print(\"C2: No Valid Pixels\")\n        sys.exit()\n\n    # Step 5: Validate result and determine answer\n    pre_fire_mean_dict = pre_fire_nbr.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=aoi,\n        scale=1000,\n        maxPixels=1e9\n    )\n    post_fire_mean_dict = post_fire_nbr.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=aoi,\n        scale=1000,\n        maxPixels=1e9\n    )\n\n    pre_fire_val = pre_fire_mean_dict.get('nd').getInfo()\n    post_fire_val = post_fire_mean_dict.get('nd').getInfo()\n    print(f\"June 2020 Mean NBR: {pre_fire_val:.4f}\")\n    print(f\"August 2020 Mean NBR: {post_fire_val:.4f}\")\n\n    if pre_fire_val is None or post_fire_val is None:\n        print(\"C3: Calculation Failure\")\n    elif post_fire_val < pre_fire_val:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An error occurred: {e}\")\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_17-45-26",
+            "data": {
+                "exec_msg": "Image Count June: 2\nImage Count August: 1\nValid Pixels (Post-fire): 387\nJune 2020 Mean NBR: 0.1981\nAugust 2020 Mean NBR: 0.2142\nB\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_17-45-26",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_17-45-28",
+            "data": {
+                "raw_answer": "<answer>\nB\n</answer>",
+                "answer": "B",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_17-45-34",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "B",
+                "verified_answer": "B",
+                "confidence": "high",
+                "final_answer": "B",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "B",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

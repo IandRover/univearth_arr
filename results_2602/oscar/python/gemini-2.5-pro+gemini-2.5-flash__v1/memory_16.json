@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "The Landsat 8 satellite captures pictures of active fire in Monte Pisano, Italy on February 25, 2019, around 10:58 a.m. local time. Was the smoke plume moving in an eastern direction?",
+        "answer": "no",
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_18-22-48",
+        "url": "https://earthobservatory.nasa.gov/images/144589/fire-burns-in-northern-italy",
+        "unique_id": 16
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_18-22-58",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"LANDSAT/LC08/C02/T1_L2\"\n- fallback_collection: \"none\"\n- date_range: \"2019-02-25 to 2019-02-26\"\n- region: \"Monte Pisano, Italy (approx. ee.Geometry.Point([10.51, 43.76]))\"\n- bands: \"SR_B4 (Red), SR_B3 (Green), SR_B2 (Blue) for true-color visualization of the smoke plume. QA_PIXEL for cloud/shadow masking.\"\n- risks: \"Landsat 8 has a 16-day revisit time. There is only one image available for this specific date. If the scene is obscured by clouds, the analysis will not be possible. Smoke can sometimes be mistaken for thin clouds.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"LANDSAT/LC08/C02/T1_L2\"\n- fallback_collection: \"none\"\n- date_range: \"2019-02-25 to 2019-02-26\"\n- region: \"Monte Pisano, Italy (approx. ee.Geometry.Point([10.51, 43.76]))\"\n- bands: \"SR_B4 (Red), SR_B3 (Green), SR_B2 (Blue) for true-color visualization of the smoke plume. QA_PIXEL for cloud/shadow masking.\"\n- risks: \"Landsat 8 has a 16-day revisit time. There is only one image available for this specific date. If the scene is obscured by clouds, the analysis will not be possible. Smoke can sometimes be mistaken for thin clouds.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_18-23-11",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define an `ee.Geometry.Point` for the fire location at `[10.51, 43.76]` (Monte Pisano). Define the date range from `2019-02-25` to `2019-02-26`. Define another point, `smoke_point`, east of the fire at `[10.61, 43.76]` to sample the smoke plume.\n\nStep 2: [Acquire and validate the primary image]\n  - Details: Filter the `LANDSAT/LC08/C02/T1_L2` collection by the defined date range and fire location.\n  - Validation: Check the size of the resulting collection. If the size is 0, the scene is not available. Exit and classify as `C1: Empty Collection`. If size is > 0, select the first image.\n  - Fallback: No fallback collection is specified.\n\nStep 3: [Apply cloud masking and scale data]\n  - Details: Create a function to mask clouds and cloud shadows using the `QA_PIXEL` band. Apply this mask to the image. Select the surface reflectance bands (`SR_B*`) and apply the standard scaling factor (multiply by 0.0000275 and add -0.2).\n\nStep 4: [Perform calculation by sampling brightness]\n  - Details: Calculate the mean brightness (average of Red, Green, Blue bands) for both the fire location and the `smoke_point`. This is done by creating two small buffers (e.g., 30 meters) around each point and reducing the image within those regions using `reduceRegion` with `ee.Reducer.mean()`. Extract the mean brightness value for `SR_B4` (Red band is a reasonable proxy for smoke brightness).\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the brightness value at the `smoke_point` to the brightness at the `fire_location`. If the brightness at the smoke point is significantly higher than a baseline clear-sky value (e.g., > 0.15) and also higher than the brightness at the fire's origin point (which might be obscured by the plume itself or be dark, burnt ground), it indicates the presence of a reflective smoke plume to the east.\n  - Guard: Check if the `reduceRegion` results are `None` or contain no valid data. If so, pixels were likely masked out, and the answer is `C2: No Valid Pixels`.\n  - Final Logic:\n    - If `smoke_brightness > fire_brightness` AND `smoke_brightness > 0.15` (an arbitrary threshold for \"smokiness\"), conclude `A: Yes`.\n    - Otherwise, conclude `B: No`.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define an `ee.Geometry.Point` for the fire location at `[10.51, 43.76]` (Monte Pisano). Define the date range from `2019-02-25` to `2019-02-26`. Define another point, `smoke_point`, east of the fire at `[10.61, 43.76]` to sample the smoke plume.\n\nStep 2: [Acquire and validate the primary image]\n  - Details: Filter the `LANDSAT/LC08/C02/T1_L2` collection by the defined date range and fire location.\n  - Validation: Check the size of the resulting collection. If the size is 0, the scene is not available. Exit and classify as `C1: Empty Collection`. If size is > 0, select the first image.\n  - Fallback: No fallback collection is specified.\n\nStep 3: [Apply cloud masking and scale data]\n  - Details: Create a function to mask clouds and cloud shadows using the `QA_PIXEL` band. Apply this mask to the image. Select the surface reflectance bands (`SR_B*`) and apply the standard scaling factor (multiply by 0.0000275 and add -0.2).\n\nStep 4: [Perform calculation by sampling brightness]\n  - Details: Calculate the mean brightness (average of Red, Green, Blue bands) for both the fire location and the `smoke_point`. This is done by creating two small buffers (e.g., 30 meters) around each point and reducing the image within those regions using `reduceRegion` with `ee.Reducer.mean()`. Extract the mean brightness value for `SR_B4` (Red band is a reasonable proxy for smoke brightness).\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the brightness value at the `smoke_point` to the brightness at the `fire_location`. If the brightness at the smoke point is significantly higher than a baseline clear-sky value (e.g., > 0.15) and also higher than the brightness at the fire's origin point (which might be obscured by the plume itself or be dark, burnt ground), it indicates the presence of a reflective smoke plume to the east.\n  - Guard: Check if the `reduceRegion` results are `None` or contain no valid data. If so, pixels were likely masked out, and the answer is `C2: No Valid Pixels`.\n  - Final Logic:\n    - If `smoke_brightness > fire_brightness` AND `smoke_brightness > 0.15` (an arbitrary threshold for \"smokiness\"), conclude `A: Yes`.\n    - Otherwise, conclude `B: No`."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_18-23-22",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\n# Initialize the Earth Engine library.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define geometry, time, and points of interest.\nfire_location = ee.Geometry.Point([10.51, 43.76])\nsmoke_point = ee.Geometry.Point([10.61, 43.76]) # A point to the east\nstart_date = '2019-02-25'\nend_date = '2019-02-26'\n\n# Step 2: Acquire and validate the primary image.\ncollection = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2') \\\n    .filterBounds(fire_location) \\\n    .filterDate(start_date, end_date)\n\ncollection_size = collection.size().getInfo()\nprint(f\"Images found: {collection_size}\")\n\nif collection_size == 0:\n    print(\"C1: Empty Collection\")\n    sys.exit()\n\nimage = collection.first()\n\n# Step 3: Apply cloud masking and scale data.\ndef scale_and_mask_landsat_l2(image):\n    qa_mask = image.select('QA_PIXEL').bitwiseAnd(int('11110', 2)).eq(0)\n    \n    # Apply scaling factors to surface reflectance bands.\n    optical_bands = image.select('SR_B.').multiply(0.0000275).add(-0.2)\n    \n    return image.addBands(optical_bands, None, True).updateMask(qa_mask)\n\nprocessed_image = scale_and_mask_landsat_l2(image)\nred_band = processed_image.select('SR_B4')\n\n# Step 4: Perform calculation by sampling brightness at two points.\ntry:\n    fire_brightness_dict = red_band.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=fire_location.buffer(30),\n        scale=30,\n        maxPixels=10\n    ).getInfo()\n\n    smoke_brightness_dict = red_band.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=smoke_point.buffer(30),\n        scale=30,\n        maxPixels=10\n    ).getInfo()\n\n    fire_brightness = fire_brightness_dict.get('SR_B4')\n    smoke_brightness = smoke_brightness_dict.get('SR_B4')\n\n    print(f\"Brightness at fire origin: {fire_brightness}\")\n    print(f\"Brightness east of fire: {smoke_brightness}\")\n\n    # Step 5: Validate result and determine answer.\n    if fire_brightness is None or smoke_brightness is None:\n        print(\"C2: No Valid Pixels\")\n    elif smoke_brightness > 0.15 and smoke_brightness > fire_brightness:\n        print(\"A: Yes\")\n    else:\n        print(\"B: No\")\n\nexcept Exception as e:\n    print(f\"An error occurred: {e}\", file=sys.stderr)\n    print(\"D\")\n```",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine library.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define geometry, time, and points of interest.\nfire_location = ee.Geometry.Point([10.51, 43.76])\nsmoke_point = ee.Geometry.Point([10.61, 43.76]) # A point to the east\nstart_date = '2019-02-25'\nend_date = '2019-02-26'\n\n# Step 2: Acquire and validate the primary image.\ncollection = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2') \\\n    .filterBounds(fire_location) \\\n    .filterDate(start_date, end_date)\n\ncollection_size = collection.size().getInfo()\nprint(f\"Images found: {collection_size}\")\n\nif collection_size == 0:\n    print(\"C1: Empty Collection\")\n    sys.exit()\n\nimage = collection.first()\n\n# Step 3: Apply cloud masking and scale data.\ndef scale_and_mask_landsat_l2(image):\n    qa_mask = image.select('QA_PIXEL').bitwiseAnd(int('11110', 2)).eq(0)\n    \n    # Apply scaling factors to surface reflectance bands.\n    optical_bands = image.select('SR_B.').multiply(0.0000275).add(-0.2)\n    \n    return image.addBands(optical_bands, None, True).updateMask(qa_mask)\n\nprocessed_image = scale_and_mask_landsat_l2(image)\nred_band = processed_image.select('SR_B4')\n\n# Step 4: Perform calculation by sampling brightness at two points.\ntry:\n    fire_brightness_dict = red_band.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=fire_location.buffer(30),\n        scale=30,\n        maxPixels=10\n    ).getInfo()\n\n    smoke_brightness_dict = red_band.reduceRegion(\n        reducer=ee.Reducer.mean(),\n        geometry=smoke_point.buffer(30),\n        scale=30,\n        maxPixels=10\n    ).getInfo()\n\n    fire_brightness = fire_brightness_dict.get('SR_B4')\n    smoke_brightness = smoke_brightness_dict.get('SR_B4')\n\n    print(f\"Brightness at fire origin: {fire_brightness}\")\n    print(f\"Brightness east of fire: {smoke_brightness}\")\n\n    # Step 5: Validate result and determine answer.\n    if fire_brightness is None or smoke_brightness is None:\n        print(\"C2: No Valid Pixels\")\n    elif smoke_brightness > 0.15 and smoke_brightness > fire_brightness:\n        print(\"A: Yes\")\n    else:\n        print(\"B: No\")\n\nexcept Exception as e:\n    print(f\"An error occurred: {e}\", file=sys.stderr)\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_18-23-25",
+            "data": {
+                "exec_msg": "Images found: 1\nBrightness at fire origin: 0.02066935279187817\nBrightness east of fire: 0.031138401639344265\nB: No\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_18-23-25",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_18-23-26",
+            "data": {
+                "raw_answer": "<answer>\nB\n</answer>",
+                "answer": "B",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_18-23-31",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "B",
+                "verified_answer": "B",
+                "confidence": "high",
+                "final_answer": "B",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "B",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

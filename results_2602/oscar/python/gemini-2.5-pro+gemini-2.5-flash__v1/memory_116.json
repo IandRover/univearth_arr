@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "Was water extent in the Sudd wetlands, South Sudan near Bor on December 4, 2021 higher than on December 6, 2019?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_19-06-52",
+        "url": "https://earthobservatory.nasa.gov/images/149217/south-sudan-submerged",
+        "unique_id": 116
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_19-07-01",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- fallback_collection: \"LANDSAT/LC08/C02/T1_L2, LANDSAT/LC09/C02/T1_L2\"\n- date_range: \"Two small windows: 2019-12-01 to 2019-12-11, and 2021-12-01 to 2021-12-11\"\n- region: \"Sudd wetlands near Bor, South Sudan. Approximate coordinates for Bor: [31.55 E, 6.20 N]\"\n- bands: \"B3 (Green), B8 (NIR) for NDWI calculation. Possibly QA60 and SCL for cloud/shadow masking.\"\n- risks: \"High probability of cloud cover. The Sudd is a vast, complex system of swamps and channels, which can make simple water/land classification challenging due to mixed pixels and aquatic vegetation.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- fallback_collection: \"LANDSAT/LC08/C02/T1_L2, LANDSAT/LC09/C02/T1_L2\"\n- date_range: \"Two small windows: 2019-12-01 to 2019-12-11, and 2021-12-01 to 2021-12-11\"\n- region: \"Sudd wetlands near Bor, South Sudan. Approximate coordinates for Bor: [31.55 E, 6.20 N]\"\n- bands: \"B3 (Green), B8 (NIR) for NDWI calculation. Possibly QA60 and SCL for cloud/shadow masking.\"\n- risks: \"High probability of cloud cover. The Sudd is a vast, complex system of swamps and channels, which can make simple water/land classification challenging due to mixed pixels and aquatic vegetation.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_19-07-14",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define a point of interest for Bor, South Sudan at `ee.Geometry.Point([31.55, 6.20])`. Create a 100x100 km square Area of Interest (AOI) around this point using `.buffer(50000).bounds()`. Define two date ranges: `t1_start = '2019-12-01'`, `t1_end = '2019-12-11'` and `t2_start = '2021-12-01'`, `t2_end = '2021-12-11'`.\n\nStep 2: [Acquire data and check collection size]\n  - Details: For each time period, filter the `COPERNICUS/S2_SR_HARMONIZED` collection by the AOI and date range. Sort by cloud cover (`CLOUDY_PIXEL_PERCENTAGE`) and take the least cloudy image using `.first()`.\n  - Validation: After filtering for each period, check if the resulting image object is valid (not None). If either image is None, the collection for that period is empty. Conclude with answer C1.\n  - Fallback: If no Sentinel-2 image is found for either period, repeat the process using a combined collection of `LANDSAT/LC08/C02/T1_L2` and `LANDSAT/LC09/C02/T1_L2`, filtering by `CLOUD_COVER` and selecting the first image. If the fallback also fails for either period, conclude C1.\n\nStep 3: [Apply cloud masking and calculate NDWI]\n  - Details: For each of the two selected images (2019 and 2021), apply a cloud mask. For Sentinel-2, use the 'SCL' band to remove clouds (class 9), cloud shadows (class 3), and cirrus (class 10). For Landsat (fallback), use the 'QA_PIXEL' band to remove clouds and cloud shadows.\n  - Details: Calculate the Normalized Difference Water Index (NDWI) for each masked image. For Sentinel-2, use `(B3 - B8) / (B3 + B8)`. For Landsat, use `(SR_B3 - SR_B5) / (SR_B3 + SR_B5)`.\n\nStep 4: [Perform calculation]\n  - Details: Classify water pixels for each NDWI image by creating a binary mask where NDWI > 0.0. This threshold is a common starting point for identifying open water.\n  - Details: Calculate the total area of water for each period. Do this by multiplying the count of water pixels by the pixel area and then converting to square kilometers. The key steps are: `water_mask.multiply(ee.Image.pixelArea()).reduceRegion(...)`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Retrieve the calculated water area values for 2019 and 2021 using `.getInfo()`.\n  - Guard: Check if either result is None or NaN. If so, conclude C3.\n  - Validation: Check if both area values are greater than 0. If either is 0, it means no valid water pixels were found after masking. Conclude with answer C2.\n  - Details: Compare the 2021 water area to the 2019 water area. If `water_area_2021 > water_area_2019`, conclude A (Yes). Otherwise, conclude B (No).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define a point of interest for Bor, South Sudan at `ee.Geometry.Point([31.55, 6.20])`. Create a 100x100 km square Area of Interest (AOI) around this point using `.buffer(50000).bounds()`. Define two date ranges: `t1_start = '2019-12-01'`, `t1_end = '2019-12-11'` and `t2_start = '2021-12-01'`, `t2_end = '2021-12-11'`.\n\nStep 2: [Acquire data and check collection size]\n  - Details: For each time period, filter the `COPERNICUS/S2_SR_HARMONIZED` collection by the AOI and date range. Sort by cloud cover (`CLOUDY_PIXEL_PERCENTAGE`) and take the least cloudy image using `.first()`.\n  - Validation: After filtering for each period, check if the resulting image object is valid (not None). If either image is None, the collection for that period is empty. Conclude with answer C1.\n  - Fallback: If no Sentinel-2 image is found for either period, repeat the process using a combined collection of `LANDSAT/LC08/C02/T1_L2` and `LANDSAT/LC09/C02/T1_L2`, filtering by `CLOUD_COVER` and selecting the first image. If the fallback also fails for either period, conclude C1.\n\nStep 3: [Apply cloud masking and calculate NDWI]\n  - Details: For each of the two selected images (2019 and 2021), apply a cloud mask. For Sentinel-2, use the 'SCL' band to remove clouds (class 9), cloud shadows (class 3), and cirrus (class 10). For Landsat (fallback), use the 'QA_PIXEL' band to remove clouds and cloud shadows.\n  - Details: Calculate the Normalized Difference Water Index (NDWI) for each masked image. For Sentinel-2, use `(B3 - B8) / (B3 + B8)`. For Landsat, use `(SR_B3 - SR_B5) / (SR_B3 + SR_B5)`.\n\nStep 4: [Perform calculation]\n  - Details: Classify water pixels for each NDWI image by creating a binary mask where NDWI > 0.0. This threshold is a common starting point for identifying open water.\n  - Details: Calculate the total area of water for each period. Do this by multiplying the count of water pixels by the pixel area and then converting to square kilometers. The key steps are: `water_mask.multiply(ee.Image.pixelArea()).reduceRegion(...)`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Retrieve the calculated water area values for 2019 and 2021 using `.getInfo()`.\n  - Guard: Check if either result is None or NaN. If so, conclude C3.\n  - Validation: Check if both area values are greater than 0. If either is 0, it means no valid water pixels were found after masking. Conclude with answer C2.\n  - Details: Compare the 2021 water area to the 2019 water area. If `water_area_2021 > water_area_2019`, conclude A (Yes). Otherwise, conclude B (No)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_19-07-32",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\n# It's a good practice to handle potential initialization errors.\ntry:\n    ee.Initialize(project='earthsense-436113')\nexcept Exception as e:\n    sys.stderr.write(f\"Error initializing Earth Engine: {e}\\n\")\n    sys.exit(1)\n\n# Step 1: Initialize and define geometry/time\npoint = ee.Geometry.Point([31.55, 6.20])\naoi = point.buffer(50000).bounds()\nt1_start, t1_end = '2019-12-01', '2019-12-11'\nt2_start, t2_end = '2021-12-01', '2021-12-11'\n\n# Helper function to get the least cloudy image, trying S2 first, then Landsat 8/9\ndef get_image(start_date, end_date, geometry):\n    # Try Sentinel-2 first\n    s2_collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \\\n        .filterBounds(geometry) \\\n        .filterDate(start_date, end_date)\n    \n    s2_size = s2_collection.size().getInfo()\n    if s2_size > 0:\n        image = s2_collection.sort('CLOUDY_PIXEL_PERCENTAGE').first()\n        return image, 'S2', s2_size\n\n    # Fallback to Landsat 8 & 9\n    l8_collection = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')\n    l9_collection = ee.ImageCollection('LANDSAT/LC09/C02/T1_L2')\n    ls_collection = l8_collection.merge(l9_collection) \\\n        .filterBounds(geometry) \\\n        .filterDate(start_date, end_date)\n    \n    ls_size = ls_collection.size().getInfo()\n    if ls_size > 0:\n        image = ls_collection.sort('CLOUD_COVER').first()\n        return image, 'LS', ls_size\n        \n    return None, None, 0\n\n# Step 2: Acquire data and check collection size\nimage_2019, source_2019, count_2019 = get_image(t1_start, t1_end, aoi)\nimage_2021, source_2021, count_2021 = get_image(t2_start, t2_end, aoi)\n\nprint(f\"2019 Period: Found {count_2019} images (Source: {source_2019 or 'None'}).\")\nprint(f\"2021 Period: Found {count_2021} images (Source: {source_2021 or 'None'}).\")\n\nif not image_2019 or not image_2021:\n    print(\"C1\")\n    sys.exit()\n\n# Step 3 & 4: Cloud masking, NDWI, and water area calculation in a function\ndef calculate_water_area(image, source, aoi):\n    # Cloud Masking\n    if source == 'S2':\n        scl = image.select('SCL')\n        # Keep clear (4), water (6), vegetation (5), bare soil (2) etc.\n        mask = scl.neq(3).And(scl.neq(8)).And(scl.neq(9)).And(scl.neq(10))\n        masked_image = image.updateMask(mask)\n        # NDWI calculation for S2 (Green - NIR) / (Green + NIR)\n        ndwi = masked_image.normalizedDifference(['B3', 'B8']).rename('ndwi')\n    else: # Landsat\n        qa = image.select('QA_PIXEL')\n        # Bits 3 (cloud shadow) and 5 (cloud) should be 0.\n        cloud_shadow_mask = (1 << 3)\n        cloud_mask = (1 << 5)\n        mask = qa.bitwiseAnd(cloud_shadow_mask).eq(0).And(qa.bitwiseAnd(cloud_mask).eq(0))\n        masked_image = image.updateMask(mask)\n        # NDWI calculation for Landsat (Green - NIR)\n        ndwi = masked_image.normalizedDifference(['SR_B3', 'SR_B5']).rename('ndwi')\n\n    # Classify water and calculate area\n    water_mask = ndwi.gt(0.0)\n    pixel_area = ee.Image.pixelArea()\n    water_area_image = water_mask.multiply(pixel_area)\n    \n    stats = water_area_image.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=aoi,\n        scale=1000, # Using a coarse scale for a large area to avoid timeouts\n        maxPixels=1e10\n    )\n    # Convert from square meters to square kilometers\n    return ee.Number(stats.get('ndwi')).divide(1e6)\n\nwater_area_2019 = calculate_water_area(image_2019, source_2019, aoi)\nwater_area_2021 = calculate_water_area(image_2021, source_2021, aoi)\n\n# Step 5: Validate result and determine answer\narea_2019_val = water_area_2019.getInfo()\narea_2021_val = water_area_2021.getInfo()\n\nprint(f\"2019 Water Area (km2): {area_2019_val}\")\nprint(f\"2021 Water Area (km2): {area_2021_val}\")\n\nif area_2019_val is None or area_2021_val is None:\n    print(\"C3\")\nelif area_2019_val == 0 or area_2021_val == 0:\n    print(\"C2\")\nelif area_2021_val > area_2019_val:\n    print(\"A\")\nelse:\n    print(\"B\")\n```",
+                "code": "import ee\nimport sys\n\n# It's a good practice to handle potential initialization errors.\ntry:\n    ee.Initialize(project='earthsense-436113')\nexcept Exception as e:\n    sys.stderr.write(f\"Error initializing Earth Engine: {e}\\n\")\n    sys.exit(1)\n\n# Step 1: Initialize and define geometry/time\npoint = ee.Geometry.Point([31.55, 6.20])\naoi = point.buffer(50000).bounds()\nt1_start, t1_end = '2019-12-01', '2019-12-11'\nt2_start, t2_end = '2021-12-01', '2021-12-11'\n\n# Helper function to get the least cloudy image, trying S2 first, then Landsat 8/9\ndef get_image(start_date, end_date, geometry):\n    # Try Sentinel-2 first\n    s2_collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \\\n        .filterBounds(geometry) \\\n        .filterDate(start_date, end_date)\n    \n    s2_size = s2_collection.size().getInfo()\n    if s2_size > 0:\n        image = s2_collection.sort('CLOUDY_PIXEL_PERCENTAGE').first()\n        return image, 'S2', s2_size\n\n    # Fallback to Landsat 8 & 9\n    l8_collection = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')\n    l9_collection = ee.ImageCollection('LANDSAT/LC09/C02/T1_L2')\n    ls_collection = l8_collection.merge(l9_collection) \\\n        .filterBounds(geometry) \\\n        .filterDate(start_date, end_date)\n    \n    ls_size = ls_collection.size().getInfo()\n    if ls_size > 0:\n        image = ls_collection.sort('CLOUD_COVER').first()\n        return image, 'LS', ls_size\n        \n    return None, None, 0\n\n# Step 2: Acquire data and check collection size\nimage_2019, source_2019, count_2019 = get_image(t1_start, t1_end, aoi)\nimage_2021, source_2021, count_2021 = get_image(t2_start, t2_end, aoi)\n\nprint(f\"2019 Period: Found {count_2019} images (Source: {source_2019 or 'None'}).\")\nprint(f\"2021 Period: Found {count_2021} images (Source: {source_2021 or 'None'}).\")\n\nif not image_2019 or not image_2021:\n    print(\"C1\")\n    sys.exit()\n\n# Step 3 & 4: Cloud masking, NDWI, and water area calculation in a function\ndef calculate_water_area(image, source, aoi):\n    # Cloud Masking\n    if source == 'S2':\n        scl = image.select('SCL')\n        # Keep clear (4), water (6), vegetation (5), bare soil (2) etc.\n        mask = scl.neq(3).And(scl.neq(8)).And(scl.neq(9)).And(scl.neq(10))\n        masked_image = image.updateMask(mask)\n        # NDWI calculation for S2 (Green - NIR) / (Green + NIR)\n        ndwi = masked_image.normalizedDifference(['B3', 'B8']).rename('ndwi')\n    else: # Landsat\n        qa = image.select('QA_PIXEL')\n        # Bits 3 (cloud shadow) and 5 (cloud) should be 0.\n        cloud_shadow_mask = (1 << 3)\n        cloud_mask = (1 << 5)\n        mask = qa.bitwiseAnd(cloud_shadow_mask).eq(0).And(qa.bitwiseAnd(cloud_mask).eq(0))\n        masked_image = image.updateMask(mask)\n        # NDWI calculation for Landsat (Green - NIR)\n        ndwi = masked_image.normalizedDifference(['SR_B3', 'SR_B5']).rename('ndwi')\n\n    # Classify water and calculate area\n    water_mask = ndwi.gt(0.0)\n    pixel_area = ee.Image.pixelArea()\n    water_area_image = water_mask.multiply(pixel_area)\n    \n    stats = water_area_image.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=aoi,\n        scale=1000, # Using a coarse scale for a large area to avoid timeouts\n        maxPixels=1e10\n    )\n    # Convert from square meters to square kilometers\n    return ee.Number(stats.get('ndwi')).divide(1e6)\n\nwater_area_2019 = calculate_water_area(image_2019, source_2019, aoi)\nwater_area_2021 = calculate_water_area(image_2021, source_2021, aoi)\n\n# Step 5: Validate result and determine answer\narea_2019_val = water_area_2019.getInfo()\narea_2021_val = water_area_2021.getInfo()\n\nprint(f\"2019 Water Area (km2): {area_2019_val}\")\nprint(f\"2021 Water Area (km2): {area_2021_val}\")\n\nif area_2019_val is None or area_2021_val is None:\n    print(\"C3\")\nelif area_2019_val == 0 or area_2021_val == 0:\n    print(\"C2\")\nelif area_2021_val > area_2019_val:\n    print(\"A\")\nelse:\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_19-07-59",
+            "data": {
+                "exec_msg": "2019 Period: Found 8 images (Source: S2).\n2021 Period: Found 8 images (Source: S2).\n2019 Water Area (km2): 15.0006496875\n2021 Water Area (km2): 38.0012423125\nA\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_19-07-59",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_19-08-01",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_19-08-06",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

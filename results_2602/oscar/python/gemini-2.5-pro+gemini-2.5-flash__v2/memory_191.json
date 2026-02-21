@@ -1,0 +1,179 @@
+{
+    "metadata": {
+        "question": "Did active fire detections in Sumatra and Borneo, Indonesia, increase in 2023 compared to 2022?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_11-55-02",
+        "url": "https://earthobservatory.nasa.gov/images/151929/indonesian-fires-return-in-2023",
+        "unique_id": 191
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_11-55-12",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"FIRMS\" (Fire Information for Resource Management System, which includes VIIRS and MODIS data)\n- fallback_collection: \"MODIS/061/MCD14ML\" (MODIS Thermal Anomalies/Fire locations)\n- date_range: \"2022-01-01 to 2023-12-31\" (to cover both years for comparison)\n- region: \"Indonesia's islands of Sumatra and Borneo. This can be represented by a FeatureCollection, likely from FAO GAUL, filtered for these specific islands.\"\n- bands: \"'confidence' to filter for high-confidence detections, 'T21' (brightness temperature in Kelvin), and 'frp' (Fire Radiative Power) are key variables. A simple count of fire pixels is the primary metric.\"\n- risks: \"Persistent and heavy cloud cover, especially during the wet season, can obscure fire detections, leading to underestimation. Smoke plumes can also sometimes be misclassified or can obscure the land surface.\"\n- needs_cloud_masking: \"no\" (Active fire products are thermal anomaly detections and are generally pre-processed to work through some atmospheric interference. A separate cloud mask is not typically applied.)\n</observation>",
+                "observation": "- collection: \"FIRMS\" (Fire Information for Resource Management System, which includes VIIRS and MODIS data)\n- fallback_collection: \"MODIS/061/MCD14ML\" (MODIS Thermal Anomalies/Fire locations)\n- date_range: \"2022-01-01 to 2023-12-31\" (to cover both years for comparison)\n- region: \"Indonesia's islands of Sumatra and Borneo. This can be represented by a FeatureCollection, likely from FAO GAUL, filtered for these specific islands.\"\n- bands: \"'confidence' to filter for high-confidence detections, 'T21' (brightness temperature in Kelvin), and 'frp' (Fire Radiative Power) are key variables. A simple count of fire pixels is the primary metric.\"\n- risks: \"Persistent and heavy cloud cover, especially during the wet season, can obscure fire detections, leading to underestimation. Smoke plumes can also sometimes be misclassified or can obscure the land surface.\"\n- needs_cloud_masking: \"no\" (Active fire products are thermal anomaly detections and are generally pre-processed to work through some atmospheric interference. A separate cloud mask is not typically applied.)"
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_11-55-25",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define two date ranges: '2022-01-01' to '2022-12-31' and '2023-01-01' to '2023-12-31'. Load the FAO GAUL Level 1 administrative boundaries ('FAO/GAUL/2015/level1'). Filter this collection for Indonesia ('ADM0_NAME' == 'Indonesia') and then filter for all provinces located on the islands of Sumatra and Borneo. Dissolve these provincial geometries into a single region of interest (ROI).\n\nStep 2: [Acquire data and check collection size]\n  - Details: Define a function to get fire counts for a given year and ROI. Inside the function:\n    1. Load the primary collection 'FIRMS'.\n    2. Filter by the specified date range and ROI bounds.\n    3. Filter for high-confidence detections where the 'confidence' band is greater than or equal to 80 (equivalent to 'high' or 'nominal' + 'high').\n    4. Call this function for 2022 and 2023.\n    5. **VALIDATION**: For each year, check if the resulting collection size is greater than zero. If not, print a warning and proceed to the fallback.\n  - Fallback: If the primary 'FIRMS' collection for a given year is empty (size is 0), attempt the same process using the 'MODIS/061/MCD14ML' collection. This collection also has a 'confidence' band that can be filtered >= 80. If the fallback is also empty, the count for that year is zero.\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details: No cloud masking is required for active fire products like FIRMS or MODIS/MCD14ML, as they are thermal anomaly detections. The primary check is the collection size from Step 2. If the collections are not empty, we assume there are valid pixels (fire detections) to count. If both primary and fallback collections for a given year are empty, we will determine the answer category C1.\n\nStep 4: [Perform calculation]\n  - Details: For each year's final, filtered ImageCollection (either from 'FIRMS' or the fallback), calculate the total number of fire detection points by getting the `size()` of the collection. Store the results as `count_2022` and `count_2023`. The result will be a server-side ee.Number object for each year.\n\nStep 5: [Validate result and determine answer]\n  - Details: Fetch the computed counts from the server using `.getInfo()`.\n    1. **GUARD**: Check if either `count_2022` or `count_2023` is None. If so, determine answer C3.\n    2. If both counts are 0, this indicates no fire detections were found in either year for the specified region and confidence level. Determine answer C1 (Empty Collection).\n    3. Compare `count_2023` with `count_2022`.\n    4. If `count_2023 > count_2022`, print the counts and conclude 'Yes' (Answer A).\n    5. Otherwise, print the counts and conclude 'No' (Answer B).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define two date ranges: '2022-01-01' to '2022-12-31' and '2023-01-01' to '2023-12-31'. Load the FAO GAUL Level 1 administrative boundaries ('FAO/GAUL/2015/level1'). Filter this collection for Indonesia ('ADM0_NAME' == 'Indonesia') and then filter for all provinces located on the islands of Sumatra and Borneo. Dissolve these provincial geometries into a single region of interest (ROI).\n\nStep 2: [Acquire data and check collection size]\n  - Details: Define a function to get fire counts for a given year and ROI. Inside the function:\n    1. Load the primary collection 'FIRMS'.\n    2. Filter by the specified date range and ROI bounds.\n    3. Filter for high-confidence detections where the 'confidence' band is greater than or equal to 80 (equivalent to 'high' or 'nominal' + 'high').\n    4. Call this function for 2022 and 2023.\n    5. **VALIDATION**: For each year, check if the resulting collection size is greater than zero. If not, print a warning and proceed to the fallback.\n  - Fallback: If the primary 'FIRMS' collection for a given year is empty (size is 0), attempt the same process using the 'MODIS/061/MCD14ML' collection. This collection also has a 'confidence' band that can be filtered >= 80. If the fallback is also empty, the count for that year is zero.\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details: No cloud masking is required for active fire products like FIRMS or MODIS/MCD14ML, as they are thermal anomaly detections. The primary check is the collection size from Step 2. If the collections are not empty, we assume there are valid pixels (fire detections) to count. If both primary and fallback collections for a given year are empty, we will determine the answer category C1.\n\nStep 4: [Perform calculation]\n  - Details: For each year's final, filtered ImageCollection (either from 'FIRMS' or the fallback), calculate the total number of fire detection points by getting the `size()` of the collection. Store the results as `count_2022` and `count_2023`. The result will be a server-side ee.Number object for each year.\n\nStep 5: [Validate result and determine answer]\n  - Details: Fetch the computed counts from the server using `.getInfo()`.\n    1. **GUARD**: Check if either `count_2022` or `count_2023` is None. If so, determine answer C3.\n    2. If both counts are 0, this indicates no fire detections were found in either year for the specified region and confidence level. Determine answer C1 (Empty Collection).\n    3. Compare `count_2023` with `count_2022`.\n    4. If `count_2023 > count_2022`, print the counts and conclude 'Yes' (Answer A).\n    5. Otherwise, print the counts and conclude 'No' (Answer B)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_11-55-41",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\n# Initialize the Earth Engine library\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define geometry and time ranges\n# Define a single geometry covering both Sumatra and Borneo islands in Indonesia.\n# This is more robust and avoids using GAUL as per core requirements.\nroi = ee.Geometry.Polygon([[\n    [95.0, 6.0],   # NW corner (Sumatra)\n    [95.0, -6.5],  # SW corner (Sumatra)\n    [109.0, -6.5], # SE corner (near Borneo)\n    [119.5, -4.5], # S corner (Borneo)\n    [119.5, 7.5],  # NE corner (Borneo)\n    [109.0, 7.5],  # N corner (between islands)\n    [104.0, 6.0]   # Back to NW area\n]])\ndate_range_2022 = ee.DateRange('2022-01-01', '2022-12-31')\ndate_range_2023 = ee.DateRange('2023-01-01', '2023-12-31')\n\n# Step 2 & 4: Function to acquire data, check size, and return count\ndef get_fire_count(date_range, region):\n    \"\"\"\n    Gets the fire count for a given date range and region, with a fallback.\n    \"\"\"\n    # Primary collection: FIRMS\n    firms_collection = ee.ImageCollection('FIRMS').filterDate(date_range).filterBounds(region)\n    # Filter for high confidence detections\n    high_conf_firms = firms_collection.filter(ee.Filter.gte('confidence', 80))\n    firms_size = high_conf_firms.size()\n\n    # Fallback to MODIS if FIRMS is empty\n    def get_modis_count():\n        modis_collection = ee.ImageCollection('MODIS/061/MCD14ML').filterDate(date_range).filterBounds(region)\n        high_conf_modis = modis_collection.filter(ee.Filter.gte('confidence', 80))\n        return high_conf_modis.size()\n\n    # Use FIRMS if it has data, otherwise try MODIS\n    final_count = ee.Number(ee.Algorithms.If(firms_size.gt(0), firms_size, get_modis_count()))\n    return final_count\n\n# Calculate counts for both years\ncount_2022 = get_fire_count(date_range_2022, roi)\ncount_2023 = get_fire_count(date_range_2023, roi)\n\n# Step 5: Validate results and determine the answer\ntry:\n    val_2022 = count_2022.getInfo()\n    val_2023 = count_2023.getInfo()\n\n    # Guard for calculation failure\n    if val_2022 is None or val_2023 is None:\n        print(\"Calculation failed: one or both results are None.\")\n        print(\"C3\")\n        sys.exit()\n\n    print(f\"2022 Fire Detections: {val_2022}\")\n    print(f\"2023 Fire Detections: {val_2023}\")\n\n    # Guard for empty collections\n    if val_2022 == 0 and val_2023 == 0:\n        print(\"No high-confidence fire detections found in either year.\")\n        print(\"C1\")\n    elif val_2023 > val_2022:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"An Earth Engine error occurred: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An unexpected error occurred: {e}\")\n    print(\"D\")\n```",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine library\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define geometry and time ranges\n# Define a single geometry covering both Sumatra and Borneo islands in Indonesia.\n# This is more robust and avoids using GAUL as per core requirements.\nroi = ee.Geometry.Polygon([[\n    [95.0, 6.0],   # NW corner (Sumatra)\n    [95.0, -6.5],  # SW corner (Sumatra)\n    [109.0, -6.5], # SE corner (near Borneo)\n    [119.5, -4.5], # S corner (Borneo)\n    [119.5, 7.5],  # NE corner (Borneo)\n    [109.0, 7.5],  # N corner (between islands)\n    [104.0, 6.0]   # Back to NW area\n]])\ndate_range_2022 = ee.DateRange('2022-01-01', '2022-12-31')\ndate_range_2023 = ee.DateRange('2023-01-01', '2023-12-31')\n\n# Step 2 & 4: Function to acquire data, check size, and return count\ndef get_fire_count(date_range, region):\n    \"\"\"\n    Gets the fire count for a given date range and region, with a fallback.\n    \"\"\"\n    # Primary collection: FIRMS\n    firms_collection = ee.ImageCollection('FIRMS').filterDate(date_range).filterBounds(region)\n    # Filter for high confidence detections\n    high_conf_firms = firms_collection.filter(ee.Filter.gte('confidence', 80))\n    firms_size = high_conf_firms.size()\n\n    # Fallback to MODIS if FIRMS is empty\n    def get_modis_count():\n        modis_collection = ee.ImageCollection('MODIS/061/MCD14ML').filterDate(date_range).filterBounds(region)\n        high_conf_modis = modis_collection.filter(ee.Filter.gte('confidence', 80))\n        return high_conf_modis.size()\n\n    # Use FIRMS if it has data, otherwise try MODIS\n    final_count = ee.Number(ee.Algorithms.If(firms_size.gt(0), firms_size, get_modis_count()))\n    return final_count\n\n# Calculate counts for both years\ncount_2022 = get_fire_count(date_range_2022, roi)\ncount_2023 = get_fire_count(date_range_2023, roi)\n\n# Step 5: Validate results and determine the answer\ntry:\n    val_2022 = count_2022.getInfo()\n    val_2023 = count_2023.getInfo()\n\n    # Guard for calculation failure\n    if val_2022 is None or val_2023 is None:\n        print(\"Calculation failed: one or both results are None.\")\n        print(\"C3\")\n        sys.exit()\n\n    print(f\"2022 Fire Detections: {val_2022}\")\n    print(f\"2023 Fire Detections: {val_2023}\")\n\n    # Guard for empty collections\n    if val_2022 == 0 and val_2023 == 0:\n        print(\"No high-confidence fire detections found in either year.\")\n        print(\"C1\")\n    elif val_2023 > val_2022:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"An Earth Engine error occurred: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An unexpected error occurred: {e}\")\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_11-55-42",
+            "data": {
+                "exec_msg": "An Earth Engine error occurred: ImageCollection.load: ImageCollection asset 'MODIS/061/MCD14ML' not found (does not exist or caller does not have access).\nD\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_11-55-42",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "D",
+                "need_replan": true,
+                "replan_reason": "Code self-reported a D (error) answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "replan",
+            "timestamp": "2026-02-21_11-56-01",
+            "data": {
+                "attempt": 1,
+                "diagnosis": "- Failed step: Step 2: [Acquire data and check collection size], specifically the fallback mechanism.\n- Root cause: The code attempts to load a fallback collection with the ID `MODIS/061/MCD14ML`. The error message `ImageCollection asset 'MODIS/061/MCD14ML' not found` indicates this collection ID is incorrect or inaccessible. The correct, publicly available collection ID for the MODIS Terra+Aqua combined daily fire product is `MODIS/006/MCD64A1`, which represents burned area, not active fire points. A more suitable fallback for active fire points is the MODIS Terra collection, `MODIS/061/MOD14A1`, which contains a 'MaxFRP' band suitable for identifying fire detections. However, the `FIRMS` collection is robust, and the original code structure might have an issue treating a `FeatureCollection` like an `ImageCollection`. The `FIRMS` dataset is actually a `FeatureCollection`.\n- Fix strategy: I will correct the code to use `ee.FeatureCollection('FIRMS')` instead of `ee.ImageCollection('FIRMS')`. This is the correct type for this dataset. I will remove the fallback logic as `FIRMS` is the most appropriate and comprehensive dataset for this task, and introducing a different data source (MODIS thermal anomalies vs. FIRMS points) complicates the direct comparison. This simplifies the code and directly addresses the core question using the best available data source.",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine library\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define geometry and time ranges\n# Define a single geometry covering both Sumatra and Borneo islands in Indonesia.\nroi = ee.Geometry.Polygon([[\n    [95.0, 6.0],   # NW corner (Sumatra)\n    [95.0, -6.5],  # SW corner (Sumatra)\n    [109.0, -6.5], # SE corner (near Borneo)\n    [119.5, -4.5], # S corner (Borneo)\n    [119.5, 7.5],  # NE corner (Borneo)\n    [109.0, 7.5],  # N corner (between islands)\n    [104.0, 6.0]   # Back to NW area\n]])\ndate_range_2022 = ee.DateRange('2022-01-01', '2022-12-31')\ndate_range_2023 = ee.DateRange('2023-01-01', '2023-12-31')\n\n# Step 2 & 4: Function to acquire data, check size, and return count\ndef get_fire_count(date_range, region):\n    \"\"\"\n    Gets the fire count for a given date range and region using the FIRMS dataset.\n    \"\"\"\n    # FIRMS is a FeatureCollection, not an ImageCollection.\n    # The 'confidence' property is a number (0-100), not a string.\n    # 'h' (high) corresponds to a confidence value >= 80.\n    collection = ee.FeatureCollection('FIRMS').filterDate(date_range).filterBounds(region)\n    \n    # Filter for high confidence detections (nominal and high)\n    # The 'confidence' property is numeric (0-100).\n    high_conf_fires = collection.filter(ee.Filter.gte('confidence', 80))\n    \n    return high_conf_fires.size()\n\n# Calculate counts for both years\ncount_2022 = get_fire_count(date_range_2022, roi)\ncount_2023 = get_fire_count(date_range_2023, roi)\n\n# Step 5: Validate results and determine the answer\ntry:\n    val_2022 = count_2022.getInfo()\n    val_2023 = count_2023.getInfo()\n\n    # Guard for calculation failure\n    if val_2022 is None or val_2023 is None:\n        print(\"Calculation failed: one or both results are None.\")\n        print(\"C3\")\n        sys.exit()\n\n    print(f\"2022 Fire Detections: {val_2022}\")\n    print(f\"2023 Fire Detections: {val_2023}\")\n\n    # Guard for empty collections\n    if val_2022 == 0 and val_2023 == 0:\n        print(\"No high-confidence fire detections found in either year.\")\n        print(\"C1\")\n    elif val_2023 > val_2022:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"An Earth Engine error occurred: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An unexpected error occurred: {e}\")\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "replan_execute",
+            "timestamp": "2026-02-21_11-56-03",
+            "data": {
+                "attempt": 1,
+                "exec_msg": "2022 Fire Detections: 0\n2023 Fire Detections: 0\nNo high-confidence fire detections found in either year.\nC1\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_11-56-03",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "C1",
+                "need_replan": true,
+                "replan_reason": "Code self-reported C1 (empty collection) \u2014 try fallback sensor or wider date range.",
+                "replan_count": 1
+            }
+        },
+        {
+            "state": "replan",
+            "timestamp": "2026-02-21_11-56-18",
+            "data": {
+                "attempt": 2,
+                "diagnosis": "- Failed step: Step 4: [Perform calculation]\n- Root cause: The executed code returned a count of 0 fires for both years, which is highly implausible for a large, fire-prone region like Sumatra and Borneo over two full years. A review of the GEE data catalog for the `FIRMS` collection reveals a critical detail: the `confidence` property is stored as a string ('l', 'n', 'h'), not an integer (0-100). The filter `ee.Filter.gte('confidence', 80)` therefore failed to match any features, leading to an incorrect count of zero.\n- Fix strategy: Modify the filtering logic to work with the actual string values in the 'confidence' property. Instead of a numeric filter, use `ee.Filter.inList('confidence', ['n', 'h'])` to select features with 'nominal' or 'high' confidence, which is the standard practice for this dataset. This will correctly identify the intended fire detections.",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine library\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define geometry and time ranges\n# Define a single geometry covering both Sumatra and Borneo islands in Indonesia.\nroi = ee.Geometry.Polygon([[\n    [95.0, 6.0],   # NW corner (Sumatra)\n    [95.0, -6.5],  # SW corner (Sumatra)\n    [109.0, -6.5], # SE corner (near Borneo)\n    [119.5, -4.5], # S corner (Borneo)\n    [119.5, 7.5],  # NE corner (Borneo)\n    [109.0, 7.5],  # N corner (between islands)\n    [104.0, 6.0]   # Back to NW area\n]])\ndate_range_2022 = ee.DateRange('2022-01-01', '2022-12-31')\ndate_range_2023 = ee.DateRange('2023-01-01', '2023-12-31')\n\n# Step 2 & 4: Function to acquire data, check size, and return count\ndef get_fire_count(date_range, region):\n    \"\"\"\n    Gets the fire count for a given date range and region using the FIRMS dataset.\n    \"\"\"\n    collection = ee.FeatureCollection('FIRMS').filterDate(date_range).filterBounds(region)\n    \n    # FIX: The 'confidence' property in FIRMS is a string ('l', 'n', 'h').\n    # Filter for nominal ('n') and high ('h') confidence detections.\n    # This corresponds to the common practice of using fires with a quality\n    # assessment above 'low'.\n    high_conf_fires = collection.filter(ee.Filter.inList('confidence', ['n', 'h']))\n    \n    return high_conf_fires.size()\n\n# Calculate counts for both years\ncount_2022 = get_fire_count(date_range_2022, roi)\ncount_2023 = get_fire_count(date_range_2023, roi)\n\n# Step 5: Validate results and determine the answer\ntry:\n    val_2022 = count_2022.getInfo()\n    val_2023 = count_2023.getInfo()\n\n    # Guard for calculation failure\n    if val_2022 is None or val_2023 is None:\n        print(\"Calculation failed: one or both results are None.\", file=sys.stderr)\n        print(\"C3\")\n        sys.exit()\n\n    print(f\"2022 Fire Detections: {val_2022}\")\n    print(f\"2023 Fire Detections: {val_2023}\")\n\n    # Guard for empty collections\n    if val_2022 == 0 and val_2023 == 0:\n        print(\"No nominal or high-confidence fire detections found in either year.\", file=sys.stderr)\n        print(\"C1\")\n    elif val_2023 > val_2022:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"An Earth Engine error occurred: {e}\", file=sys.stderr)\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An unexpected error occurred: {e}\", file=sys.stderr)\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "replan_execute",
+            "timestamp": "2026-02-21_11-56-20",
+            "data": {
+                "attempt": 2,
+                "exec_msg": "2022 Fire Detections: 0\n2023 Fire Detections: 0\nC1\n",
+                "exec_stderr": "No nominal or high-confidence fire detections found in either year.\n",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_11-56-20",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "C1",
+                "need_replan": true,
+                "replan_reason": "Code self-reported C1 (empty collection) \u2014 try fallback sensor or wider date range.",
+                "replan_count": 2
+            }
+        },
+        {
+            "state": "replan",
+            "timestamp": "2026-02-21_11-56-39",
+            "data": {
+                "attempt": 3,
+                "diagnosis": "- Failed step: Step 2 & 4: [Acquire data and check collection size] and [Perform calculation]\n- Root cause: The code used the `FIRMS` collection, which is a near-real-time dataset containing only the last 7 days of data. When querying for historical years like 2022 and 2023, it found no images, leading to a count of 0 for both years. This is not a code error but a logical error in collection selection.\n- Fix strategy: Switch from the near-real-time `FIRMS` collection to an archival MODIS fire product, `MODIS/061/MCD14ML`. This collection is suitable for historical analysis. The calculation logic must also be updated. Instead of counting features in a `FeatureCollection` with `.size()`, we must:\n  1. Map over the `ImageCollection` to mask out low-confidence pixels (confidence < 80).\n  2. Create a single image representing the count of fire detections for the year.\n  3. Use `reduceRegion` with a `sum` reducer to count the total number of valid fire pixels within the ROI.",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine library\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Define geometry and time ranges\n# Define a single geometry covering both Sumatra and Borneo islands in Indonesia.\nroi = ee.Geometry.Polygon([[\n    [95.0, 6.0],   # NW corner (Sumatra)\n    [95.0, -6.5],  # SW corner (Sumatra)\n    [109.0, -6.5], # SE corner (near Borneo)\n    [119.5, -4.5], # S corner (Borneo)\n    [119.5, 7.5],  # NE corner (Borneo)\n    [109.0, 7.5],  # N corner (between islands)\n    [104.0, 6.0]   # Back to NW area\n]])\ndate_range_2022 = ee.DateRange('2022-01-01', '2022-12-31')\ndate_range_2023 = ee.DateRange('2023-01-01', '2023-12-31')\n\n# Step 2 & 4 (Corrected): Function to acquire data, filter, and return count\ndef get_fire_count(date_range, region):\n    \"\"\"\n    Gets the fire pixel count from the MODIS archival dataset for a given\n    date range and region, filtering for high confidence detections.\n    \"\"\"\n    # Use the archival MODIS fire collection, not the NRT FIRMS collection.\n    collection = ee.ImageCollection('MODIS/061/MCD14ML').filterDate(date_range).filterBounds(region)\n\n    # The collection is an ImageCollection, not a FeatureCollection.\n    # We need to process the pixels within the images.\n    # The 'MaxFRP' band contains the fire radiative power, and its presence\n    # indicates a fire pixel. The 'confidence' band gives the detection confidence.\n    \n    def mask_low_confidence(image):\n        # Create a mask where confidence is >= 80\n        confidence_mask = image.select('confidence').gte(80)\n        # Apply the mask to the MaxFRP band. This results in an image where\n        # only high-confidence fire pixels have a value.\n        return image.select('MaxFRP').updateMask(confidence_mask)\n\n    # Map the masking function over the collection.\n    high_conf_fires = collection.map(mask_low_confidence)\n\n    # Count the number of valid (high-confidence) fire pixels over the year.\n    fire_pixel_count_image = high_conf_fires.count()\n\n    # Sum the pixel counts over the entire region.\n    # Using a larger scale (e.g., 2000) to ensure the computation doesn't time out.\n    fire_count = fire_pixel_count_image.reduceRegion(\n        reducer=ee.Reducer.sum(),\n        geometry=region,\n        scale=2000, # Using a coarser scale to avoid timeout on large region.\n        maxPixels=1e10\n    )\n\n    # The result is a dictionary. Extract the count for the band ('MaxFRP_count').\n    return fire_count.get('MaxFRP_count')\n\n# Calculate counts for both years\ncount_2022 = get_fire_count(date_range_2022, roi)\ncount_2023 = get_fire_count(date_range_2023, roi)\n\n# Step 5: Validate results and determine the answer\ntry:\n    val_2022 = count_2022.getInfo()\n    val_2023 = count_2023.getInfo()\n\n    # Guard for calculation failure\n    if val_2022 is None or val_2023 is None:\n        print(\"Calculation failed: one or both results are None.\", file=sys.stderr)\n        print(\"C3\")\n        sys.exit()\n\n    print(f\"2022 High-Confidence Fire Pixels: {val_2022}\")\n    print(f\"2023 High-Confidence Fire Pixels: {val_2023}\")\n\n    # Guard for no valid pixels found\n    if val_2022 == 0 and val_2023 == 0:\n        print(\"No high-confidence fire pixels found in either year.\", file=sys.stderr)\n        print(\"C2\")\n    elif val_2023 > val_2022:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"An Earth Engine error occurred: {e}\", file=sys.stderr)\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An unexpected error occurred: {e}\", file=sys.stderr)\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "replan_execute",
+            "timestamp": "2026-02-21_11-56-41",
+            "data": {
+                "attempt": 3,
+                "exec_msg": "D\n",
+                "exec_stderr": "An Earth Engine error occurred: ImageCollection.load: ImageCollection asset 'MODIS/061/MCD14ML' not found (does not exist or caller does not have access).\n",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_11-56-41",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "D",
+                "need_replan": true,
+                "replan_reason": "Code self-reported a D (error) answer.",
+                "replan_count": 3
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_11-56-42",
+            "data": {
+                "raw_answer": "<answer>\nD\n</answer>",
+                "answer": "D",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_11-56-45",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "D",
+                "verified_answer": "D",
+                "confidence": "high",
+                "final_answer": "D",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "D",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 3,
+        "total_states": 16
+    }
+}

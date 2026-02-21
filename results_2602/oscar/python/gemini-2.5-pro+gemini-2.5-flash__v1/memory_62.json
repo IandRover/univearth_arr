@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "Were there more than 8 active fires in the Sakha Republic on August 6, 2020?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_18-12-54",
+        "url": "https://earthobservatory.nasa.gov/images/147083/another-intense-summer-of-fires-in-siberia",
+        "unique_id": 62
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_18-13-03",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MCD14ML\"\n- fallback_collection: \"NOAA/VIIRS/001/VNP14IMGML\"\n- date_range: \"2020-08-06 to 2020-08-07\"\n- region: \"Sakha Republic, Russia (requires filtering a FeatureCollection like FAO/GAUL/2015/level1)\"\n- bands: \"Not applicable; counting features (fire detection points) is the primary task.\"\n- risks: \"Cloud cover can obscure fires, leading to a potential undercount. The MODIS algorithm may have false positives, though this is generally low. A single large fire may be represented by multiple detection points.\"\n- needs_cloud_masking: \"no\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MCD14ML\"\n- fallback_collection: \"NOAA/VIIRS/001/VNP14IMGML\"\n- date_range: \"2020-08-06 to 2020-08-07\"\n- region: \"Sakha Republic, Russia (requires filtering a FeatureCollection like FAO/GAUL/2015/level1)\"\n- bands: \"Not applicable; counting features (fire detection points) is the primary task.\"\n- risks: \"Cloud cover can obscure fires, leading to a potential undercount. The MODIS algorithm may have false positives, though this is generally low. A single large fire may be represented by multiple detection points.\"\n- needs_cloud_masking: \"no\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_18-13-13",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define the date range from '2020-08-06' to '2020-08-07'. Load the FAO GAUL level 1 administrative boundaries ('FAO/GAUL/2015/level1'). Filter this collection to find the specific feature where the 'ADM1_NAME' property is 'Sakha (Yakutiya)'. Extract the geometry for this region.\n\nStep 2: [Acquire primary data and check collection size]\n  - Details: Load the primary fire detection collection 'MODIS/061/MCD14ML'. Filter it by the date range and the Sakha Republic geometry defined in Step 1. Calculate the size of the resulting filtered collection.\n  - Validation: If the collection size is 0, proceed to the fallback step. Otherwise, store the count and proceed to Step 4.\n\nStep 3: [Acquire fallback data (if necessary)]\n  - Details: This step is executed only if the primary collection size from Step 2 is 0. Load the fallback fire detection collection 'NOAA/VIIRS/001/VNP14IMGML'. Apply the same date and geometry filters as in Step 2.\n  - Validation: Calculate the size of the filtered fallback collection. If this size is also 0, determine the answer is C1 (Empty Collection). Otherwise, use this count for the final comparison.\n\nStep 4: [Perform comparison]\n  - Details: Compare the final fire count (from either Step 2 or Step 3) to the threshold value of 8. The question asks if the number of fires was \"more than 8\".\n\nStep 5: [Validate result and determine answer]\n  - Details: Based on the comparison in Step 4, determine the final answer. If the fire count is greater than 8, the answer is 'A: Yes'. If the fire count is 8 or less, the answer is 'B: No'. If both collections were empty, the answer is 'C1: Empty Collection'.\n  - Guard: Before comparison, ensure the calculated size is a valid number (not None).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define the date range from '2020-08-06' to '2020-08-07'. Load the FAO GAUL level 1 administrative boundaries ('FAO/GAUL/2015/level1'). Filter this collection to find the specific feature where the 'ADM1_NAME' property is 'Sakha (Yakutiya)'. Extract the geometry for this region.\n\nStep 2: [Acquire primary data and check collection size]\n  - Details: Load the primary fire detection collection 'MODIS/061/MCD14ML'. Filter it by the date range and the Sakha Republic geometry defined in Step 1. Calculate the size of the resulting filtered collection.\n  - Validation: If the collection size is 0, proceed to the fallback step. Otherwise, store the count and proceed to Step 4.\n\nStep 3: [Acquire fallback data (if necessary)]\n  - Details: This step is executed only if the primary collection size from Step 2 is 0. Load the fallback fire detection collection 'NOAA/VIIRS/001/VNP14IMGML'. Apply the same date and geometry filters as in Step 2.\n  - Validation: Calculate the size of the filtered fallback collection. If this size is also 0, determine the answer is C1 (Empty Collection). Otherwise, use this count for the final comparison.\n\nStep 4: [Perform comparison]\n  - Details: Compare the final fire count (from either Step 2 or Step 3) to the threshold value of 8. The question asks if the number of fires was \"more than 8\".\n\nStep 5: [Validate result and determine answer]\n  - Details: Based on the comparison in Step 4, determine the final answer. If the fire count is greater than 8, the answer is 'A: Yes'. If the fire count is 8 or less, the answer is 'B: No'. If both collections were empty, the answer is 'C1: Empty Collection'.\n  - Guard: Before comparison, ensure the calculated size is a valid number (not None)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_18-13-28",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    startDate = '2020-08-06'\n    endDate = '2020-08-07'\n    \n    # Use a reliable administrative boundary dataset instead of the deprecated FAO/GAUL.\n    # gadm41_RUS_1 is a good alternative for Russian administrative boundaries.\n    admin_boundaries = ee.FeatureCollection(\"FAO/GAUL_SIMPLIFIED_500m/2015/level1\")\n    sakha_republic = admin_boundaries.filter(ee.Filter.eq('ADM1_NAME', 'Sakha (Yakutiya)')).first()\n    \n    # Check if the geometry was found\n    if not sakha_republic.getInfo():\n        print(\"Error: Sakha Republic geometry not found in the dataset.\")\n        print(\"D\")\n        sys.exit()\n        \n    geometry = sakha_republic.geometry()\n\n    # Step 2: Acquire primary data and check collection size\n    modis_collection = ee.ImageCollection('MODIS/061/MCD14ML') \\\n                         .filterDate(startDate, endDate) \\\n                         .filterBounds(geometry)\n\n    modis_count = modis_collection.size().getInfo()\n    print(f\"MODIS fire count: {modis_count}\")\n\n    final_count = modis_count\n\n    # Step 3: Acquire fallback data (if necessary)\n    if modis_count == 0:\n        print(\"MODIS collection empty, trying VIIRS as fallback.\")\n        viirs_collection = ee.ImageCollection('NOAA/VIIRS/001/VNP14IMGML') \\\n                             .filterDate(startDate, endDate) \\\n                             .filterBounds(geometry)\n        \n        viirs_count = viirs_collection.size().getInfo()\n        print(f\"VIIRS fire count: {viirs_count}\")\n        final_count = viirs_count\n        \n        if viirs_count == 0:\n            print(\"Both primary and fallback collections are empty.\")\n            print(\"C1\")\n            sys.exit()\n\n    # Step 4 & 5: Perform comparison, validate result, and determine answer\n    threshold = 8\n    \n    if final_count is None:\n        print(\"Calculation failed, count is None.\")\n        print(\"C3\")\n    elif final_count > threshold:\n        print(f\"Final count ({final_count}) is more than {threshold}.\")\n        print(\"A\")\n    else:\n        print(f\"Final count ({final_count}) is not more than {threshold}.\")\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"An Earth Engine error occurred: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An unexpected error occurred: {e}\")\n    print(\"D\")\n```",
+                "code": "import ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    startDate = '2020-08-06'\n    endDate = '2020-08-07'\n    \n    # Use a reliable administrative boundary dataset instead of the deprecated FAO/GAUL.\n    # gadm41_RUS_1 is a good alternative for Russian administrative boundaries.\n    admin_boundaries = ee.FeatureCollection(\"FAO/GAUL_SIMPLIFIED_500m/2015/level1\")\n    sakha_republic = admin_boundaries.filter(ee.Filter.eq('ADM1_NAME', 'Sakha (Yakutiya)')).first()\n    \n    # Check if the geometry was found\n    if not sakha_republic.getInfo():\n        print(\"Error: Sakha Republic geometry not found in the dataset.\")\n        print(\"D\")\n        sys.exit()\n        \n    geometry = sakha_republic.geometry()\n\n    # Step 2: Acquire primary data and check collection size\n    modis_collection = ee.ImageCollection('MODIS/061/MCD14ML') \\\n                         .filterDate(startDate, endDate) \\\n                         .filterBounds(geometry)\n\n    modis_count = modis_collection.size().getInfo()\n    print(f\"MODIS fire count: {modis_count}\")\n\n    final_count = modis_count\n\n    # Step 3: Acquire fallback data (if necessary)\n    if modis_count == 0:\n        print(\"MODIS collection empty, trying VIIRS as fallback.\")\n        viirs_collection = ee.ImageCollection('NOAA/VIIRS/001/VNP14IMGML') \\\n                             .filterDate(startDate, endDate) \\\n                             .filterBounds(geometry)\n        \n        viirs_count = viirs_collection.size().getInfo()\n        print(f\"VIIRS fire count: {viirs_count}\")\n        final_count = viirs_count\n        \n        if viirs_count == 0:\n            print(\"Both primary and fallback collections are empty.\")\n            print(\"C1\")\n            sys.exit()\n\n    # Step 4 & 5: Perform comparison, validate result, and determine answer\n    threshold = 8\n    \n    if final_count is None:\n        print(\"Calculation failed, count is None.\")\n        print(\"C3\")\n    elif final_count > threshold:\n        print(f\"Final count ({final_count}) is more than {threshold}.\")\n        print(\"A\")\n    else:\n        print(f\"Final count ({final_count}) is not more than {threshold}.\")\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"An Earth Engine error occurred: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An unexpected error occurred: {e}\")\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_18-13-32",
+            "data": {
+                "exec_msg": "Error: Sakha Republic geometry not found in the dataset.\nD\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_18-13-32",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_18-13-34",
+            "data": {
+                "raw_answer": "<answer>\nD\n</answer>",
+                "answer": "D",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_18-13-38",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "D",
+                "verified_answer": "D",
+                "confidence": "high",
+                "final_answer": "D",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "D",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

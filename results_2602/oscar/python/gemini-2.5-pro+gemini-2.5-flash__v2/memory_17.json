@@ -1,0 +1,89 @@
+{
+    "metadata": {
+        "question": "Was there an active fire present in Monte Pisano in Northern Italy between February 24, 2019 and February 26, 2019?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_11-21-04",
+        "url": "https://earthobservatory.nasa.gov/images/144589/fire-burns-in-northern-italy",
+        "unique_id": 17
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_11-21-13",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MOD14A1\"\n- fallback_collection: \"NOAA/VIIRS/001/VNP14A1\"\n- date_range: \"2019-02-24 to 2019-02-27\"\n- region: \"Named location: Monte Pisano, Northern Italy (approx. 43.79\u00b0N, 10.51\u00b0E)\"\n- bands: \"FireMask\"\n- risks: \"MODIS has a coarse spatial resolution (1km), which might not pinpoint the exact location of a small fire. Clouds or heavy smoke can obscure the sensor's view, leading to false negatives.\"\n- needs_cloud_masking: \"no\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MOD14A1\"\n- fallback_collection: \"NOAA/VIIRS/001/VNP14A1\"\n- date_range: \"2019-02-24 to 2019-02-27\"\n- region: \"Named location: Monte Pisano, Northern Italy (approx. 43.79\u00b0N, 10.51\u00b0E)\"\n- bands: \"FireMask\"\n- risks: \"MODIS has a coarse spatial resolution (1km), which might not pinpoint the exact location of a small fire. Clouds or heavy smoke can obscure the sensor's view, leading to false negatives.\"\n- needs_cloud_masking: \"no\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_11-21-26",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details:\n    - Define the Area of Interest (AOI) as a point geometry for Monte Pisano, Italy using coordinates: `ee.Geometry.Point([10.51, 43.79])`.\n    - Define the time range for the query: from `'2019-02-24'` to `'2019-02-27'`.\n\nStep 2: [Acquire primary data and check collection size]\n  - Details:\n    - Load the primary Image Collection: `MODIS/061/MOD14A1`.\n    - Filter the collection by the defined date range and AOI.\n    - Select the `'FireMask'` band.\n  - Validation:\n    - Check the size of the filtered collection.\n    - If the size is 0, proceed to the Fallback step. Otherwise, proceed to Step 3 with this collection.\n\nStep 3: [Acquire fallback data and check collection size]\n  - Fallback:\n    - This step is executed only if the primary collection from Step 2 is empty.\n    - Load the fallback Image Collection: `NOAA/VIIRS/001/VNP14A1`.\n    - Filter by the same date range and AOI.\n    - Select the `'Mask'` band, which is the equivalent of MODIS's `FireMask`.\n  - Validation:\n    - Check the size of the fallback collection.\n    - If the size is 0, conclude with answer category C1 (Empty Collection). Otherwise, proceed to Step 4.\n\nStep 4: [Perform calculation]\n  - Details:\n    - Create a single composite image from the valid collection (either primary or fallback) by taking the maximum value of the mask band over the time period. This ensures the highest confidence fire pixel is captured. `collection.select('...Mask').max()`.\n    - Create a binary mask where pixels are 1 if they represent any type of fire (values 7, 8, or 9) and 0 otherwise. Use `image.gte(7).And(image.lte(9))`.\n    - Sum the pixels in this binary mask over the AOI using `reduceRegion` with a `ee.Reducer.sum()` and a scale appropriate for the sensor (1000m for MODIS/VIIRS). This counts the number of active fire pixels.\n\nStep 5: [Validate result and determine answer]\n  - Details:\n    - Extract the pixel count value from the dictionary returned by `reduceRegion`.\n  - Guard:\n    - Check if the result is `None` or not a valid number. If so, conclude with answer category C3 (Calculation Failure).\n  - Decision Logic:\n    - If the fire pixel count is greater than 0, the answer is A (Yes).\n    - If the fire pixel count is exactly 0, the answer is B (No).\n    - If the fire pixel count is 0 *and* we reached this step, it means images existed but contained no fire pixels, which is distinct from having no valid pixels at all (C2). Given the nature of a single point query on a fire mask, B is the more direct answer in this case. C2 would be more relevant if an area was queried and all pixels were masked out by clouds prior to the fire check.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details:\n    - Define the Area of Interest (AOI) as a point geometry for Monte Pisano, Italy using coordinates: `ee.Geometry.Point([10.51, 43.79])`.\n    - Define the time range for the query: from `'2019-02-24'` to `'2019-02-27'`.\n\nStep 2: [Acquire primary data and check collection size]\n  - Details:\n    - Load the primary Image Collection: `MODIS/061/MOD14A1`.\n    - Filter the collection by the defined date range and AOI.\n    - Select the `'FireMask'` band.\n  - Validation:\n    - Check the size of the filtered collection.\n    - If the size is 0, proceed to the Fallback step. Otherwise, proceed to Step 3 with this collection.\n\nStep 3: [Acquire fallback data and check collection size]\n  - Fallback:\n    - This step is executed only if the primary collection from Step 2 is empty.\n    - Load the fallback Image Collection: `NOAA/VIIRS/001/VNP14A1`.\n    - Filter by the same date range and AOI.\n    - Select the `'Mask'` band, which is the equivalent of MODIS's `FireMask`.\n  - Validation:\n    - Check the size of the fallback collection.\n    - If the size is 0, conclude with answer category C1 (Empty Collection). Otherwise, proceed to Step 4.\n\nStep 4: [Perform calculation]\n  - Details:\n    - Create a single composite image from the valid collection (either primary or fallback) by taking the maximum value of the mask band over the time period. This ensures the highest confidence fire pixel is captured. `collection.select('...Mask').max()`.\n    - Create a binary mask where pixels are 1 if they represent any type of fire (values 7, 8, or 9) and 0 otherwise. Use `image.gte(7).And(image.lte(9))`.\n    - Sum the pixels in this binary mask over the AOI using `reduceRegion` with a `ee.Reducer.sum()` and a scale appropriate for the sensor (1000m for MODIS/VIIRS). This counts the number of active fire pixels.\n\nStep 5: [Validate result and determine answer]\n  - Details:\n    - Extract the pixel count value from the dictionary returned by `reduceRegion`.\n  - Guard:\n    - Check if the result is `None` or not a valid number. If so, conclude with answer category C3 (Calculation Failure).\n  - Decision Logic:\n    - If the fire pixel count is greater than 0, the answer is A (Yes).\n    - If the fire pixel count is exactly 0, the answer is B (No).\n    - If the fire pixel count is 0 *and* we reached this step, it means images existed but contained no fire pixels, which is distinct from having no valid pixels at all (C2). Given the nature of a single point query on a fire mask, B is the more direct answer in this case. C2 would be more relevant if an area was queried and all pixels were masked out by clouds prior to the fire check."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_11-21-40",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\naoi = ee.Geometry.Point([10.51, 43.79])\nstart_date = '2019-02-24'\nend_date = '2019-02-27' # GEE's date range is exclusive of the end date\n\n# Step 2: Acquire primary data and check collection size\nmodis_collection = ee.ImageCollection('MODIS/061/MOD14A1') \\\n    .filterBounds(aoi) \\\n    .filterDate(start_date, end_date)\n\nmodis_size = modis_collection.size().getInfo()\nprint(f\"MODIS images found: {modis_size}\")\n\nfire_collection = None\nfire_band_name = None\n\nif modis_size > 0:\n    fire_collection = modis_collection\n    fire_band_name = 'FireMask'\nelse:\n    # Step 3: Acquire fallback data and check collection size\n    print(\"MODIS collection empty, trying VIIRS fallback.\")\n    viirs_collection = ee.ImageCollection('NOAA/VIIRS/001/VNP14A1') \\\n        .filterBounds(aoi) \\\n        .filterDate(start_date, end_date)\n    viirs_size = viirs_collection.size().getInfo()\n    print(f\"VIIRS images found: {viirs_size}\")\n    if viirs_size > 0:\n        fire_collection = viirs_collection\n        fire_band_name = 'Mask' # VIIRS equivalent of FireMask\n    else:\n        print(\"C1\")\n        sys.exit()\n\n# Step 4: Perform calculation\n# Composite the collection to a single image representing the max fire value.\nmax_fire_image = fire_collection.select(fire_band_name).max()\n\n# Create a binary mask for active fire pixels (values 7, 8, 9).\n# 7=low-confidence fire, 8=nominal-confidence fire, 9=high-confidence fire.\nfire_mask = max_fire_image.gte(7).And(max_fire_image.lte(9))\n\n# Sum the fire pixels in the AOI. Buffer the point to ensure it covers a pixel.\nfire_pixel_count = fire_mask.reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=aoi.buffer(500), # Buffer by half the pixel size\n    scale=1000,\n    maxPixels=1e9\n)\n\n# Step 5: Validate result and determine answer\nfire_count_value = fire_pixel_count.get(fire_band_name).getInfo()\nprint(f\"Fire pixel count: {fire_count_value}\")\n\nif fire_count_value is None:\n    print(\"C3\")\nelif fire_count_value > 0:\n    print(\"A\")\nelse:\n    print(\"B\")\n```",
+                "code": "import ee\nimport sys\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\naoi = ee.Geometry.Point([10.51, 43.79])\nstart_date = '2019-02-24'\nend_date = '2019-02-27' # GEE's date range is exclusive of the end date\n\n# Step 2: Acquire primary data and check collection size\nmodis_collection = ee.ImageCollection('MODIS/061/MOD14A1') \\\n    .filterBounds(aoi) \\\n    .filterDate(start_date, end_date)\n\nmodis_size = modis_collection.size().getInfo()\nprint(f\"MODIS images found: {modis_size}\")\n\nfire_collection = None\nfire_band_name = None\n\nif modis_size > 0:\n    fire_collection = modis_collection\n    fire_band_name = 'FireMask'\nelse:\n    # Step 3: Acquire fallback data and check collection size\n    print(\"MODIS collection empty, trying VIIRS fallback.\")\n    viirs_collection = ee.ImageCollection('NOAA/VIIRS/001/VNP14A1') \\\n        .filterBounds(aoi) \\\n        .filterDate(start_date, end_date)\n    viirs_size = viirs_collection.size().getInfo()\n    print(f\"VIIRS images found: {viirs_size}\")\n    if viirs_size > 0:\n        fire_collection = viirs_collection\n        fire_band_name = 'Mask' # VIIRS equivalent of FireMask\n    else:\n        print(\"C1\")\n        sys.exit()\n\n# Step 4: Perform calculation\n# Composite the collection to a single image representing the max fire value.\nmax_fire_image = fire_collection.select(fire_band_name).max()\n\n# Create a binary mask for active fire pixels (values 7, 8, 9).\n# 7=low-confidence fire, 8=nominal-confidence fire, 9=high-confidence fire.\nfire_mask = max_fire_image.gte(7).And(max_fire_image.lte(9))\n\n# Sum the fire pixels in the AOI. Buffer the point to ensure it covers a pixel.\nfire_pixel_count = fire_mask.reduceRegion(\n    reducer=ee.Reducer.sum(),\n    geometry=aoi.buffer(500), # Buffer by half the pixel size\n    scale=1000,\n    maxPixels=1e9\n)\n\n# Step 5: Validate result and determine answer\nfire_count_value = fire_pixel_count.get(fire_band_name).getInfo()\nprint(f\"Fire pixel count: {fire_count_value}\")\n\nif fire_count_value is None:\n    print(\"C3\")\nelif fire_count_value > 0:\n    print(\"A\")\nelse:\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_11-21-42",
+            "data": {
+                "exec_msg": "MODIS images found: 3\nFire pixel count: 0\nB\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_11-21-42",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "B",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_11-21-43",
+            "data": {
+                "raw_answer": "<answer>\nB\n</answer>",
+                "answer": "B",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_11-21-46",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "B",
+                "verified_answer": "B",
+                "confidence": "high",
+                "final_answer": "B",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "B",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

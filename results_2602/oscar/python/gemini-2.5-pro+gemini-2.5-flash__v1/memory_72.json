@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "Was the mean NDSI for Mount Fuji lower in December 2020 than December 2019?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_17-37-19",
+        "url": "https://earthobservatory.nasa.gov/images/147780/mount-fujis-missing-snow",
+        "unique_id": 72
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_17-37-28",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"LANDSAT/LC08/C02/T1_L2\"\n- fallback_collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- date_range: \"2019-12-01 to 2019-12-31\" and \"2020-12-01 to 2020-12-31\"\n- region: \"Mount Fuji, centered around ee.Geometry.Point([138.73, 35.36])\"\n- bands: \"SR_B3 (Green), SR_B6 (SWIR1) for NDSI calculation. QA_PIXEL for cloud masking.\"\n- risks: \"Winter months can have persistent cloud cover, which may limit the number of clear observations. Mountainous terrain introduces topographic shadows that can be misclassified as water or low-reflectance surfaces, potentially affecting NDSI values.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"LANDSAT/LC08/C02/T1_L2\"\n- fallback_collection: \"COPERNICUS/S2_SR_HARMONIZED\"\n- date_range: \"2019-12-01 to 2019-12-31\" and \"2020-12-01 to 2020-12-31\"\n- region: \"Mount Fuji, centered around ee.Geometry.Point([138.73, 35.36])\"\n- bands: \"SR_B3 (Green), SR_B6 (SWIR1) for NDSI calculation. QA_PIXEL for cloud masking.\"\n- risks: \"Winter months can have persistent cloud cover, which may limit the number of clear observations. Mountainous terrain introduces topographic shadows that can be misclassified as water or low-reflectance surfaces, potentially affecting NDSI values.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_17-37-40",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define an `ee.Geometry.Point` for Mount Fuji at `[138.73, 35.36]`. Create a 5km buffer around this point to define the area of interest (AOI). Define two date ranges: `2019-12-01` to `2019-12-31` (period 1) and `2020-12-01` to `2020-12-31` (period 2).\n\nStep 2: [Acquire data and check collection size]\n  - Details: For each period, filter the `LANDSAT/LC08/C02/T1_L2` collection by the AOI and the date range.\n  - Validation: For each filtered collection, check if its size is greater than zero using `size().getInfo()`. If either collection size is 0, exit and report Answer `C1: Empty Collection`.\n\nStep 3: [Apply cloud masking and calculate NDSI]\n  - Details: Create a function to mask clouds and shadows using the `QA_PIXEL` band (bits 3 and 4). Create a second function that uses this mask and then calculates the Normalized Difference Snow Index (NDSI) as `(SR_B3 - SR_B6) / (SR_B3 + SR_B6)`. Map these functions over both the 2019 and 2020 image collections to create two new collections of masked, NDSI images.\n\nStep 4: [Perform calculation]\n  - Details: For each of the two NDSI collections, create a single mean composite image. Use `reduceRegion` with an `ee.Reducer.mean()` to calculate the mean NDSI value over the AOI for each composite image.\n  - Validation: For each `reduceRegion` result, check if the number of pixels used in the reduction is greater than zero. If not, it means no valid pixels were found after masking for that period. Exit and report Answer `C2: No Valid Pixels`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Extract the mean NDSI values for 2019 and 2020 from the `reduceRegion` dictionaries.\n  - Guard: Check if either extracted NDSI value is `None` or `NaN`. If so, exit and report Answer `C3: Calculation Failure`. Also check if the values are within the valid NDSI range [-1, 1].\n  - Details: Compare the 2020 mean NDSI value to the 2019 mean NDSI value. If `ndsi_2020 < ndsi_2019`, the answer is `A: Yes`. Otherwise, the answer is `B: No`. Print the two values and the final conclusion.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define an `ee.Geometry.Point` for Mount Fuji at `[138.73, 35.36]`. Create a 5km buffer around this point to define the area of interest (AOI). Define two date ranges: `2019-12-01` to `2019-12-31` (period 1) and `2020-12-01` to `2020-12-31` (period 2).\n\nStep 2: [Acquire data and check collection size]\n  - Details: For each period, filter the `LANDSAT/LC08/C02/T1_L2` collection by the AOI and the date range.\n  - Validation: For each filtered collection, check if its size is greater than zero using `size().getInfo()`. If either collection size is 0, exit and report Answer `C1: Empty Collection`.\n\nStep 3: [Apply cloud masking and calculate NDSI]\n  - Details: Create a function to mask clouds and shadows using the `QA_PIXEL` band (bits 3 and 4). Create a second function that uses this mask and then calculates the Normalized Difference Snow Index (NDSI) as `(SR_B3 - SR_B6) / (SR_B3 + SR_B6)`. Map these functions over both the 2019 and 2020 image collections to create two new collections of masked, NDSI images.\n\nStep 4: [Perform calculation]\n  - Details: For each of the two NDSI collections, create a single mean composite image. Use `reduceRegion` with an `ee.Reducer.mean()` to calculate the mean NDSI value over the AOI for each composite image.\n  - Validation: For each `reduceRegion` result, check if the number of pixels used in the reduction is greater than zero. If not, it means no valid pixels were found after masking for that period. Exit and report Answer `C2: No Valid Pixels`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Extract the mean NDSI values for 2019 and 2020 from the `reduceRegion` dictionaries.\n  - Guard: Check if either extracted NDSI value is `None` or `NaN`. If so, exit and report Answer `C3: Calculation Failure`. Also check if the values are within the valid NDSI range [-1, 1].\n  - Details: Compare the 2020 mean NDSI value to the 2019 mean NDSI value. If `ndsi_2020 < ndsi_2019`, the answer is `A: Yes`. Otherwise, the answer is `B: No`. Print the two values and the final conclusion."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_17-37-57",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport ee.mapclient\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\npoint = ee.Geometry.Point([138.73, 35.36])\naoi = point.buffer(5000)\ndate_range_2019 = ee.DateRange('2019-12-01', '2019-12-31')\ndate_range_2020 = ee.DateRange('2020-12-01', '2020-12-31')\nCOLLECTION = 'LANDSAT/LC08/C02/T1_L2'\n\n# Step 2: Acquire data and check collection size\ncollection_2019 = ee.ImageCollection(COLLECTION).filterBounds(aoi).filterDate(date_range_2019)\ncollection_2020 = ee.ImageCollection(COLLECTION).filterBounds(aoi).filterDate(date_range_2020)\n\nsize_2019 = collection_2019.size().getInfo()\nsize_2020 = collection_2020.size().getInfo()\n\nif size_2019 == 0 or size_2020 == 0:\n    print(f\"Image count 2019: {size_2019}\")\n    print(f\"Image count 2020: {size_2020}\")\n    print(\"C1\")\nelse:\n    # Step 3: Apply cloud masking and calculate NDSI\n    def mask_and_ndsi(image):\n        # Bits 3 (Cloud Shadow) and 4 (Cloud) are the bits to mask.\n        cloud_shadow_bit_mask = (1 << 3)\n        clouds_bit_mask = (1 << 4)\n        qa = image.select('QA_PIXEL')\n        mask = qa.bitwiseAnd(cloud_shadow_bit_mask).eq(0).And(qa.bitwiseAnd(clouds_bit_mask).eq(0))\n        \n        # Apply scaling factors before calculation\n        optical_bands = image.select('SR_B.').multiply(0.0000275).add(-0.2)\n        \n        # Calculate NDSI: (Green - SWIR1) / (Green + SWIR1) -> (B3 - B6) / (B3 + B6)\n        ndsi = optical_bands.normalizedDifference(['SR_B3', 'SR_B6']).rename('NDSI')\n        return ndsi.updateMask(mask)\n\n    ndsi_collection_2019 = collection_2019.map(mask_and_ndsi)\n    ndsi_collection_2020 = collection_2020.map(mask_and_ndsi)\n\n    # Step 4: Perform calculation\n    mean_ndsi_image_2019 = ndsi_collection_2019.mean()\n    mean_ndsi_image_2020 = ndsi_collection_2020.mean()\n\n    # Use a reducer that calculates both mean and count\n    reducer = ee.Reducer.mean().combine(reducer2=ee.Reducer.count(), sharedInputs=True)\n\n    stats_2019 = mean_ndsi_image_2019.reduceRegion(reducer=reducer, geometry=aoi, scale=1000, maxPixels=1e9)\n    stats_2020 = mean_ndsi_image_2020.reduceRegion(reducer=reducer, geometry=aoi, scale=1000, maxPixels=1e9)\n    \n    # Extract results\n    result_2019 = stats_2019.getInfo()\n    result_2020 = stats_2020.getInfo()\n\n    ndsi_2019 = result_2019.get('NDSI_mean')\n    pixels_2019 = result_2019.get('NDSI_count', 0)\n    \n    ndsi_2020 = result_2020.get('NDSI_mean')\n    pixels_2020 = result_2020.get('NDSI_count', 0)\n\n    print(f\"2019: Images={size_2019}, NDSI={ndsi_2019:.3f} ({pixels_2019} pixels)\")\n    print(f\"2020: Images={size_2020}, NDSI={ndsi_2020:.3f} ({pixels_2020} pixels)\")\n\n    # Step 5: Validate result and determine answer\n    if pixels_2019 == 0 or pixels_2020 == 0:\n        print(\"C2\")\n    elif ndsi_2019 is None or ndsi_2020 is None:\n        print(\"C3\")\n    elif not (-1 <= ndsi_2019 <= 1 and -1 <= ndsi_2020 <= 1):\n        print(\"C3\")\n    else:\n        if ndsi_2020 < ndsi_2019:\n            print(\"A\")\n        else:\n            print(\"B\")\n```",
+                "code": "import ee\nimport ee.mapclient\n\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\npoint = ee.Geometry.Point([138.73, 35.36])\naoi = point.buffer(5000)\ndate_range_2019 = ee.DateRange('2019-12-01', '2019-12-31')\ndate_range_2020 = ee.DateRange('2020-12-01', '2020-12-31')\nCOLLECTION = 'LANDSAT/LC08/C02/T1_L2'\n\n# Step 2: Acquire data and check collection size\ncollection_2019 = ee.ImageCollection(COLLECTION).filterBounds(aoi).filterDate(date_range_2019)\ncollection_2020 = ee.ImageCollection(COLLECTION).filterBounds(aoi).filterDate(date_range_2020)\n\nsize_2019 = collection_2019.size().getInfo()\nsize_2020 = collection_2020.size().getInfo()\n\nif size_2019 == 0 or size_2020 == 0:\n    print(f\"Image count 2019: {size_2019}\")\n    print(f\"Image count 2020: {size_2020}\")\n    print(\"C1\")\nelse:\n    # Step 3: Apply cloud masking and calculate NDSI\n    def mask_and_ndsi(image):\n        # Bits 3 (Cloud Shadow) and 4 (Cloud) are the bits to mask.\n        cloud_shadow_bit_mask = (1 << 3)\n        clouds_bit_mask = (1 << 4)\n        qa = image.select('QA_PIXEL')\n        mask = qa.bitwiseAnd(cloud_shadow_bit_mask).eq(0).And(qa.bitwiseAnd(clouds_bit_mask).eq(0))\n        \n        # Apply scaling factors before calculation\n        optical_bands = image.select('SR_B.').multiply(0.0000275).add(-0.2)\n        \n        # Calculate NDSI: (Green - SWIR1) / (Green + SWIR1) -> (B3 - B6) / (B3 + B6)\n        ndsi = optical_bands.normalizedDifference(['SR_B3', 'SR_B6']).rename('NDSI')\n        return ndsi.updateMask(mask)\n\n    ndsi_collection_2019 = collection_2019.map(mask_and_ndsi)\n    ndsi_collection_2020 = collection_2020.map(mask_and_ndsi)\n\n    # Step 4: Perform calculation\n    mean_ndsi_image_2019 = ndsi_collection_2019.mean()\n    mean_ndsi_image_2020 = ndsi_collection_2020.mean()\n\n    # Use a reducer that calculates both mean and count\n    reducer = ee.Reducer.mean().combine(reducer2=ee.Reducer.count(), sharedInputs=True)\n\n    stats_2019 = mean_ndsi_image_2019.reduceRegion(reducer=reducer, geometry=aoi, scale=1000, maxPixels=1e9)\n    stats_2020 = mean_ndsi_image_2020.reduceRegion(reducer=reducer, geometry=aoi, scale=1000, maxPixels=1e9)\n    \n    # Extract results\n    result_2019 = stats_2019.getInfo()\n    result_2020 = stats_2020.getInfo()\n\n    ndsi_2019 = result_2019.get('NDSI_mean')\n    pixels_2019 = result_2019.get('NDSI_count', 0)\n    \n    ndsi_2020 = result_2020.get('NDSI_mean')\n    pixels_2020 = result_2020.get('NDSI_count', 0)\n\n    print(f\"2019: Images={size_2019}, NDSI={ndsi_2019:.3f} ({pixels_2019} pixels)\")\n    print(f\"2020: Images={size_2020}, NDSI={ndsi_2020:.3f} ({pixels_2020} pixels)\")\n\n    # Step 5: Validate result and determine answer\n    if pixels_2019 == 0 or pixels_2020 == 0:\n        print(\"C2\")\n    elif ndsi_2019 is None or ndsi_2020 is None:\n        print(\"C3\")\n    elif not (-1 <= ndsi_2019 <= 1 and -1 <= ndsi_2020 <= 1):\n        print(\"C3\")\n    else:\n        if ndsi_2020 < ndsi_2019:\n            print(\"A\")\n        else:\n            print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_17-37-59",
+            "data": {
+                "exec_msg": "2019: Images=2, NDSI=-0.219 (106 pixels)\n2020: Images=2, NDSI=-0.404 (71 pixels)\nA\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_17-37-59",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_17-38-01",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_17-38-06",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

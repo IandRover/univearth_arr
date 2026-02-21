@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "Did Cambodia have more active fire detections than Vietnam between August 2016 and February 2018?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_19-00-29",
+        "url": "https://earthobservatory.nasa.gov/images/91771/its-fire-season-in-southeast-asia",
+        "unique_id": 327
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_19-00-41",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MCD14ML\"\n- fallback_collection: \"VIIRS/VNP14IMGML\"\n- date_range: \"2016-08-01 to 2018-03-01\"\n- region: \"Country boundaries for Cambodia and Vietnam (e.g., from FAO GAUL 2015 dataset)\"\n- bands: \"Not applicable (this is a feature collection of fire detection points). The analysis requires counting features.\"\n- risks: \"Active fire detection is obscured by heavy cloud cover, which is common in Southeast Asia, leading to potential undercounting of fires in both countries. The result is a count of fire pixels, not total area burned.\"\n- needs_cloud_masking: \"no\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MCD14ML\"\n- fallback_collection: \"VIIRS/VNP14IMGML\"\n- date_range: \"2016-08-01 to 2018-03-01\"\n- region: \"Country boundaries for Cambodia and Vietnam (e.g., from FAO GAUL 2015 dataset)\"\n- bands: \"Not applicable (this is a feature collection of fire detection points). The analysis requires counting features.\"\n- risks: \"Active fire detection is obscured by heavy cloud cover, which is common in Southeast Asia, leading to potential undercounting of fires in both countries. The result is a count of fire pixels, not total area burned.\"\n- needs_cloud_masking: \"no\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_19-00-51",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define the start date as '2016-08-01' and the end date as '2018-03-01'. Load the FAO GAUL 2015 level 0 administrative boundaries ('FAO/GAUL/2015/level0'). Filter this collection to get the specific geometry for Cambodia by selecting where 'ADM0_NAME' is 'Cambodia'. Do the same for Vietnam, selecting where 'ADM0_NAME' is 'Viet Nam'.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Access the primary FeatureCollection 'MODIS/061/MCD14ML'. Filter this collection by the date range defined in Step 1.\n  - Fallback: No fallback is necessary for this particular plan since the goal is to directly count features from a single, globally available collection. If 'MODIS/061/MCD14ML' were unavailable, the plan would need to be re-written to use 'VIIRS/VNP14IMGML'.\n\nStep 3: [Apply spatial filtering and get counts]\n  - Details: Create two separate sub-collections from the date-filtered data. The first sub-collection will contain points that intersect with the Cambodia geometry. The second will contain points intersecting the Vietnam geometry. Calculate the size of each sub-collection to get the total fire detection count for each country.\n\nStep 4: [Perform calculation and validation]\n  - Details: Compare the Cambodia fire count directly with the Vietnam fire count.\n  - Validation: After retrieving the counts, verify that both are greater than zero. If either count is zero, the answer will be C1 (Empty Collection), as no fires were detected in that country for the given period.\n\nStep 5: [Validate result and determine answer]\n  - Details: Based on the comparison in Step 4, determine the final answer.\n    - If the Cambodia count is greater than the Vietnam count, the answer is A (Yes).\n    - If the Cambodia count is less than or equal to the Vietnam count, the answer is B (No).\n    - If either count is zero, the answer is C1 (Empty Collection).\n  - Guard: Check if the size() operation returns a null or non-integer result for either country. If so, classify the result as C3 (Calculation Failure).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define the start date as '2016-08-01' and the end date as '2018-03-01'. Load the FAO GAUL 2015 level 0 administrative boundaries ('FAO/GAUL/2015/level0'). Filter this collection to get the specific geometry for Cambodia by selecting where 'ADM0_NAME' is 'Cambodia'. Do the same for Vietnam, selecting where 'ADM0_NAME' is 'Viet Nam'.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Access the primary FeatureCollection 'MODIS/061/MCD14ML'. Filter this collection by the date range defined in Step 1.\n  - Fallback: No fallback is necessary for this particular plan since the goal is to directly count features from a single, globally available collection. If 'MODIS/061/MCD14ML' were unavailable, the plan would need to be re-written to use 'VIIRS/VNP14IMGML'.\n\nStep 3: [Apply spatial filtering and get counts]\n  - Details: Create two separate sub-collections from the date-filtered data. The first sub-collection will contain points that intersect with the Cambodia geometry. The second will contain points intersecting the Vietnam geometry. Calculate the size of each sub-collection to get the total fire detection count for each country.\n\nStep 4: [Perform calculation and validation]\n  - Details: Compare the Cambodia fire count directly with the Vietnam fire count.\n  - Validation: After retrieving the counts, verify that both are greater than zero. If either count is zero, the answer will be C1 (Empty Collection), as no fires were detected in that country for the given period.\n\nStep 5: [Validate result and determine answer]\n  - Details: Based on the comparison in Step 4, determine the final answer.\n    - If the Cambodia count is greater than the Vietnam count, the answer is A (Yes).\n    - If the Cambodia count is less than or equal to the Vietnam count, the answer is B (No).\n    - If either count is zero, the answer is C1 (Empty Collection).\n  - Guard: Check if the size() operation returns a null or non-integer result for either country. If so, classify the result as C3 (Calculation Failure)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_19-01-02",
+            "data": {
+                "raw_code": "```python\nimport ee\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\nstart_date = '2016-08-01'\nend_date = '2018-03-01'\n\n# Load administrative boundaries and get geometries\ncountries = ee.FeatureCollection('FAO/GAUL/2015/level0')\ncambodia_geom = countries.filter(ee.Filter.eq('ADM0_NAME', 'Cambodia')).first().geometry()\nvietnam_geom = countries.filter(ee.Filter.eq('ADM0_NAME', 'Viet Nam')).first().geometry()\n\n# Step 2: Acquire data\nfire_collection = ee.FeatureCollection('MODIS/061/MCD14ML').filterDate(start_date, end_date)\n\n# Step 3: Apply spatial filtering\ncambodia_fires = fire_collection.filterBounds(cambodia_geom)\nvietnam_fires = fire_collection.filterBounds(vietnam_geom)\n\n# Step 4: Get counts and validate\ntry:\n    cambodia_count = cambodia_fires.size().getInfo()\n    vietnam_count = vietnam_fires.size().getInfo()\n\n    print(f\"Cambodia fire detections: {cambodia_count}\")\n    print(f\"Vietnam fire detections: {vietnam_count}\")\n\n    # Step 5: Validate result and determine answer\n    if cambodia_count is None or vietnam_count is None:\n        print(\"C3\")\n    elif cambodia_count == 0 or vietnam_count == 0:\n        print(\"C1\")\n    elif cambodia_count > vietnam_count:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept Exception as e:\n    print(f\"An error occurred: {e}\")\n    print(\"D\")\n```",
+                "code": "import ee\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\nstart_date = '2016-08-01'\nend_date = '2018-03-01'\n\n# Load administrative boundaries and get geometries\ncountries = ee.FeatureCollection('FAO/GAUL/2015/level0')\ncambodia_geom = countries.filter(ee.Filter.eq('ADM0_NAME', 'Cambodia')).first().geometry()\nvietnam_geom = countries.filter(ee.Filter.eq('ADM0_NAME', 'Viet Nam')).first().geometry()\n\n# Step 2: Acquire data\nfire_collection = ee.FeatureCollection('MODIS/061/MCD14ML').filterDate(start_date, end_date)\n\n# Step 3: Apply spatial filtering\ncambodia_fires = fire_collection.filterBounds(cambodia_geom)\nvietnam_fires = fire_collection.filterBounds(vietnam_geom)\n\n# Step 4: Get counts and validate\ntry:\n    cambodia_count = cambodia_fires.size().getInfo()\n    vietnam_count = vietnam_fires.size().getInfo()\n\n    print(f\"Cambodia fire detections: {cambodia_count}\")\n    print(f\"Vietnam fire detections: {vietnam_count}\")\n\n    # Step 5: Validate result and determine answer\n    if cambodia_count is None or vietnam_count is None:\n        print(\"C3\")\n    elif cambodia_count == 0 or vietnam_count == 0:\n        print(\"C1\")\n    elif cambodia_count > vietnam_count:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept Exception as e:\n    print(f\"An error occurred: {e}\")\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_19-01-04",
+            "data": {
+                "exec_msg": "An error occurred: Collection.loadTable: Collection asset 'MODIS/061/MCD14ML' not found.\nD\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_19-01-04",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_19-01-06",
+            "data": {
+                "raw_answer": "<answer>\nD\n</answer>",
+                "answer": "D",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_19-01-09",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "D",
+                "verified_answer": "D",
+                "confidence": "high",
+                "final_answer": "D",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "D",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

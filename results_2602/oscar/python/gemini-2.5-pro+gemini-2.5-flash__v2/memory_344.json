@@ -1,0 +1,89 @@
+{
+    "metadata": {
+        "question": "Does the NDVI in northern Afghanistan decrease during June-August 2018 compared to the June-August average of 2000-2013?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_11-52-22",
+        "url": "https://earthobservatory.nasa.gov/images/92851/early-warnings-for-crop-failures",
+        "unique_id": 344
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_11-52-33",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MOD13Q1\"\n- fallback_collection: \"LANDSAT/LT05/C02/T1_L2, LANDSAT/LE07/C02/T1_L2, LANDSAT/LC08/C02/T1_L2\"\n- date_range: \"Baseline: 2000-06-01 to 2013-08-31; Comparison: 2018-06-01 to 2018-08-31\"\n- region: \"Northern Afghanistan (requires specific geometry definition, e.g., a bounding box like [60, 34, 72, 38])\"\n- bands: \"'NDVI' band from MOD13Q1\"\n- risks: \"Using Landsat as a fallback would require harmonizing data from three different sensors (L5, L7, L8) and dealing with the Landsat 7 SLC-off issue post-2003. MODIS avoids this but has a coarser spatial resolution (250m).\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MOD13Q1\"\n- fallback_collection: \"LANDSAT/LT05/C02/T1_L2, LANDSAT/LE07/C02/T1_L2, LANDSAT/LC08/C02/T1_L2\"\n- date_range: \"Baseline: 2000-06-01 to 2013-08-31; Comparison: 2018-06-01 to 2018-08-31\"\n- region: \"Northern Afghanistan (requires specific geometry definition, e.g., a bounding box like [60, 34, 72, 38])\"\n- bands: \"'NDVI' band from MOD13Q1\"\n- risks: \"Using Landsat as a fallback would require harmonizing data from three different sensors (L5, L7, L8) and dealing with the Landsat 7 SLC-off issue post-2003. MODIS avoids this but has a coarser spatial resolution (250m).\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_11-52-45",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details:\n    - Define an `ee.Geometry.Rectangle` for Northern Afghanistan using coordinates [60, 34, 72, 38].\n    - Define the baseline date range: '2000-06-01' to '2013-08-31'.\n    - Define the comparison date range: '2018-06-01' to '2018-08-31'.\n    - Define the months of interest for the seasonal average: June, July, August (list [6, 7, 8]).\n\nStep 2: [Acquire data and check collection size]\n  - Details:\n    - Load the primary Image Collection: `MODIS/061/MOD13Q1`.\n    - Create a 'baseline_collection' by filtering the primary collection by the baseline date range, the geometry, and the months of interest.\n    - Create a 'comparison_collection' by filtering for the comparison date range, geometry, and months.\n  - Validation:\n    - Get the `.size()` of both collections. If either size is 0, stop and report Answer C1: Empty Collection.\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details:\n    - Define a cloud masking function that uses the 'SummaryQA' band. Keep only the best quality pixels (where 'VI usefulness' bits 2-5 are '0000' or '0001').\n    - Apply this mask to both the baseline and comparison collections. Select the 'NDVI' band.\n    - Create a single mean composite image for each collection (`baseline_image` and `comparison_image`).\n  - Validation:\n    - Check the number of valid (unmasked) pixels in each composite image within the region. Use `reduceRegion` with a `.count()` reducer. If either count is 0, stop and report Answer C2: No Valid Pixels.\n\nStep 4: [Perform calculation]\n  - Details:\n    - Calculate the mean NDVI for the baseline period by applying `reduceRegion` with an `ee.Reducer.mean()` to the `baseline_image` over the defined geometry. Use a scale of 250 meters.\n    - Calculate the mean NDVI for the comparison period similarly using the `comparison_image`.\n    - Extract the numeric NDVI values from the resulting dictionaries for both periods.\n\nStep 5: [Validate result and determine answer]\n  - Details:\n    - Compare the extracted numeric values: `comparison_ndvi < baseline_ndvi`.\n    - If the comparison NDVI is lower, the answer is A: Yes.\n    - Otherwise, the answer is B: No.\n  - Guard:\n    - Before comparison, check if either calculated NDVI value is None or not a number (NaN). If so, report Answer C3: Calculation Failure.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details:\n    - Define an `ee.Geometry.Rectangle` for Northern Afghanistan using coordinates [60, 34, 72, 38].\n    - Define the baseline date range: '2000-06-01' to '2013-08-31'.\n    - Define the comparison date range: '2018-06-01' to '2018-08-31'.\n    - Define the months of interest for the seasonal average: June, July, August (list [6, 7, 8]).\n\nStep 2: [Acquire data and check collection size]\n  - Details:\n    - Load the primary Image Collection: `MODIS/061/MOD13Q1`.\n    - Create a 'baseline_collection' by filtering the primary collection by the baseline date range, the geometry, and the months of interest.\n    - Create a 'comparison_collection' by filtering for the comparison date range, geometry, and months.\n  - Validation:\n    - Get the `.size()` of both collections. If either size is 0, stop and report Answer C1: Empty Collection.\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details:\n    - Define a cloud masking function that uses the 'SummaryQA' band. Keep only the best quality pixels (where 'VI usefulness' bits 2-5 are '0000' or '0001').\n    - Apply this mask to both the baseline and comparison collections. Select the 'NDVI' band.\n    - Create a single mean composite image for each collection (`baseline_image` and `comparison_image`).\n  - Validation:\n    - Check the number of valid (unmasked) pixels in each composite image within the region. Use `reduceRegion` with a `.count()` reducer. If either count is 0, stop and report Answer C2: No Valid Pixels.\n\nStep 4: [Perform calculation]\n  - Details:\n    - Calculate the mean NDVI for the baseline period by applying `reduceRegion` with an `ee.Reducer.mean()` to the `baseline_image` over the defined geometry. Use a scale of 250 meters.\n    - Calculate the mean NDVI for the comparison period similarly using the `comparison_image`.\n    - Extract the numeric NDVI values from the resulting dictionaries for both periods.\n\nStep 5: [Validate result and determine answer]\n  - Details:\n    - Compare the extracted numeric values: `comparison_ndvi < baseline_ndvi`.\n    - If the comparison NDVI is lower, the answer is A: Yes.\n    - Otherwise, the answer is B: No.\n  - Guard:\n    - Before comparison, check if either calculated NDVI value is None or not a number (NaN). If so, report Answer C3: Calculation Failure."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_11-53-00",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    geom = ee.Geometry.Rectangle([60, 34, 72, 38])\n    baseline_date_range = ('2000-06-01', '2013-08-31')\n    comparison_date_range = ('2018-06-01', '2018-08-31')\n    months_of_interest = [6, 7, 8]\n\n    # Step 2: Acquire data and check collection size\n    modis_collection = ee.ImageCollection('MODIS/061/MOD13Q1')\n\n    baseline_collection = modis_collection.filterBounds(geom).filterDate(\n        *baseline_date_range).filter(ee.Filter.calendarRange(months_of_interest[0], months_of_interest[-1], 'month'))\n    comparison_collection = modis_collection.filterBounds(geom).filterDate(\n        *comparison_date_range).filter(ee.Filter.calendarRange(months_of_interest[0], months_of_interest[-1], 'month'))\n\n    baseline_size = baseline_collection.size().getInfo()\n    comparison_size = comparison_collection.size().getInfo()\n\n    print(f\"Baseline images found: {baseline_size}\")\n    print(f\"Comparison images found: {comparison_size}\")\n\n    if baseline_size == 0 or comparison_size == 0:\n        print(\"C1\")\n        sys.exit()\n\n    # Step 3: Apply cloud masking and check valid pixels\n    def mask_modis_qa(image):\n        qa_band = image.select('SummaryQA')\n        # Bits 0-1: VI Quality. 00 = Good data. We mask out all other values.\n        good_quality_mask = qa_band.bitwiseAnd(3).eq(0)\n        # Scale factor for NDVI is 0.0001\n        return image.select('NDVI').multiply(0.0001).updateMask(good_quality_mask)\n\n    masked_baseline_collection = baseline_collection.map(mask_modis_qa)\n    masked_comparison_collection = comparison_collection.map(mask_modis_qa)\n\n    baseline_image = masked_baseline_collection.mean()\n    comparison_image = masked_comparison_collection.mean()\n\n    # Validation: Check pixel counts\n    scale_check = 3000\n    baseline_pixel_count = baseline_image.reduceRegion(reducer=ee.Reducer.count(), geometry=geom, scale=scale_check, maxPixels=1e9).get('NDVI').getInfo()\n    comparison_pixel_count = comparison_image.reduceRegion(reducer=ee.Reducer.count(), geometry=geom, scale=scale_check, maxPixels=1e9).get('NDVI').getInfo()\n\n    print(f\"Baseline valid pixels: {baseline_pixel_count}\")\n    print(f\"Comparison valid pixels: {comparison_pixel_count}\")\n\n    if baseline_pixel_count == 0 or comparison_pixel_count == 0:\n        print(\"C2\")\n        sys.exit()\n\n    # Step 4: Perform calculation\n    scale_calc = 250\n    baseline_stats = baseline_image.reduceRegion(reducer=ee.Reducer.mean(), geometry=geom, scale=scale_calc, maxPixels=1e9)\n    comparison_stats = comparison_image.reduceRegion(reducer=ee.Reducer.mean(), geometry=geom, scale=scale_calc, maxPixels=1e9)\n\n    baseline_ndvi = baseline_stats.get('NDVI').getInfo()\n    comparison_ndvi = comparison_stats.get('NDVI').getInfo()\n\n    print(f\"Baseline Mean NDVI (2000-2013): {baseline_ndvi:.4f}\" if baseline_ndvi is not None else \"Baseline Mean NDVI (2000-2013): None\")\n    print(f\"Comparison Mean NDVI (2018): {comparison_ndvi:.4f}\" if comparison_ndvi is not None else \"Comparison Mean NDVI (2018): None\")\n\n    # Step 5: Validate result and determine answer\n    if baseline_ndvi is None or comparison_ndvi is None:\n        print(\"C3\")\n        sys.exit()\n\n    if comparison_ndvi < baseline_ndvi:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\", file=sys.stderr)\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An error occurred: {e}\", file=sys.stderr)\n    print(\"D\")\n```",
+                "code": "import ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    geom = ee.Geometry.Rectangle([60, 34, 72, 38])\n    baseline_date_range = ('2000-06-01', '2013-08-31')\n    comparison_date_range = ('2018-06-01', '2018-08-31')\n    months_of_interest = [6, 7, 8]\n\n    # Step 2: Acquire data and check collection size\n    modis_collection = ee.ImageCollection('MODIS/061/MOD13Q1')\n\n    baseline_collection = modis_collection.filterBounds(geom).filterDate(\n        *baseline_date_range).filter(ee.Filter.calendarRange(months_of_interest[0], months_of_interest[-1], 'month'))\n    comparison_collection = modis_collection.filterBounds(geom).filterDate(\n        *comparison_date_range).filter(ee.Filter.calendarRange(months_of_interest[0], months_of_interest[-1], 'month'))\n\n    baseline_size = baseline_collection.size().getInfo()\n    comparison_size = comparison_collection.size().getInfo()\n\n    print(f\"Baseline images found: {baseline_size}\")\n    print(f\"Comparison images found: {comparison_size}\")\n\n    if baseline_size == 0 or comparison_size == 0:\n        print(\"C1\")\n        sys.exit()\n\n    # Step 3: Apply cloud masking and check valid pixels\n    def mask_modis_qa(image):\n        qa_band = image.select('SummaryQA')\n        # Bits 0-1: VI Quality. 00 = Good data. We mask out all other values.\n        good_quality_mask = qa_band.bitwiseAnd(3).eq(0)\n        # Scale factor for NDVI is 0.0001\n        return image.select('NDVI').multiply(0.0001).updateMask(good_quality_mask)\n\n    masked_baseline_collection = baseline_collection.map(mask_modis_qa)\n    masked_comparison_collection = comparison_collection.map(mask_modis_qa)\n\n    baseline_image = masked_baseline_collection.mean()\n    comparison_image = masked_comparison_collection.mean()\n\n    # Validation: Check pixel counts\n    scale_check = 3000\n    baseline_pixel_count = baseline_image.reduceRegion(reducer=ee.Reducer.count(), geometry=geom, scale=scale_check, maxPixels=1e9).get('NDVI').getInfo()\n    comparison_pixel_count = comparison_image.reduceRegion(reducer=ee.Reducer.count(), geometry=geom, scale=scale_check, maxPixels=1e9).get('NDVI').getInfo()\n\n    print(f\"Baseline valid pixels: {baseline_pixel_count}\")\n    print(f\"Comparison valid pixels: {comparison_pixel_count}\")\n\n    if baseline_pixel_count == 0 or comparison_pixel_count == 0:\n        print(\"C2\")\n        sys.exit()\n\n    # Step 4: Perform calculation\n    scale_calc = 250\n    baseline_stats = baseline_image.reduceRegion(reducer=ee.Reducer.mean(), geometry=geom, scale=scale_calc, maxPixels=1e9)\n    comparison_stats = comparison_image.reduceRegion(reducer=ee.Reducer.mean(), geometry=geom, scale=scale_calc, maxPixels=1e9)\n\n    baseline_ndvi = baseline_stats.get('NDVI').getInfo()\n    comparison_ndvi = comparison_stats.get('NDVI').getInfo()\n\n    print(f\"Baseline Mean NDVI (2000-2013): {baseline_ndvi:.4f}\" if baseline_ndvi is not None else \"Baseline Mean NDVI (2000-2013): None\")\n    print(f\"Comparison Mean NDVI (2018): {comparison_ndvi:.4f}\" if comparison_ndvi is not None else \"Comparison Mean NDVI (2018): None\")\n\n    # Step 5: Validate result and determine answer\n    if baseline_ndvi is None or comparison_ndvi is None:\n        print(\"C3\")\n        sys.exit()\n\n    if comparison_ndvi < baseline_ndvi:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\", file=sys.stderr)\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An error occurred: {e}\", file=sys.stderr)\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_11-54-16",
+            "data": {
+                "exec_msg": "Baseline images found: 84\nComparison images found: 6\nBaseline valid pixels: 65647\nComparison valid pixels: 65274\nBaseline Mean NDVI (2000-2013): 0.1784\nComparison Mean NDVI (2018): 0.1661\nA\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_11-54-16",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "A",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_11-54-17",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_11-54-22",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: False\nDetails:\n  [FAIL] ndvi: 2000.0 (expected (-1.0, 1.0), source: 'NDVI (2000')\n  [FAIL] ndvi: 2018.0 (expected (-1.0, 1.0), source: 'NDVI (2018')",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

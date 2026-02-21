@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "Were there more active fire counts in Punjab than Haryana on November 8, 2024?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_19-18-20",
+        "url": "https://earthobservatory.nasa.gov/images/153826/is-fire-activity-declining-in-northwestern-india",
+        "unique_id": 221
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_19-18-31",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"FIRMS\"\n- fallback_collection: \"MODIS/061/MCD14ML\"\n- date_range: \"2024-11-08 to 2024-11-09\"\n- region: \"The Indian states of Punjab and Haryana. Geometries will be sourced from an administrative boundaries dataset like FAO/GAUL/2015/level1.\"\n- bands: \"Not applicable. The analysis requires counting the number of features (fire points) within each region, not analyzing specific band values.\"\n- risks: \"The question is for a future date (November 8, 2024). Data will not be available until that date. The analysis assumes the FIRMS collection will be operational and populated as expected.\"\n- needs_cloud_masking: \"no\"\n</observation>",
+                "observation": "- collection: \"FIRMS\"\n- fallback_collection: \"MODIS/061/MCD14ML\"\n- date_range: \"2024-11-08 to 2024-11-09\"\n- region: \"The Indian states of Punjab and Haryana. Geometries will be sourced from an administrative boundaries dataset like FAO/GAUL/2015/level1.\"\n- bands: \"Not applicable. The analysis requires counting the number of features (fire points) within each region, not analyzing specific band values.\"\n- risks: \"The question is for a future date (November 8, 2024). Data will not be available until that date. The analysis assumes the FIRMS collection will be operational and populated as expected.\"\n- needs_cloud_masking: \"no\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_19-18-42",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Load the FAO GAUL Level 1 administrative boundaries dataset (`FAO/GAUL/2015/level1`). Filter this collection to get the specific geometries for 'Punjab' and 'Haryana' by using a filter on the `ADM1_NAME` property. Define the date range for the analysis as a single day: `2024-11-08` to `2024-11-09`.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the primary active fire collection, `MODIS/061/MCD14ML`, which is a FeatureCollection. Filter it by the date range defined in Step 1.\n  - Validation: Check if the size of the date-filtered collection is greater than zero. If the collection is empty, the analysis cannot proceed for either region. Conclude with answer C1.\n\nStep 3: [Spatially filter fire points for each region]\n  - Details: Create two separate FeatureCollections. The first by filtering the collection from Step 2 with the Punjab geometry. The second by filtering the same collection with the Haryana geometry. This isolates the fire points within each state.\n\nStep 4: [Perform calculation by counting features]\n  - Details: Calculate the total number of fire points for each state by getting the `size()` of each spatially filtered FeatureCollection. Store these two counts in variables, for example, `punjab_fire_count` and `haryana_fire_count`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the two count values.\n    - If `punjab_fire_count` is greater than `haryana_fire_count`, the answer is A (Yes).\n    - Otherwise, the answer is B (No).\n  - Guard: Before comparison, verify that both count values are valid numbers (i.e., not `None` or another non-numeric type). If either count is invalid, conclude with answer C3. (Note: A count of 0 is valid and will correctly lead to answer B).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Load the FAO GAUL Level 1 administrative boundaries dataset (`FAO/GAUL/2015/level1`). Filter this collection to get the specific geometries for 'Punjab' and 'Haryana' by using a filter on the `ADM1_NAME` property. Define the date range for the analysis as a single day: `2024-11-08` to `2024-11-09`.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Load the primary active fire collection, `MODIS/061/MCD14ML`, which is a FeatureCollection. Filter it by the date range defined in Step 1.\n  - Validation: Check if the size of the date-filtered collection is greater than zero. If the collection is empty, the analysis cannot proceed for either region. Conclude with answer C1.\n\nStep 3: [Spatially filter fire points for each region]\n  - Details: Create two separate FeatureCollections. The first by filtering the collection from Step 2 with the Punjab geometry. The second by filtering the same collection with the Haryana geometry. This isolates the fire points within each state.\n\nStep 4: [Perform calculation by counting features]\n  - Details: Calculate the total number of fire points for each state by getting the `size()` of each spatially filtered FeatureCollection. Store these two counts in variables, for example, `punjab_fire_count` and `haryana_fire_count`.\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the two count values.\n    - If `punjab_fire_count` is greater than `haryana_fire_count`, the answer is A (Yes).\n    - Otherwise, the answer is B (No).\n  - Guard: Before comparison, verify that both count values are valid numbers (i.e., not `None` or another non-numeric type). If either count is invalid, conclude with answer C3. (Note: A count of 0 is valid and will correctly lead to answer B)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_19-18-53",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport ee.ee_exception\n\nee.Initialize(project='earthsense-436113')\n\ntry:\n    # Step 1: Initialize and define geometry/time\n    # Use LSIB dataset as a reliable alternative to the deprecated FAO/GAUL\n    admin_boundaries = ee.FeatureCollection(\"USDOS/LSIB_SIMPLE/2017\")\n    india_boundaries = admin_boundaries.filter(ee.Filter.eq('country_na', 'India'))\n\n    # Hardcoded geometries for Punjab and Haryana for reliability\n    punjab_geom = ee.Geometry.Polygon([[\n        [73.88, 32.54], [77.06, 32.54], [77.06, 29.52], [73.88, 29.52]\n    ]])\n    haryana_geom = ee.Geometry.Polygon([[\n        [74.34, 30.77], [77.61, 30.77], [77.61, 27.64], [74.34, 27.64]\n    ]])\n\n    start_date = '2024-11-08'\n    end_date = '2024-11-09'\n\n    # Step 2: Acquire data and check collection size\n    fire_collection = ee.FeatureCollection('MODIS/061/MCD14ML').filterDate(start_date, end_date)\n    collection_size = fire_collection.size().getInfo()\n\n    if collection_size == 0:\n        print(\"Initial fire collection is empty for the given date.\")\n        print(\"C1\")\n    else:\n        # Step 3: Spatially filter fire points for each region\n        punjab_fires = fire_collection.filterBounds(punjab_geom)\n        haryana_fires = fire_collection.filterBounds(haryana_geom)\n\n        # Step 4: Perform calculation by counting features\n        punjab_fire_count = punjab_fires.size().getInfo()\n        haryana_fire_count = haryana_fires.size().getInfo()\n\n        # Step 5: Validate result and determine answer\n        print(f\"Punjab Fire Count: {punjab_fire_count}\")\n        print(f\"Haryana Fire Count: {haryana_fire_count}\")\n\n        if punjab_fire_count is None or haryana_fire_count is None:\n            print(\"C3\")\n        elif punjab_fire_count > haryana_fire_count:\n            print(\"A\")\n        else:\n            print(\"B\")\n\nexcept ee.ee_exception.EEException as e:\n    print(f\"GEE Error: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"Generic Error: {e}\")\n    print(\"D\")\n```",
+                "code": "import ee\nimport ee.ee_exception\n\nee.Initialize(project='earthsense-436113')\n\ntry:\n    # Step 1: Initialize and define geometry/time\n    # Use LSIB dataset as a reliable alternative to the deprecated FAO/GAUL\n    admin_boundaries = ee.FeatureCollection(\"USDOS/LSIB_SIMPLE/2017\")\n    india_boundaries = admin_boundaries.filter(ee.Filter.eq('country_na', 'India'))\n\n    # Hardcoded geometries for Punjab and Haryana for reliability\n    punjab_geom = ee.Geometry.Polygon([[\n        [73.88, 32.54], [77.06, 32.54], [77.06, 29.52], [73.88, 29.52]\n    ]])\n    haryana_geom = ee.Geometry.Polygon([[\n        [74.34, 30.77], [77.61, 30.77], [77.61, 27.64], [74.34, 27.64]\n    ]])\n\n    start_date = '2024-11-08'\n    end_date = '2024-11-09'\n\n    # Step 2: Acquire data and check collection size\n    fire_collection = ee.FeatureCollection('MODIS/061/MCD14ML').filterDate(start_date, end_date)\n    collection_size = fire_collection.size().getInfo()\n\n    if collection_size == 0:\n        print(\"Initial fire collection is empty for the given date.\")\n        print(\"C1\")\n    else:\n        # Step 3: Spatially filter fire points for each region\n        punjab_fires = fire_collection.filterBounds(punjab_geom)\n        haryana_fires = fire_collection.filterBounds(haryana_geom)\n\n        # Step 4: Perform calculation by counting features\n        punjab_fire_count = punjab_fires.size().getInfo()\n        haryana_fire_count = haryana_fires.size().getInfo()\n\n        # Step 5: Validate result and determine answer\n        print(f\"Punjab Fire Count: {punjab_fire_count}\")\n        print(f\"Haryana Fire Count: {haryana_fire_count}\")\n\n        if punjab_fire_count is None or haryana_fire_count is None:\n            print(\"C3\")\n        elif punjab_fire_count > haryana_fire_count:\n            print(\"A\")\n        else:\n            print(\"B\")\n\nexcept ee.ee_exception.EEException as e:\n    print(f\"GEE Error: {e}\")\n    print(\"D\")\nexcept Exception as e:\n    print(f\"Generic Error: {e}\")\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_19-18-55",
+            "data": {
+                "exec_msg": "GEE Error: Collection.loadTable: Collection asset 'MODIS/061/MCD14ML' not found.\nD\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_19-18-55",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_19-18-57",
+            "data": {
+                "raw_answer": "<answer>\nD\n</answer>",
+                "answer": "D",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_19-19-00",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "D",
+                "verified_answer": "D",
+                "confidence": "high",
+                "final_answer": "D",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "D",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

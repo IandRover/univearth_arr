@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "question": "Was there more smoke on January 1, 2020 in the coastal regions of Victoria and New South Wales, Australia compared to July 24, 2019?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v1",
+        "timestamp": "2026-02-20_18-25-09",
+        "url": "https://earthobservatory.nasa.gov/images/146096/thick-smoke-blankets-southeastern-australia",
+        "unique_id": 38
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-20_18-25-19",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"MODIS/061/MOD09GA\"\n- fallback_collection: \"MODIS/061/MYD09GA\"\n- date_range: \"Two specific dates: 2020-01-01 and 2019-07-24\"\n- region: \"Coastal regions of Victoria and New South Wales, Australia. A bounding box covering the southeastern coast is appropriate, e.g., ee.Geometry.BBox(140.9, -39.2, 154.0, -33.5)\"\n- bands: \"For true-color visualization: 'sur_refl_b01' (Red), 'sur_refl_b04' (Green), 'sur_refl_b03' (Blue). For smoke/aerosol analysis: 'sur_refl_b02' (NIR), 'state_1km' (for quality/cloud).\"\n- risks: \"MODIS has a moderate resolution (500m), so fine-scale features will not be visible. The primary risk is cloud cover on the specific dates, which could obscure the smoke or be confused with it.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"MODIS/061/MOD09GA\"\n- fallback_collection: \"MODIS/061/MYD09GA\"\n- date_range: \"Two specific dates: 2020-01-01 and 2019-07-24\"\n- region: \"Coastal regions of Victoria and New South Wales, Australia. A bounding box covering the southeastern coast is appropriate, e.g., ee.Geometry.BBox(140.9, -39.2, 154.0, -33.5)\"\n- bands: \"For true-color visualization: 'sur_refl_b01' (Red), 'sur_refl_b04' (Green), 'sur_refl_b03' (Blue). For smoke/aerosol analysis: 'sur_refl_b02' (NIR), 'state_1km' (for quality/cloud).\"\n- risks: \"MODIS has a moderate resolution (500m), so fine-scale features will not be visible. The primary risk is cloud cover on the specific dates, which could obscure the smoke or be confused with it.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-20_18-25-33",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define the area of interest (AOI) as a bounding box for coastal Southeast Australia: `ee.Geometry.BBox(140.9, -39.2, 154.0, -33.5)`. Define the two dates for comparison: `date1 = '2020-01-01'` and `date2 = '2019-07-24'`. Specify the primary collection ID as `'MODIS/061/MOD09GA'` and the fallback as `'MODIS/061/MYD09GA'`. Identify the red band `'sur_refl_b01'` as the proxy for smoke/haze level.\n\nStep 2: [Acquire data and check collection size]\n  - Details: For each date, create a one-day date range (e.g., `'2020-01-01'` to `'2020-01-02'`). Filter the primary collection `'MODIS/061/MOD09GA'` by date and AOI.\n  - Validation: Check if the resulting collection size for each date is greater than zero.\n  - Fallback: If a collection for a given date is empty, repeat the filter using the fallback collection `'MODIS/061/MYD09GA'`. If the fallback is also empty, the process cannot continue for that date.\n  - Guard: If after checking primary and fallback sources, no images are found for either `date1` or `date2`, classify the result as `C1: Empty Collection` and stop.\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details: For each date's image collection, create a mosaic. Define a cloud masking function using the `'state_1km'` band to remove pixels identified as cloud or cloud shadow. Apply this mask to each mosaic.\n  - Validation: After masking, use `reduceRegion` to count the number of valid (unmasked) pixels for the `'sur_refl_b01'` band within the AOI for each date's mosaic.\n  - Guard: If the valid pixel count for either mosaic is zero, classify the result as `C2: No Valid Pixels` and stop.\n\nStep 4: [Perform calculation]\n  - Details: For each cloud-masked mosaic, calculate the mean value of the `'sur_refl_b01'` band within the AOI. This will serve as the smoke/haze index for that day. Use `ee.Reducer.mean()` with a scale appropriate for MODIS (e.g., 500 meters).\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the mean reflectance value from `date1` (Jan 1, 2020) with the value from `date2` (Jul 24, 2019). If the `date1` value is greater than the `date2` value, the answer is \"Yes\". Otherwise, the answer is \"No\".\n  - Guard: Before comparison, check if either calculated mean value is `None` or `NaN`. If so, classify the result as `C3: Calculation Failure`. If the mean reflectance for Jan 1, 2020 is higher, classify as `A: Yes`. If not, classify as `B: No`.\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define the area of interest (AOI) as a bounding box for coastal Southeast Australia: `ee.Geometry.BBox(140.9, -39.2, 154.0, -33.5)`. Define the two dates for comparison: `date1 = '2020-01-01'` and `date2 = '2019-07-24'`. Specify the primary collection ID as `'MODIS/061/MOD09GA'` and the fallback as `'MODIS/061/MYD09GA'`. Identify the red band `'sur_refl_b01'` as the proxy for smoke/haze level.\n\nStep 2: [Acquire data and check collection size]\n  - Details: For each date, create a one-day date range (e.g., `'2020-01-01'` to `'2020-01-02'`). Filter the primary collection `'MODIS/061/MOD09GA'` by date and AOI.\n  - Validation: Check if the resulting collection size for each date is greater than zero.\n  - Fallback: If a collection for a given date is empty, repeat the filter using the fallback collection `'MODIS/061/MYD09GA'`. If the fallback is also empty, the process cannot continue for that date.\n  - Guard: If after checking primary and fallback sources, no images are found for either `date1` or `date2`, classify the result as `C1: Empty Collection` and stop.\n\nStep 3: [Apply cloud masking and check valid pixels]\n  - Details: For each date's image collection, create a mosaic. Define a cloud masking function using the `'state_1km'` band to remove pixels identified as cloud or cloud shadow. Apply this mask to each mosaic.\n  - Validation: After masking, use `reduceRegion` to count the number of valid (unmasked) pixels for the `'sur_refl_b01'` band within the AOI for each date's mosaic.\n  - Guard: If the valid pixel count for either mosaic is zero, classify the result as `C2: No Valid Pixels` and stop.\n\nStep 4: [Perform calculation]\n  - Details: For each cloud-masked mosaic, calculate the mean value of the `'sur_refl_b01'` band within the AOI. This will serve as the smoke/haze index for that day. Use `ee.Reducer.mean()` with a scale appropriate for MODIS (e.g., 500 meters).\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare the mean reflectance value from `date1` (Jan 1, 2020) with the value from `date2` (Jul 24, 2019). If the `date1` value is greater than the `date2` value, the answer is \"Yes\". Otherwise, the answer is \"No\".\n  - Guard: Before comparison, check if either calculated mean value is `None` or `NaN`. If so, classify the result as `C3: Calculation Failure`. If the mean reflectance for Jan 1, 2020 is higher, classify as `A: Yes`. If not, classify as `B: No`."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-20_18-25-48",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    aoi = ee.Geometry.BBox(140.9, -39.2, 154.0, -33.5)\n    date1 = '2020-01-01'\n    date2 = '2019-07-24'\n    primary_collection_id = 'MODIS/061/MOD09GA'\n    fallback_collection_id = 'MODIS/061/MYD09GA'\n    band = 'sur_refl_b01'\n\n    # Step 2: Acquire data and check collection size\n    def get_image_collection(date_str):\n        start_date = ee.Date(date_str)\n        end_date = start_date.advance(1, 'day')\n        \n        # Try primary collection\n        collection = ee.ImageCollection(primary_collection_id) \\\n            .filterDate(start_date, end_date) \\\n            .filterBounds(aoi)\n        \n        # If primary is empty, try fallback\n        size = collection.size().getInfo()\n        if size == 0:\n            collection = ee.ImageCollection(fallback_collection_id) \\\n                .filterDate(start_date, end_date) \\\n                .filterBounds(aoi)\n        return collection\n\n    collection1 = get_image_collection(date1)\n    collection2 = get_image_collection(date2)\n\n    size1 = collection1.size().getInfo()\n    size2 = collection2.size().getInfo()\n\n    if size1 == 0 or size2 == 0:\n        print(f\"Images {date1}: {size1}\")\n        print(f\"Images {date2}: {size2}\")\n        print(\"C1\")\n        sys.exit()\n\n    # Step 3: Apply cloud masking and check valid pixels\n    # Mosaic collections into single images\n    image1 = collection1.mosaic().clip(aoi)\n    image2 = collection2.mosaic().clip(aoi)\n    \n    def mask_clouds(image):\n        qa = image.select('state_1km')\n        # Bits 0 (cloud) and 1 (cloud shadow) should be 0\n        cloud_mask = qa.bitwiseAnd(1).eq(0)\n        cloud_shadow_mask = qa.bitwiseAnd(2).eq(0)\n        # Apply mask\n        return image.updateMask(cloud_mask.And(cloud_shadow_mask))\n\n    masked_image1 = mask_clouds(image1)\n    masked_image2 = mask_clouds(image2)\n    \n    # Validation: Count valid pixels\n    count_reducer = ee.Reducer.count()\n    scale = 1000  # Use a coarser scale for checks to avoid timeouts\n\n    pixel_count1 = masked_image1.select(band).reduceRegion(\n        reducer=count_reducer, geometry=aoi, scale=scale, maxPixels=1e9\n    ).get(band).getInfo()\n    \n    pixel_count2 = masked_image2.select(band).reduceRegion(\n        reducer=count_reducer, geometry=aoi, scale=scale, maxPixels=1e9\n    ).get(band).getInfo()\n\n    if pixel_count1 == 0 or pixel_count2 == 0:\n        print(f\"Valid pixels {date1}: {pixel_count1}\")\n        print(f\"Valid pixels {date2}: {pixel_count2}\")\n        print(\"C2\")\n        sys.exit()\n\n    # Step 4: Perform calculation\n    mean_reducer = ee.Reducer.mean()\n    mean_val1_dict = masked_image1.select(band).reduceRegion(\n        reducer=mean_reducer, geometry=aoi, scale=scale, maxPixels=1e9\n    )\n    mean_val2_dict = masked_image2.select(band).reduceRegion(\n        reducer=mean_reducer, geometry=aoi, scale=scale, maxPixels=1e9\n    )\n\n    mean_val1 = mean_val1_dict.get(band).getInfo()\n    mean_val2 = mean_val2_dict.get(band).getInfo()\n    \n    # Step 5: Validate result and determine answer\n    if mean_val1 is None or mean_val2 is None:\n        print(f\"Mean reflectance {date1}: {mean_val1}\")\n        print(f\"Mean reflectance {date2}: {mean_val2}\")\n        print(\"C3\")\n        sys.exit()\n\n    print(f\"Mean reflectance {date1} (smoke proxy): {mean_val1:.4f}\")\n    print(f\"Mean reflectance {date2} (smoke proxy): {mean_val2:.4f}\")\n\n    if mean_val1 > mean_val2:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\", file=sys.stderr)\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An unexpected error occurred: {e}\", file=sys.stderr)\n    print(\"D\")\n```",
+                "code": "import ee\nimport sys\n\ntry:\n    ee.Initialize(project='earthsense-436113')\n\n    # Step 1: Initialize and define geometry/time\n    aoi = ee.Geometry.BBox(140.9, -39.2, 154.0, -33.5)\n    date1 = '2020-01-01'\n    date2 = '2019-07-24'\n    primary_collection_id = 'MODIS/061/MOD09GA'\n    fallback_collection_id = 'MODIS/061/MYD09GA'\n    band = 'sur_refl_b01'\n\n    # Step 2: Acquire data and check collection size\n    def get_image_collection(date_str):\n        start_date = ee.Date(date_str)\n        end_date = start_date.advance(1, 'day')\n        \n        # Try primary collection\n        collection = ee.ImageCollection(primary_collection_id) \\\n            .filterDate(start_date, end_date) \\\n            .filterBounds(aoi)\n        \n        # If primary is empty, try fallback\n        size = collection.size().getInfo()\n        if size == 0:\n            collection = ee.ImageCollection(fallback_collection_id) \\\n                .filterDate(start_date, end_date) \\\n                .filterBounds(aoi)\n        return collection\n\n    collection1 = get_image_collection(date1)\n    collection2 = get_image_collection(date2)\n\n    size1 = collection1.size().getInfo()\n    size2 = collection2.size().getInfo()\n\n    if size1 == 0 or size2 == 0:\n        print(f\"Images {date1}: {size1}\")\n        print(f\"Images {date2}: {size2}\")\n        print(\"C1\")\n        sys.exit()\n\n    # Step 3: Apply cloud masking and check valid pixels\n    # Mosaic collections into single images\n    image1 = collection1.mosaic().clip(aoi)\n    image2 = collection2.mosaic().clip(aoi)\n    \n    def mask_clouds(image):\n        qa = image.select('state_1km')\n        # Bits 0 (cloud) and 1 (cloud shadow) should be 0\n        cloud_mask = qa.bitwiseAnd(1).eq(0)\n        cloud_shadow_mask = qa.bitwiseAnd(2).eq(0)\n        # Apply mask\n        return image.updateMask(cloud_mask.And(cloud_shadow_mask))\n\n    masked_image1 = mask_clouds(image1)\n    masked_image2 = mask_clouds(image2)\n    \n    # Validation: Count valid pixels\n    count_reducer = ee.Reducer.count()\n    scale = 1000  # Use a coarser scale for checks to avoid timeouts\n\n    pixel_count1 = masked_image1.select(band).reduceRegion(\n        reducer=count_reducer, geometry=aoi, scale=scale, maxPixels=1e9\n    ).get(band).getInfo()\n    \n    pixel_count2 = masked_image2.select(band).reduceRegion(\n        reducer=count_reducer, geometry=aoi, scale=scale, maxPixels=1e9\n    ).get(band).getInfo()\n\n    if pixel_count1 == 0 or pixel_count2 == 0:\n        print(f\"Valid pixels {date1}: {pixel_count1}\")\n        print(f\"Valid pixels {date2}: {pixel_count2}\")\n        print(\"C2\")\n        sys.exit()\n\n    # Step 4: Perform calculation\n    mean_reducer = ee.Reducer.mean()\n    mean_val1_dict = masked_image1.select(band).reduceRegion(\n        reducer=mean_reducer, geometry=aoi, scale=scale, maxPixels=1e9\n    )\n    mean_val2_dict = masked_image2.select(band).reduceRegion(\n        reducer=mean_reducer, geometry=aoi, scale=scale, maxPixels=1e9\n    )\n\n    mean_val1 = mean_val1_dict.get(band).getInfo()\n    mean_val2 = mean_val2_dict.get(band).getInfo()\n    \n    # Step 5: Validate result and determine answer\n    if mean_val1 is None or mean_val2 is None:\n        print(f\"Mean reflectance {date1}: {mean_val1}\")\n        print(f\"Mean reflectance {date2}: {mean_val2}\")\n        print(\"C3\")\n        sys.exit()\n\n    print(f\"Mean reflectance {date1} (smoke proxy): {mean_val1:.4f}\")\n    print(f\"Mean reflectance {date2} (smoke proxy): {mean_val2:.4f}\")\n\n    if mean_val1 > mean_val2:\n        print(\"A\")\n    else:\n        print(\"B\")\n\nexcept ee.EEException as e:\n    print(f\"GEE Error: {e}\", file=sys.stderr)\n    print(\"D\")\nexcept Exception as e:\n    print(f\"An unexpected error occurred: {e}\", file=sys.stderr)\n    print(\"D\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-20_18-25-54",
+            "data": {
+                "exec_msg": "Mean reflectance 2020-01-01 (smoke proxy): 1549.7239\nMean reflectance 2019-07-24 (smoke proxy): 463.0022\nA\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-20_18-25-54",
+            "data": {
+                "exec_returncode": 0,
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-20_18-25-55",
+            "data": {
+                "raw_answer": "<answer>\nA\n</answer>",
+                "answer": "A",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-20_18-26-00",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "A",
+                "verified_answer": "A",
+                "confidence": "high",
+                "final_answer": "A",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "A",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}

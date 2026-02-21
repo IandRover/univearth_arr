@@ -1,0 +1,89 @@
+{
+    "metadata": {
+        "question": "Does New Delhi show less fog coverage compared to its surrounding areas such as Modinagar and Greater Noida in January 30, 2014?",
+        "answer": NaN,
+        "strategy": "oscar",
+        "code_llm": "gemini-2.5-pro",
+        "answer_llm": "gemini-2.5-flash",
+        "language": "python",
+        "max_replan_attempts": 3,
+        "suffix": "v2",
+        "timestamp": "2026-02-21_12-04-42",
+        "url": "https://www.earthobservatory.nasa.gov/images/91742/",
+        "unique_id": 400
+    },
+    "trajectory": [
+        {
+            "state": "init_observe",
+            "timestamp": "2026-02-21_12-04-51",
+            "data": {
+                "raw_observation": "<observation>\n- collection: \"LANDSAT/LC08/C02/T1_L2\"\n- fallback_collection: \"MODIS/061/MOD09GA\"\n- date_range: \"2014-01-30 to 2014-01-31\"\n- region: \"A bounding box encompassing New Delhi, Modinagar, and Greater Noida, India. Approximate center: 28.6\u00b0 N, 77.4\u00b0 E\"\n- bands: \"SR_B4 (Red), SR_B3 (Green), SR_B2 (Blue) for true-color visualization of fog. QA_PIXEL for cloud/aerosol state.\"\n- risks: \"No guarantee that a Landsat 8 scene will cover the exact area on this specific day due to its 16-day revisit cycle. The presence of high-altitude clouds could obscure the view of ground-level fog.\"\n- needs_cloud_masking: \"yes\"\n</observation>",
+                "observation": "- collection: \"LANDSAT/LC08/C02/T1_L2\"\n- fallback_collection: \"MODIS/061/MOD09GA\"\n- date_range: \"2014-01-30 to 2014-01-31\"\n- region: \"A bounding box encompassing New Delhi, Modinagar, and Greater Noida, India. Approximate center: 28.6\u00b0 N, 77.4\u00b0 E\"\n- bands: \"SR_B4 (Red), SR_B3 (Green), SR_B2 (Blue) for true-color visualization of fog. QA_PIXEL for cloud/aerosol state.\"\n- risks: \"No guarantee that a Landsat 8 scene will cover the exact area on this specific day due to its 16-day revisit cycle. The presence of high-altitude clouds could obscure the view of ground-level fog.\"\n- needs_cloud_masking: \"yes\""
+            }
+        },
+        {
+            "state": "plan",
+            "timestamp": "2026-02-21_12-05-04",
+            "data": {
+                "raw_plan": "<plan>\nStep 1: [Initialize and define geometry/time]\n  - Details: Define three geometries:\n    1. `delhi_aoi`: An `ee.Geometry.Point` for New Delhi (77.2167, 28.6139) buffered by 15 km.\n    2. `surrounding_aoi_large`: The same point buffered by 45 km.\n    3. `surrounding_aoi`: The result of `surrounding_aoi_large.difference(delhi_aoi)` to create a donut-shaped region representing the surroundings.\n  - Define the date range as '2014-01-30' to '2014-01-31'.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Attempt to load an image collection from `LANDSAT/LC08/C02/T1_L2` filtered by the defined date range and the `surrounding_aoi_large` geometry.\n  - Validation: Check if the collection size is greater than zero. If it is zero, the plan will proceed to the fallback.\n  - Fallback: If the Landsat collection is empty, repeat the process using the `MODIS/061/MOD09GA` collection ID. If this collection is also empty, conclude with answer category C1 (Empty Collection).\n\nStep 3: [Apply cloud/aerosol masking and check valid pixels]\n  - Details: Create a single mosaic from the image collection. Based on the `QA_PIXEL` band (for Landsat) or `state_1km` band (for MODIS), create a binary mask representing potential fog/haze. This mask should identify pixels flagged as medium/high confidence cloud or aerosol.\n  - Validation: Clip the mask to the combined geometry (`surrounding_aoi_large`). Use `reduceRegion` to count the total number of masked (foggy/hazy) pixels. If the count is zero, conclude with answer category C2 (No Valid Pixels).\n\nStep 4: [Perform calculation]\n  - Details: Calculate two values using the fog/haze mask and `reduceRegion` with a `sum` reducer:\n    1. `delhi_fog_pixels`: The number of masked pixels within `delhi_aoi`.\n    2. `surrounding_fog_pixels`: The number of masked pixels within `surrounding_aoi`.\n  - To normalize the comparison, calculate the fog coverage percentage for each area:\n    1. `delhi_pct`: (`delhi_fog_pixels` / total pixels in `delhi_aoi`) * 100.\n    2. `surrounding_pct`: (`surrounding_fog_pixels` / total pixels in `surrounding_aoi`) * 100.\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare `delhi_pct` with `surrounding_pct`.\n    - If `delhi_pct < surrounding_pct`, the answer is A (Yes).\n    - Otherwise, the answer is B (No).\n  - Guard: Before the comparison, check if `delhi_pct` or `surrounding_pct` are None or NaN. If they are, conclude with answer category C3 (Calculation Failure).\n</plan>",
+                "plan": "Step 1: [Initialize and define geometry/time]\n  - Details: Define three geometries:\n    1. `delhi_aoi`: An `ee.Geometry.Point` for New Delhi (77.2167, 28.6139) buffered by 15 km.\n    2. `surrounding_aoi_large`: The same point buffered by 45 km.\n    3. `surrounding_aoi`: The result of `surrounding_aoi_large.difference(delhi_aoi)` to create a donut-shaped region representing the surroundings.\n  - Define the date range as '2014-01-30' to '2014-01-31'.\n\nStep 2: [Acquire data and check collection size]\n  - Details: Attempt to load an image collection from `LANDSAT/LC08/C02/T1_L2` filtered by the defined date range and the `surrounding_aoi_large` geometry.\n  - Validation: Check if the collection size is greater than zero. If it is zero, the plan will proceed to the fallback.\n  - Fallback: If the Landsat collection is empty, repeat the process using the `MODIS/061/MOD09GA` collection ID. If this collection is also empty, conclude with answer category C1 (Empty Collection).\n\nStep 3: [Apply cloud/aerosol masking and check valid pixels]\n  - Details: Create a single mosaic from the image collection. Based on the `QA_PIXEL` band (for Landsat) or `state_1km` band (for MODIS), create a binary mask representing potential fog/haze. This mask should identify pixels flagged as medium/high confidence cloud or aerosol.\n  - Validation: Clip the mask to the combined geometry (`surrounding_aoi_large`). Use `reduceRegion` to count the total number of masked (foggy/hazy) pixels. If the count is zero, conclude with answer category C2 (No Valid Pixels).\n\nStep 4: [Perform calculation]\n  - Details: Calculate two values using the fog/haze mask and `reduceRegion` with a `sum` reducer:\n    1. `delhi_fog_pixels`: The number of masked pixels within `delhi_aoi`.\n    2. `surrounding_fog_pixels`: The number of masked pixels within `surrounding_aoi`.\n  - To normalize the comparison, calculate the fog coverage percentage for each area:\n    1. `delhi_pct`: (`delhi_fog_pixels` / total pixels in `delhi_aoi`) * 100.\n    2. `surrounding_pct`: (`surrounding_fog_pixels` / total pixels in `surrounding_aoi`) * 100.\n\nStep 5: [Validate result and determine answer]\n  - Details: Compare `delhi_pct` with `surrounding_pct`.\n    - If `delhi_pct < surrounding_pct`, the answer is A (Yes).\n    - Otherwise, the answer is B (No).\n  - Guard: Before the comparison, check if `delhi_pct` or `surrounding_pct` are None or NaN. If they are, conclude with answer category C3 (Calculation Failure)."
+            }
+        },
+        {
+            "state": "execute_codegen",
+            "timestamp": "2026-02-21_12-05-21",
+            "data": {
+                "raw_code": "```python\nimport ee\nimport sys\n\n# Initialize the Earth Engine library.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\n# Define the central point for New Delhi.\ncenter_point = ee.Geometry.Point([77.2167, 28.6139])\n\n# Define the Areas of Interest (AOIs).\ndelhi_aoi = center_point.buffer(15000)\nsurrounding_aoi_large = center_point.buffer(45000)\nsurrounding_aoi = surrounding_aoi_large.difference(delhi_aoi)\n\n# Define the date range.\nstart_date = '2014-01-30'\nend_date = '2014-01-31'\n\n# Step 2: Acquire data and check collection size\n# Attempt to load Landsat 8 data.\ncollection = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2') \\\n    .filterBounds(surrounding_aoi_large) \\\n    .filterDate(start_date, end_date)\n\ncollection_size = collection.size().getInfo()\ndata_source = 'Landsat'\n\n# Fallback to MODIS if Landsat collection is empty.\nif collection_size == 0:\n    collection = ee.ImageCollection('MODIS/061/MOD09GA') \\\n        .filterBounds(surrounding_aoi_large) \\\n        .filterDate(start_date, end_date)\n    collection_size = collection.size().getInfo()\n    data_source = 'MODIS'\n\nif collection_size == 0:\n    print(\"No images found for the specified date in Landsat or MODIS.\")\n    print(\"C1\")\n    sys.exit()\n\nprint(f\"Data source: {data_source}, Images found: {collection_size}\")\n\n# Step 3: Apply cloud/aerosol masking and check valid pixels\ndef create_fog_mask(image):\n    if data_source == 'Landsat':\n        # Use QA_PIXEL for Landsat 8. Bits 6-7 for Aerosol level.\n        # 01=low, 10=medium, 11=high. We mask for medium or high.\n        qa = image.select('QA_PIXEL')\n        aerosol_mask = qa.bitwiseAnd(192).rightShift(6).gte(2) # 192 = (1<<7)|(1<<6)\n        return aerosol_mask.rename('fog')\n    else: # MODIS\n        # Use state_1km for MODIS. Bits 6-7 for Aerosol Quantity.\n        # 01=low, 10=average, 11=high. We mask for average or high.\n        state = image.select('state_1km')\n        aerosol_mask = state.bitwiseAnd(192).rightShift(6).gte(2)\n        return aerosol_mask.rename('fog')\n\n# Create a single mosaic and generate the fog/haze mask.\nimage_mosaic = collection.mosaic()\nfog_mask = create_fog_mask(image_mosaic)\n\n# Count total fog pixels to ensure there's something to analyze.\n# Use selfMask() to count only pixels where fog_mask is 1.\ntotal_fog_pixels = fog_mask.selfMask().reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=surrounding_aoi_large,\n    scale=1000,\n    maxPixels=1e9\n).get('fog').getInfo()\n\nif total_fog_pixels is None or total_fog_pixels == 0:\n    print(f\"Total fog/aerosol pixels found: {total_fog_pixels}\")\n    print(\"C2\")\n    sys.exit()\n\nprint(f\"Total fog/aerosol pixels in region: {total_fog_pixels}\")\n\n# Step 4: Perform calculation\n# Calculate total pixels in each AOI to normalize results.\nscale = 1000 if data_source == 'MODIS' else 30 # Use native res for Landsat\ndelhi_total_pixels = fog_mask.reduceRegion(reducer=ee.Reducer.count(), geometry=delhi_aoi, scale=scale, maxPixels=1e9).get('fog').getInfo()\nsurrounding_total_pixels = fog_mask.reduceRegion(reducer=ee.Reducer.count(), geometry=surrounding_aoi, scale=scale, maxPixels=1e9).get('fog').getInfo()\n\n# Calculate sum of fog pixels in each AOI.\ndelhi_fog_sum = fog_mask.reduceRegion(reducer=ee.Reducer.sum(), geometry=delhi_aoi, scale=scale, maxPixels=1e9).get('fog').getInfo()\nsurrounding_fog_sum = fog_mask.reduceRegion(reducer=ee.Reducer.sum(), geometry=surrounding_aoi, scale=scale, maxPixels=1e9).get('fog').getInfo()\n\n# Step 5: Validate result and determine answer\nif delhi_fog_sum is None or surrounding_fog_sum is None or delhi_total_pixels == 0 or surrounding_total_pixels == 0:\n    print(\"Calculation failed due to null intermediate results.\")\n    print(\"C3\")\n    sys.exit()\n\ndelhi_pct = (delhi_fog_sum / delhi_total_pixels) * 100\nsurrounding_pct = (surrounding_fog_sum / surrounding_total_pixels) * 100\n\nprint(f\"Delhi fog coverage: {delhi_pct:.2f}%\")\nprint(f\"Surrounding fog coverage: {surrounding_pct:.2f}%\")\n\nif delhi_pct < surrounding_pct:\n    print(\"A\")\nelse:\n    print(\"B\")\n```",
+                "code": "import ee\nimport sys\n\n# Initialize the Earth Engine library.\nee.Initialize(project='earthsense-436113')\n\n# Step 1: Initialize and define geometry/time\n# Define the central point for New Delhi.\ncenter_point = ee.Geometry.Point([77.2167, 28.6139])\n\n# Define the Areas of Interest (AOIs).\ndelhi_aoi = center_point.buffer(15000)\nsurrounding_aoi_large = center_point.buffer(45000)\nsurrounding_aoi = surrounding_aoi_large.difference(delhi_aoi)\n\n# Define the date range.\nstart_date = '2014-01-30'\nend_date = '2014-01-31'\n\n# Step 2: Acquire data and check collection size\n# Attempt to load Landsat 8 data.\ncollection = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2') \\\n    .filterBounds(surrounding_aoi_large) \\\n    .filterDate(start_date, end_date)\n\ncollection_size = collection.size().getInfo()\ndata_source = 'Landsat'\n\n# Fallback to MODIS if Landsat collection is empty.\nif collection_size == 0:\n    collection = ee.ImageCollection('MODIS/061/MOD09GA') \\\n        .filterBounds(surrounding_aoi_large) \\\n        .filterDate(start_date, end_date)\n    collection_size = collection.size().getInfo()\n    data_source = 'MODIS'\n\nif collection_size == 0:\n    print(\"No images found for the specified date in Landsat or MODIS.\")\n    print(\"C1\")\n    sys.exit()\n\nprint(f\"Data source: {data_source}, Images found: {collection_size}\")\n\n# Step 3: Apply cloud/aerosol masking and check valid pixels\ndef create_fog_mask(image):\n    if data_source == 'Landsat':\n        # Use QA_PIXEL for Landsat 8. Bits 6-7 for Aerosol level.\n        # 01=low, 10=medium, 11=high. We mask for medium or high.\n        qa = image.select('QA_PIXEL')\n        aerosol_mask = qa.bitwiseAnd(192).rightShift(6).gte(2) # 192 = (1<<7)|(1<<6)\n        return aerosol_mask.rename('fog')\n    else: # MODIS\n        # Use state_1km for MODIS. Bits 6-7 for Aerosol Quantity.\n        # 01=low, 10=average, 11=high. We mask for average or high.\n        state = image.select('state_1km')\n        aerosol_mask = state.bitwiseAnd(192).rightShift(6).gte(2)\n        return aerosol_mask.rename('fog')\n\n# Create a single mosaic and generate the fog/haze mask.\nimage_mosaic = collection.mosaic()\nfog_mask = create_fog_mask(image_mosaic)\n\n# Count total fog pixels to ensure there's something to analyze.\n# Use selfMask() to count only pixels where fog_mask is 1.\ntotal_fog_pixels = fog_mask.selfMask().reduceRegion(\n    reducer=ee.Reducer.count(),\n    geometry=surrounding_aoi_large,\n    scale=1000,\n    maxPixels=1e9\n).get('fog').getInfo()\n\nif total_fog_pixels is None or total_fog_pixels == 0:\n    print(f\"Total fog/aerosol pixels found: {total_fog_pixels}\")\n    print(\"C2\")\n    sys.exit()\n\nprint(f\"Total fog/aerosol pixels in region: {total_fog_pixels}\")\n\n# Step 4: Perform calculation\n# Calculate total pixels in each AOI to normalize results.\nscale = 1000 if data_source == 'MODIS' else 30 # Use native res for Landsat\ndelhi_total_pixels = fog_mask.reduceRegion(reducer=ee.Reducer.count(), geometry=delhi_aoi, scale=scale, maxPixels=1e9).get('fog').getInfo()\nsurrounding_total_pixels = fog_mask.reduceRegion(reducer=ee.Reducer.count(), geometry=surrounding_aoi, scale=scale, maxPixels=1e9).get('fog').getInfo()\n\n# Calculate sum of fog pixels in each AOI.\ndelhi_fog_sum = fog_mask.reduceRegion(reducer=ee.Reducer.sum(), geometry=delhi_aoi, scale=scale, maxPixels=1e9).get('fog').getInfo()\nsurrounding_fog_sum = fog_mask.reduceRegion(reducer=ee.Reducer.sum(), geometry=surrounding_aoi, scale=scale, maxPixels=1e9).get('fog').getInfo()\n\n# Step 5: Validate result and determine answer\nif delhi_fog_sum is None or surrounding_fog_sum is None or delhi_total_pixels == 0 or surrounding_total_pixels == 0:\n    print(\"Calculation failed due to null intermediate results.\")\n    print(\"C3\")\n    sys.exit()\n\ndelhi_pct = (delhi_fog_sum / delhi_total_pixels) * 100\nsurrounding_pct = (surrounding_fog_sum / surrounding_total_pixels) * 100\n\nprint(f\"Delhi fog coverage: {delhi_pct:.2f}%\")\nprint(f\"Surrounding fog coverage: {surrounding_pct:.2f}%\")\n\nif delhi_pct < surrounding_pct:\n    print(\"A\")\nelse:\n    print(\"B\")"
+            }
+        },
+        {
+            "state": "execute_run",
+            "timestamp": "2026-02-21_12-05-25",
+            "data": {
+                "exec_msg": "Data source: MODIS, Images found: 1\nTotal fog/aerosol pixels in region: 646\nDelhi fog coverage: 29.59%\nSurrounding fog coverage: 6.42%\nB\n",
+                "exec_stderr": "",
+                "exec_returncode": 0
+            }
+        },
+        {
+            "state": "observe_post_exec",
+            "timestamp": "2026-02-21_12-05-25",
+            "data": {
+                "exec_returncode": 0,
+                "detected_answer": "B",
+                "need_replan": false,
+                "replan_reason": "Execution succeeded with a valid answer.",
+                "replan_count": 0
+            }
+        },
+        {
+            "state": "answer",
+            "timestamp": "2026-02-21_12-05-27",
+            "data": {
+                "raw_answer": "<answer>\nB\n</answer>",
+                "answer": "B",
+                "answer_thinking": null
+            }
+        },
+        {
+            "state": "verify",
+            "timestamp": "2026-02-21_12-05-31",
+            "data": {
+                "physical_validation": "Execution success: True\nPhysical range checks passed: True\nDetails:\nNo physical range checks applicable.",
+                "preliminary_answer": "B",
+                "verified_answer": "B",
+                "confidence": "high",
+                "final_answer": "B",
+                "answer_source": "preliminary"
+            }
+        }
+    ],
+    "summary": {
+        "final_answer": "B",
+        "answer_source": "preliminary",
+        "confidence": "high",
+        "replan_attempts": 0,
+        "total_states": 7
+    }
+}
