@@ -8,7 +8,7 @@ saved to figures_0220/.
 
 Usage:
     python analysis_0220.py                          # auto-detect latest OSCAR run
-    python analysis_0220.py --oscar_dir results_2602/oscar/python/gemini-2.5-pro+gemini-2.5-flash__v1
+    python analysis_0220.py --oscar_dir results_2602/oscar/python/gemini-2.5-pro+gemini-2.5-flash__v2
     python analysis_0220.py --baseline_model gemini-2.5-pro
 """
 
